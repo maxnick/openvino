@@ -117,7 +117,12 @@ enum ActivationTypes {
 enum EltwiseTypes {
     ADD,
     MULTIPLY,
-    SUBTRACT
+    SUBTRACT,
+    DIVIDE,
+    FLOOR_MOD,
+    MOD,
+    SQUARED_DIFFERENCE,
+    POWER
 };
 
 enum ComparisonTypes {
