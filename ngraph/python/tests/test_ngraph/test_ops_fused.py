@@ -418,7 +418,6 @@ def test_grn_operator():
     assert np.allclose(result, expected)
 
 
-@xfail_issue_35923
 def test_prelu_operator():
     runtime = get_runtime()
 
