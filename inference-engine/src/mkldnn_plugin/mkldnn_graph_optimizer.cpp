@@ -1933,6 +1933,22 @@ void MKLDNNGraphOptimizer::DropConvertReorder(MKLDNNGraph& graph) {
     }
 }
 
+static bool isReorderAvailable(const MKLDNNEdgePtr parentEdge, const MKLDNNEdgePtr childEdge, const mkldnn::engine& eng) {
+    MKLDNNMemoryDesc dstMemDesc(childEdge->getDesc());
+    MKLDNNMemoryDesc srcMemDesc(parentEdge->getDesc());
+
+//    const auto& srcMemDesc = parentEdge->getMemoryPtr()->GetDescriptor();
+
+    memory::primitive_desc dstPrimitiveDesc(dstMemDesc, eng);
+    memory::primitive_desc srcPrimitiveDesc(srcMemDesc, eng);
+    mkldnn::primitive_attr attr;
+
+    mkldnn_primitive_desc_t result = nullptr;
+    auto status = mkldnn_reorder_primitive_desc_create_v2(&result, srcPrimitiveDesc.get(), dstPrimitiveDesc.get(), attr.get());
+
+    return mkldnn_success == status;
+}
+
 void MKLDNNGraphOptimizer::ChangeConvertToReorder(MKLDNNGraph& graph) {
     auto reorderArgs = [](const InferenceEngine::TensorDesc &parentDesc, const InferenceEngine::TensorDesc &childDesc) {
         std::string inArgs, outArgs;
@@ -1946,24 +1962,15 @@ void MKLDNNGraphOptimizer::ChangeConvertToReorder(MKLDNNGraph& graph) {
         }
         return inArgs + "_" + outArgs;
     };
-    std::vector<Type> bf16ComplementTypes{
-//        Convolution,
-        FullyConnected,
-        Concatenation,
-        Eltwise,
-        Gemm,
-        MemoryOutput,
-        MemoryInput,
-    };
     for (int ind = 0; ind < graph.GetNodes().size(); ind++) {
         auto input = graph.GetNodes().at(ind);
-        if (input->getType() != Input) {
-            continue;
-        }
         for (size_t i = 0; i < input->getChildEdges().size(); i++) {
             auto inputEdge = input->getChildEdgeAt(i);
             auto convertCandidate = inputEdge->getChild();
-            if (convertCandidate->getType() != Generic) {
+            auto covertCandidateType = convertCandidate->getTypeStr();
+            std::transform(covertCandidateType.begin(), covertCandidateType.end(), covertCandidateType.begin(),
+                           [](unsigned char c){ return std::tolower(c); });
+            if (covertCandidateType != "convert") {
                 continue;
             }
             std::unordered_set<std::string> uniqueLayerNames;
@@ -1973,9 +1980,11 @@ void MKLDNNGraphOptimizer::ChangeConvertToReorder(MKLDNNGraph& graph) {
             for (size_t j = 0; j < convertCandidate->getChildEdges().size(); j++) {
                 auto &convertEdge = convertCandidate->getChildEdgeAt(j);
                 auto dstNode = convertEdge->getChild();
-                if (std::find(bf16ComplementTypes.begin(), bf16ComplementTypes.end(), dstNode->getType()) == bf16ComplementTypes.end()) {
+                // Check if there is a reorder that supports the type conversion
+                if (!isReorderAvailable(inputEdge, convertEdge, graph.getEngine())) {
                     continue;
                 }
+
                 // create reorder node
                 std::string basicLayerName = convertEdge->getParent()->getName() + "_" +
                                              reorderArgs(convertCandidate->getCnnLayer()->insData[0].lock()->getTensorDesc(),
@@ -1990,15 +1999,13 @@ void MKLDNNGraphOptimizer::ChangeConvertToReorder(MKLDNNGraph& graph) {
                 CNNLayerPtr layer(new CNNLayer({layerName,
                                                 "Reorder",
                                                 convertCandidate->getCnnLayer()->outData[0]->getPrecision()}));
-                MKLDNNNodePtr newReorder(new MKLDNNReorderNode(layer, graph.getEngine(), graph.weightsCache));
-                auto *reorderPtr = dynamic_cast<MKLDNNReorderNode *>(newReorder.get());
-                reorderPtr->setDescs(convertCandidate->getCnnLayer()->insData[0].lock()->getTensorDesc(),
+                auto newReorder = std::make_shared<MKLDNNReorderNode>(layer, graph.getEngine(), graph.weightsCache);
+                newReorder->setDescs(convertCandidate->getCnnLayer()->insData[0].lock()->getTensorDesc(),
                                      convertCandidate->getCnnLayer()->outData[0]->getTensorDesc());
                 // create new edges edges and drop unused node and edges
-                auto oldEdgeNum = convertEdge->getOutputNum();
 
-                MKLDNNEdgePtr newEdge1(new MKLDNNEdge(input, newReorder, i, 0));
-                MKLDNNEdgePtr newEdge2(new MKLDNNEdge(newReorder, dstNode, 0, oldEdgeNum));
+                MKLDNNEdgePtr newEdge1(new MKLDNNEdge(input, newReorder, inputEdge->getInputNum(), 0));
+                MKLDNNEdgePtr newEdge2(new MKLDNNEdge(newReorder, dstNode, 0, convertEdge->getOutputNum()));
 
                 newReorder->parentEdges.push_back(newEdge1);
                 input->childEdges.at(i) = newEdge1;
