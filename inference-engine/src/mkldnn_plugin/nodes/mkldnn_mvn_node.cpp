@@ -486,7 +486,6 @@ void MKLDNNMVNNode::initSupportedPrimitiveDescriptors() {
     setPostOps(attr, true);
 
     Precision inputPrecision = getCnnLayer()->insData[0].lock()->getPrecision();
-    if (inputPrecision == Precision::BF16) inputPrecision =  Precision::FP32;
     Precision outputPrecision = getCnnLayer()->outData[0]->getPrecision();
 
     if (!fusedWith.empty()) {
@@ -495,7 +494,6 @@ void MKLDNNMVNNode::initSupportedPrimitiveDescriptors() {
             outputPrecision = lastFusedLayer->outData[0]->getPrecision();
         }
     }
-    if (outputPrecision == Precision::BF16) outputPrecision = Precision::FP32;
 
     if (getParentEdgeAt(0)->getDims().ndims() < 4 || getParentEdgeAt(0)->getDims().ndims() > 5
         || across_channels != 0 || normalize_variance != 1) {
