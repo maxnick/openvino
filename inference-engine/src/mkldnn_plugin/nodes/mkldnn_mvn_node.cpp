@@ -506,12 +506,8 @@ void MKLDNNMVNNode::initSupportedPrimitiveDescriptors() {
     }
 
     if (!mayiuse(avx512_core_bf16)) {
-        bool hasBF16 = false;
-        if (inputPrecision == Precision::BF16)
-            hasBF16 = true;
-
-        if (outputPrecision == Precision::BF16 || hasBF16)
-            THROW_IE_EXCEPTION << "MVN node with name `" << getName() << "` doesn't support BF16 precision on this target.";
+        if (outputPrecision == Precision::BF16)
+            outputPrecision = Precision::FP32;
     }
 
     auto inputDataType = MKLDNNExtensionUtils::IEPrecisionToDataType(inputPrecision);
