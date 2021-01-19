@@ -317,6 +317,8 @@ int main(int argc, char *argv[]) {
             return std::chrono::duration_cast<ns>(Time::now() - startTime).count() * 0.000001;
         };
 
+        OutputsDataMap outputInfo;
+
         size_t batchSize = FLAGS_b;
         Precision precision = Precision::UNSPECIFIED;
         std::string topology_name = "";
@@ -328,6 +330,7 @@ int main(int argc, char *argv[]) {
 
             auto startTime = Time::now();
             CNNNetwork cnnNetwork = ie.ReadNetwork(FLAGS_m);
+            outputInfo = cnnNetwork.getOutputsInfo();
             auto duration_ms = double_to_string(get_total_ms_time(startTime));
             slog::info << "Read network took " << duration_ms << " ms" << slog::endl;
             if (statistics)
@@ -532,7 +535,141 @@ int main(int argc, char *argv[]) {
             THROW_IE_EXCEPTION << "No idle Infer Requests!";
         }
         if (FLAGS_api == "sync") {
+            slog::info << "Start inference" << slog::endl;
+
             inferRequest->infer();
+
+            slog::info << "End inference" << slog::endl;
+
+//            for (auto & item : outputInfo) {
+//                if (firstOutputName.empty()) {
+//                    firstOutputName = item.first;
+//                }
+//            }
+
+        std::ofstream output("output_data.txt");
+        constexpr unsigned outputSize = 1;
+
+        for (unsigned i = 0; i < outputSize; ++i) {
+            std::string firstOutputName;
+            auto itr = outputInfo.begin();
+            std::advance(itr, i);
+            auto & item = *itr;
+
+            if (firstOutputName.empty()) {
+                firstOutputName = item.first;
+                output << firstOutputName << "\n";
+            }
+
+            MemoryBlob::CPtr moutput = as<MemoryBlob>(inferRequest->getBlob(firstOutputName));
+            if (!moutput) {
+                throw std::logic_error("We expect output to be inherited from MemoryBlob, "
+                                       "but by fact we were not able to cast it to MemoryBlob");
+            }
+
+            auto lmoHolder = moutput->rmap();
+
+            size_t num_channels = 1;
+            size_t c_stride = 0;
+
+            size_t num_batch = moutput->getTensorDesc().getDims()[0];
+            size_t n_stride = moutput->getTensorDesc().getBlockingDesc().getStrides()[0];
+            if (moutput->getTensorDesc().getDims().size() > 1) {
+                num_channels = moutput->getTensorDesc().getDims()[1];
+                c_stride = moutput->getTensorDesc().getBlockingDesc().getStrides()[1];
+            }
+
+            size_t size_H = moutput->getTensorDesc().getDims()[2];
+            size_t size_W = moutput->getTensorDesc().getDims()[3];
+
+            size_t stride_H = moutput->getTensorDesc().getBlockingDesc().getStrides()[2];
+            size_t stride_W = moutput->getTensorDesc().getBlockingDesc().getStrides()[3];
+
+            auto prc = moutput->getTensorDesc().getPrecision();
+            if (Precision::FP32 == prc) {
+                const auto output_data = lmoHolder.as<const PrecisionTrait<Precision::FP32>::value_type *>();
+                for (size_t n = 0; n < num_batch; n++) {
+                    for (size_t c = 0; c < num_channels; c++) {
+                        for (size_t h = 0; h < size_H; h++) {
+                            for (size_t w = 0; w < size_W; w++) {
+                                output << output_data[n * n_stride + c * c_stride + h * stride_H + w * stride_W] << ", ";
+                            }
+                            output << "\n";
+                        }
+                        output << "\n";
+                    }
+                    output << "\n";
+                }
+            } else if (Precision::I32 == prc) {
+                const auto output_data = lmoHolder.as<const PrecisionTrait<Precision::I32>::value_type *>();
+                for (size_t n = 0; n < num_batch; n++) {
+                    for (size_t c = 0; c < num_channels; c++) {
+                        output << output_data[n * n_stride + c * c_stride] << ", ";
+                    }
+                    output << "\n";
+                }
+            }
+        }
+
+
+            //outputInfo(exeNetwork.getOutputsInfo());
+
+//        const float meanValues[] = {114.4440f, 111.4605f, 103.02f};
+//        //const float meanValues[] = {0.0f, 0.0f, 0.0f};
+//
+//        // locked memory holder should be alive all time while access to its buffer happens
+//        auto lmoHolder = moutput->rmap();
+//        const auto output_data = lmoHolder.as<const PrecisionTrait<Precision::FP32>::value_type *>();
+//
+//        size_t num_images = moutput->getTensorDesc().getDims()[0];
+//        size_t num_channels = moutput->getTensorDesc().getDims()[1];
+//        size_t H = moutput->getTensorDesc().getDims()[2];
+//        size_t W = moutput->getTensorDesc().getDims()[3];
+//        size_t nPixels = W * H;
+//
+//        slog::info << "Output size [N,C,H,W]: " << num_images << ", " << num_channels << ", " << H << ", " << W << slog::endl;
+//
+//        {
+//            std::vector<float> data_img(nPixels * num_channels);
+//
+//            for (size_t n = 0; n < num_images; n++) {
+//                for (size_t i = 0; i < nPixels; i++) {
+//                    data_img[i * num_channels] = static_cast<float>(output_data[i + n * nPixels * num_channels] +
+//                                                                    meanValues[0]);
+//                    data_img[i * num_channels + 1] = static_cast<float>(
+//                            output_data[(i + nPixels) + n * nPixels * num_channels] + meanValues[1]);
+//                    data_img[i * num_channels + 2] = static_cast<float>(
+//                            output_data[(i + 2 * nPixels) + n * nPixels * num_channels] + meanValues[2]);
+//
+//                    float temp = data_img[i * num_channels];
+//                    data_img[i * num_channels] = data_img[i * num_channels + 2];
+//                    data_img[i * num_channels + 2] = temp;
+//
+//                    if (data_img[i * num_channels] < 0) data_img[i * num_channels] = 0;
+//                    if (data_img[i * num_channels] > 255) data_img[i * num_channels] = 255;
+//
+//                    if (data_img[i * num_channels + 1] < 0) data_img[i * num_channels + 1] = 0;
+//                    if (data_img[i * num_channels + 1] > 255) data_img[i * num_channels + 1] = 255;
+//
+//                    if (data_img[i * num_channels + 2] < 0) data_img[i * num_channels + 2] = 0;
+//                    if (data_img[i * num_channels + 2] > 255) data_img[i * num_channels + 2] = 255;
+//                }
+//                std::string out_img_name = std::string("out" + std::to_string(n + 1) + ".bmp");
+//                std::ofstream outFile;
+//                outFile.open(out_img_name.c_str(), std::ios_base::binary);
+//                if (!outFile.is_open()) {
+//                    throw new std::runtime_error("Cannot create " + out_img_name);
+//                }
+//                std::vector<unsigned char> data_img2;
+//                for (float i : data_img) {
+//                    data_img2.push_back(static_cast<unsigned char>(i));
+//                }
+//                writeOutputBmp(data_img2.data(), H, W, outFile);
+//                outFile.close();
+//                slog::info << "Image " << out_img_name << " created!" << slog::endl;
+//            }
+//        }
+
         } else {
             inferRequest->startAsync();
         }
