@@ -579,12 +579,19 @@ int main(int argc, char *argv[]) {
                 c_stride = moutput->getTensorDesc().getBlockingDesc().getStrides()[1];
             }
 
-            size_t size_H = moutput->getTensorDesc().getDims()[2];
-            size_t size_W = moutput->getTensorDesc().getDims()[3];
+            size_t size_H = 1;
+            size_t stride_H = 0;
+            if (moutput->getTensorDesc().getDims().size() > 2) {
+                size_H = moutput->getTensorDesc().getDims()[2];
+                stride_H = moutput->getTensorDesc().getBlockingDesc().getStrides()[2];
+            }
 
-            size_t stride_H = moutput->getTensorDesc().getBlockingDesc().getStrides()[2];
-            size_t stride_W = moutput->getTensorDesc().getBlockingDesc().getStrides()[3];
-
+            size_t size_W = 1;
+            size_t stride_W = 0;
+            if (moutput->getTensorDesc().getDims().size() > 3) {
+                size_W = moutput->getTensorDesc().getDims()[3];
+                stride_W = moutput->getTensorDesc().getBlockingDesc().getStrides()[3];
+            }
             auto prc = moutput->getTensorDesc().getPrecision();
             if (Precision::FP32 == prc) {
                 const auto output_data = lmoHolder.as<const PrecisionTrait<Precision::FP32>::value_type *>();
@@ -596,7 +603,7 @@ int main(int argc, char *argv[]) {
                             }
                             output << "\n";
                         }
-                        output << "\n";
+                        if (size_H != 1) output << "\n";
                     }
                     output << "\n";
                 }
