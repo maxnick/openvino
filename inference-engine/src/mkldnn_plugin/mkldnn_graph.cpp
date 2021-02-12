@@ -47,9 +47,9 @@
  *    additional information to std output.
  *
  *****************************************************/
-// #define BLOB_DUMP_PATH "mkldnn_dump"
+ #define BLOB_DUMP_PATH "mkldnn_dump"
 // #define PRINT_GRAPH_INFO
-// #define DUMP_AS_TEXT
+ #define DUMP_AS_TEXT
 // #define DUMP_INTERNAL_BLOBS
 
 #ifdef BLOB_DUMP_PATH
@@ -797,6 +797,13 @@ void MKLDNNGraph::Infer(MKLDNNInferRequest* request, int batch) {
 
     mkldnn::stream stream(eng);
 
+    int execOrder = std::numeric_limits<int>::max();
+    char* envExecOrder = getenv("EXEC_ORDER");
+
+    if (envExecOrder) {
+        execOrder = atoi(envExecOrder);
+    }
+
     for (int i = 0; i < graphNodes.size(); i++) {
         if (request != nullptr) {
             request->ThrowIfCanceled();
@@ -807,13 +814,16 @@ void MKLDNNGraph::Infer(MKLDNNInferRequest* request, int batch) {
         if (batch > 0)
             graphNodes[i]->setDynamicBatchLim(batch);
 
-        ENABLE_DUMP(do_before(DUMP_DIR, graphNodes[i]));
+        if (graphNodes[i]->getExecIndex() == execOrder)
+            ENABLE_DUMP(do_before(DUMP_DIR, graphNodes[i]));
 
         if (!graphNodes[i]->isConstant()) {
             OV_ITT_SCOPED_TASK(itt::domains::MKLDNNPlugin, graphNodes[i]->profiling.execute);
             graphNodes[i]->execute(stream);
         }
-        ENABLE_DUMP(do_after(DUMP_DIR, graphNodes[i]));
+
+        if (graphNodes[i]->getExecIndex() == execOrder)
+            ENABLE_DUMP(do_after(DUMP_DIR, graphNodes[i]));
     }
 
     if (infer_count != -1) infer_count++;
