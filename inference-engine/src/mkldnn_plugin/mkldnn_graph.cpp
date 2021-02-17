@@ -800,27 +800,42 @@ static double computL2Array(const T* src, size_t size) {
     return sqrt(result);
 }
 
-static double computeL2(Blob::Ptr blob) {
-    auto prc = blob->getTensorDesc().getPrecision();
+static double computeL2(const MKLDNNMemory& mem) {
+    auto prc = mem.GetDataType();
     double result;
     switch (prc) {
-        case Precision::FP32: {
-            auto srcData = blob->cbuffer().as<float *>();
-            result = computL2Array(srcData, blob->size());
+        case memory::data_type::f32: {
+            auto srcData = reinterpret_cast<float*>(mem.GetData()) + mem.GetDescriptor().data.layout_desc.blocking.offset_padding *
+                            MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(mem.GetDescriptor().data.data_type));
+            result = computL2Array(srcData, mem.GetElementsCount());
             break;
         }
-        case Precision::I32: {
-            auto srcData = blob->cbuffer().as<int *>();
-            result = computL2Array(srcData, blob->size());
+        case memory::data_type::s32: {
+            auto srcData = reinterpret_cast<int*>(mem.GetData()) + mem.GetDescriptor().data.layout_desc.blocking.offset_padding *
+                             MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(mem.GetDescriptor().data.data_type));
+            result = computL2Array(srcData, mem.GetElementsCount());
             break;
         }
-        case Precision::BF16: {
-            auto srcData = blob->cbuffer().as<MKLDNNPlugin::bfloat16_t *>();
-            result = computL2Array(srcData, blob->size());
+        case memory::data_type::bf16: {
+            auto srcData = reinterpret_cast<MKLDNNPlugin::bfloat16_t*>(mem.GetData()) + mem.GetDescriptor().data.layout_desc.blocking.offset_padding *
+                             MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(mem.GetDescriptor().data.data_type));
+            result = computL2Array(srcData, mem.GetElementsCount());
+            break;
+        }
+        case memory::data_type::s8: {
+            auto srcData = reinterpret_cast<int8_t *>(mem.GetData()) + mem.GetDescriptor().data.layout_desc.blocking.offset_padding *
+                            MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(mem.GetDescriptor().data.data_type));
+            result = computL2Array(srcData, mem.GetElementsCount());
+            break;
+        }
+        case memory::data_type::u8: {
+            auto srcData = reinterpret_cast<uint8_t *>(mem.GetData()) + mem.GetDescriptor().data.layout_desc.blocking.offset_padding *
+                            MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(mem.GetDescriptor().data.data_type));
+            result = computL2Array(srcData, mem.GetElementsCount());
             break;
         }
         default:
-            THROW_IE_EXCEPTION << "Unknown precision for L2 calulation: " << prc.name() << " ";
+            THROW_IE_EXCEPTION << "Unknown data type for L2 calulation";
     }
     return result;
 }
@@ -833,7 +848,10 @@ void MKLDNNGraph::Infer(MKLDNNInferRequest* request, int batch) {
     mkldnn::stream stream(eng);
 
     std::unordered_set<int> setExecOrder;
-    std::string envExecOrder = getenv("EXEC_ORDER");
+    std::string envExecOrder;
+    char* envExecOrderPtr = getenv("EXEC_ORDER");
+    if (envExecOrderPtr)
+        envExecOrder = envExecOrderPtr;
 
     if (!envExecOrder.empty()) {
         std::stringstream ss(envExecOrder);
@@ -855,7 +873,7 @@ void MKLDNNGraph::Infer(MKLDNNInferRequest* request, int batch) {
         if (graphNodes[i]->getType() != MKLDNNPlugin::Type::Reorder) {
             output << graphNodes[i]->getName() << " " << graphNodes[i]->getTypeStr() << "\n";
             for (auto& item : graphNodes[i]->getParentEdges()) {
-                output << computeL2(item.lock()->getBlob()) << " , ";
+                output << computeL2(item.lock()->getMemory()) << " , ";
             }
             output << "\n";
         }
@@ -875,7 +893,7 @@ void MKLDNNGraph::Infer(MKLDNNInferRequest* request, int batch) {
 
         if (graphNodes[i]->getType() != MKLDNNPlugin::Type::Reorder) {
             for (auto &item : graphNodes[i]->getChildEdges()) {
-                output << computeL2(item.lock()->getBlob()) << " , ";
+                output << computeL2(item.lock()->getMemory()) << " , ";
             }
             output << std::endl;
         }
