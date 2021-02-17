@@ -805,32 +805,27 @@ static double computeL2(const MKLDNNMemory& mem) {
     double result;
     switch (prc) {
         case memory::data_type::f32: {
-            auto srcData = reinterpret_cast<float*>(mem.GetData()) + mem.GetDescriptor().data.layout_desc.blocking.offset_padding *
-                            MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(mem.GetDescriptor().data.data_type));
+            auto srcData = reinterpret_cast<float*>(mem.GetPtr());
             result = computL2Array(srcData, mem.GetElementsCount());
             break;
         }
         case memory::data_type::s32: {
-            auto srcData = reinterpret_cast<int*>(mem.GetData()) + mem.GetDescriptor().data.layout_desc.blocking.offset_padding *
-                             MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(mem.GetDescriptor().data.data_type));
+            auto srcData = reinterpret_cast<int*>(mem.GetPtr());
             result = computL2Array(srcData, mem.GetElementsCount());
             break;
         }
         case memory::data_type::bf16: {
-            auto srcData = reinterpret_cast<MKLDNNPlugin::bfloat16_t*>(mem.GetData()) + mem.GetDescriptor().data.layout_desc.blocking.offset_padding *
-                             MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(mem.GetDescriptor().data.data_type));
+            auto srcData = reinterpret_cast<MKLDNNPlugin::bfloat16_t*>(mem.GetPtr());
             result = computL2Array(srcData, mem.GetElementsCount());
             break;
         }
         case memory::data_type::s8: {
-            auto srcData = reinterpret_cast<int8_t *>(mem.GetData()) + mem.GetDescriptor().data.layout_desc.blocking.offset_padding *
-                            MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(mem.GetDescriptor().data.data_type));
+            auto srcData = reinterpret_cast<int8_t *>(mem.GetPtr());
             result = computL2Array(srcData, mem.GetElementsCount());
             break;
         }
         case memory::data_type::u8: {
-            auto srcData = reinterpret_cast<uint8_t *>(mem.GetData()) + mem.GetDescriptor().data.layout_desc.blocking.offset_padding *
-                            MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(mem.GetDescriptor().data.data_type));
+            auto srcData = reinterpret_cast<uint8_t *>(mem.GetPtr());
             result = computL2Array(srcData, mem.GetElementsCount());
             break;
         }
