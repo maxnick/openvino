@@ -32,6 +32,7 @@
 #include <legacy/details/ie_cnn_network_tools.h>
 #include "nodes/common/cpu_memcpy.h"
 #include "nodes/common/cpu_convert.h"
+#include "utils/bfloat16.hpp"
 
 #include "precision_utils.h"
 #include <ie_plugin_config.hpp>
@@ -790,6 +791,40 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
     }
 }
 
+template <typename T>
+static double computL2Array(const T* src, size_t size) {
+    double result = 0;
+    for (size_t i = 0; i < size; ++i) {
+        result += pow(src[i], 2);
+    }
+    return sqrt(result);
+}
+
+static double computeL2(Blob::Ptr blob) {
+    auto prc = blob->getTensorDesc().getPrecision();
+    double result;
+    switch (prc) {
+        case Precision::FP32: {
+            auto srcData = blob->cbuffer().as<float *>();
+            result = computL2Array(srcData, blob->size());
+            break;
+        }
+        case Precision::I32: {
+            auto srcData = blob->cbuffer().as<int *>();
+            result = computL2Array(srcData, blob->size());
+            break;
+        }
+        case Precision::BF16: {
+            auto srcData = blob->cbuffer().as<MKLDNNPlugin::bfloat16_t *>();
+            result = computL2Array(srcData, blob->size());
+            break;
+        }
+        default:
+            THROW_IE_EXCEPTION << "Unknown precision for L2 calulation: " << prc.name() << " ";
+    }
+    return result;
+}
+
 void MKLDNNGraph::Infer(MKLDNNInferRequest* request, int batch) {
     if (!IsReady()) {
         THROW_IE_EXCEPTION << "Wrong state. Topology is not ready.";
@@ -797,16 +832,32 @@ void MKLDNNGraph::Infer(MKLDNNInferRequest* request, int batch) {
 
     mkldnn::stream stream(eng);
 
-    int execOrder = std::numeric_limits<int>::max();
-    char* envExecOrder = getenv("EXEC_ORDER");
+    std::unordered_set<int> setExecOrder;
+    std::string envExecOrder = getenv("EXEC_ORDER");
 
-    if (envExecOrder) {
-        execOrder = atoi(envExecOrder);
+    if (!envExecOrder.empty()) {
+        std::stringstream ss(envExecOrder);
+        while (ss.good()) {
+            std::string substr;
+            std::getline(ss, substr, ',');
+            setExecOrder.insert(std::stoi(substr));
+        }
     }
+
+    std::ofstream output;
+    output.open("layers_dump.txt");
 
     for (int i = 0; i < graphNodes.size(); i++) {
         if (request != nullptr) {
             request->ThrowIfCanceled();
+        }
+
+        if (graphNodes[i]->getType() != MKLDNNPlugin::Type::Reorder) {
+            output << graphNodes[i]->getName() << " " << graphNodes[i]->getTypeStr() << "\n";
+            for (auto& item : graphNodes[i]->getParentEdges()) {
+                output << computeL2(item.lock()->getBlob()) << " , ";
+            }
+            output << "\n";
         }
 
         PERF(graphNodes[i]);
@@ -814,7 +865,7 @@ void MKLDNNGraph::Infer(MKLDNNInferRequest* request, int batch) {
         if (batch > 0)
             graphNodes[i]->setDynamicBatchLim(batch);
 
-        if (graphNodes[i]->getExecIndex() == execOrder)
+        if (setExecOrder.count(graphNodes[i]->getExecIndex()))
             ENABLE_DUMP(do_before(DUMP_DIR, graphNodes[i]));
 
         if (!graphNodes[i]->isConstant()) {
@@ -822,8 +873,16 @@ void MKLDNNGraph::Infer(MKLDNNInferRequest* request, int batch) {
             graphNodes[i]->execute(stream);
         }
 
-        if (graphNodes[i]->getExecIndex() == execOrder)
+        if (graphNodes[i]->getType() != MKLDNNPlugin::Type::Reorder) {
+            for (auto &item : graphNodes[i]->getChildEdges()) {
+                output << computeL2(item.lock()->getBlob()) << " , ";
+            }
+            output << std::endl;
+        }
+
+        if (setExecOrder.count(graphNodes[i]->getExecIndex())) {
             ENABLE_DUMP(do_after(DUMP_DIR, graphNodes[i]));
+        }
     }
 
     if (infer_count != -1) infer_count++;
