@@ -52,6 +52,12 @@ private:
     void PushStates();
     void PullStates();
 
+    void allocateInputBlob(const std::string& name);
+    void allocateOutputBlob(const std::string& name);
+
+    void allocateInputBlob(const std::string& name, const InferenceEngine::BlobMap& blobs);
+    void allocateOutputBlob(const std::string& name, const InferenceEngine::BlobMap& blobs);
+
     void pushInput(const std::string& inputName, InferenceEngine::Blob::Ptr& inputBlob, InferenceEngine::Precision dataType);
 
     void changeDefaultPtr();

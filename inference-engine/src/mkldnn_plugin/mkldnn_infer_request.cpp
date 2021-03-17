@@ -32,11 +32,11 @@ MKLDNNPlugin::MKLDNNInferRequest::MKLDNNInferRequest(InferenceEngine::InputsData
         THROW_IE_EXCEPTION << "No graph was found";
     graph = &(execNetwork->GetGraph()._graph);
     for (const auto& it : _networkInputs) {
-        MKLDNNInferRequest::GetBlob(it.first);
+        allocateInputBlob(it.first);
     }
     // Allocate all output blobs
     for (const auto& it : _networkOutputs) {
-        MKLDNNInferRequest::GetBlob(it.first);
+        allocateOutputBlob(it.first);
     }
 
     // Save all MemoryLayer data tensors. Will use insight about mechanics
@@ -237,55 +237,22 @@ InferenceEngine::Blob::Ptr MKLDNNPlugin::MKLDNNInferRequest::GetBlob(const std::
             return data;
         }
 
-        if (_inputs.find(name) != _inputs.end()) {
-            data = _inputs[name];
-            checkBlob(data, name, true);
-            return data;
+        if (_inputs.find(name) == _inputs.end()) {
+            allocateInputBlob(name, blobs);
         }
 
-        InferenceEngine::TensorDesc desc = blobs[name]->getTensorDesc();
-        InferenceEngine::Precision originPrecision = blobs[name]->getTensorDesc().getPrecision();
-        if (_networkInputs.find(name) != _networkInputs.end()) {
-            InferenceEngine::Layout l = _networkInputs[name]->getLayout();
-            InferenceEngine::Precision p = _networkInputs[name]->getPrecision();
-            InferenceEngine::SizeVector dims = _networkInputs[name]->getTensorDesc().getDims();
-
-            desc = InferenceEngine::TensorDesc(p, dims, l);
-        }
-
-        _inputs[name] = make_blob_with_precision(desc);
-        _inputs[name]->allocate();
-        if (desc.getPrecision() == originPrecision &&
-                graph->_meanImages.find(name) == graph->_meanImages.end() && !graph->getProperty().batchLimit) {
-            externalPtr[name] = _inputs[name]->buffer();
-        }
         data = _inputs[name];
         checkBlob(data, name, true);
         return data;
     }
+
     blobs.clear();
     graph->getOutputBlobs(blobs);
     if (blobs.find(name) != blobs.end()) {
-        if (_outputs.find(name) != _outputs.end()) {
-            data = _outputs[name];
-            checkBlob(data, name, false);
-            return data;
+        if (_outputs.find(name) == _outputs.end()) {
+            allocateOutputBlob(name, blobs);
         }
 
-        InferenceEngine::TensorDesc desc = blobs[name]->getTensorDesc();
-
-        // WA: need to avoid exception thrown when we compare blocking desc in SetBlob
-        // in situation if we push output blobs as inputs for next network (in Hetero plugin)
-        // it may be that output tensor desc will be different from real input tensor desc for next network
-        // because the optimal descriptor was chosen (e.g. inPlace case for Split node)
-        auto currBlockDesc = InferenceEngine::BlockingDesc(desc.getBlockingDesc().getBlockDims(), desc.getBlockingDesc().getOrder());
-        desc = InferenceEngine::TensorDesc(desc.getPrecision(), desc.getDims(), currBlockDesc);
-
-        _outputs[name] = make_blob_with_precision(desc);
-        _outputs[name]->allocate();
-        if (desc.getPrecision() == InferenceEngine::Precision::FP32 && !graph->getProperty().batchLimit) {
-            externalPtr[name] = _outputs[name]->buffer();
-        }
         data = _outputs[name];
         checkBlob(data, name, false);
         return data;
@@ -490,5 +457,73 @@ void MKLDNNPlugin::MKLDNNInferRequest::SetAsyncRequest(MKLDNNAsyncInferRequest* 
 void MKLDNNPlugin::MKLDNNInferRequest::ThrowIfCanceled() const {
     if (_asyncRequest != nullptr) {
         _asyncRequest->ThrowIfCanceled();
+    }
+}
+
+void MKLDNNPlugin::MKLDNNInferRequest::allocateInputBlob(const std::string& name) {
+    OV_ITT_SCOPED_TASK(itt::domains::MKLDNNPlugin, "allocateInputBlob");
+
+    if (!graph || !graph->IsReady())
+        THROW_IE_EXCEPTION << "Graph is not ready!";
+
+    InferenceEngine::BlobMap blobs;
+    graph->getInputBlobs(blobs);
+
+    if (blobs.find(name) != blobs.end()) {
+        allocateInputBlob(name, blobs);
+    } else {
+        THROW_IE_EXCEPTION << "Cannot find blob with name: " << name << " in the MKLDNNPlugin graph.";
+    }
+}
+
+void MKLDNNPlugin::MKLDNNInferRequest::allocateOutputBlob(const std::string& name) {
+    OV_ITT_SCOPED_TASK(itt::domains::MKLDNNPlugin, "allocateOutputBlob");
+
+    if (!graph || !graph->IsReady())
+        THROW_IE_EXCEPTION << "Graph is not ready!";
+
+    InferenceEngine::BlobMap blobs;
+    graph->getOutputBlobs(blobs);
+
+    if (blobs.find(name) != blobs.end()) {
+        allocateOutputBlob(name, blobs);
+    } else {
+        THROW_IE_EXCEPTION << "Cannot find blob with name: " << name << " in the MKLDNNPlugin graph.";
+    }
+}
+
+void MKLDNNPlugin::MKLDNNInferRequest::allocateInputBlob(const std::string& name, const InferenceEngine::BlobMap& blobs) {
+    InferenceEngine::TensorDesc desc = blobs.at(name)->getTensorDesc();
+    InferenceEngine::Precision originPrecision = blobs.at(name)->getTensorDesc().getPrecision();
+    if (_networkInputs.find(name) != _networkInputs.end()) {
+        InferenceEngine::Layout l = _networkInputs[name]->getLayout();
+        InferenceEngine::Precision p = _networkInputs[name]->getPrecision();
+        InferenceEngine::SizeVector dims = _networkInputs[name]->getTensorDesc().getDims();
+
+        desc = InferenceEngine::TensorDesc(p, dims, l);
+    }
+
+    _inputs[name] = make_blob_with_precision(desc);
+    _inputs[name]->allocate();
+    if (desc.getPrecision() == originPrecision &&
+        graph->_meanImages.find(name) == graph->_meanImages.end() && !graph->getProperty().batchLimit) {
+        externalPtr[name] = _inputs[name]->buffer();
+    }
+}
+
+void MKLDNNPlugin::MKLDNNInferRequest::allocateOutputBlob(const std::string& name, const InferenceEngine::BlobMap& blobs) {
+    InferenceEngine::TensorDesc desc = blobs.at(name)->getTensorDesc();
+
+    // WA: need to avoid exception thrown when we compare blocking desc in SetBlob
+    // in situation if we push output blobs as inputs for next network (in Hetero plugin)
+    // it may be that output tensor desc will be different from real input tensor desc for next network
+    // because the optimal descriptor was chosen (e.g. inPlace case for Split node)
+    auto currBlockDesc = InferenceEngine::BlockingDesc(desc.getBlockingDesc().getBlockDims(), desc.getBlockingDesc().getOrder());
+    desc = InferenceEngine::TensorDesc(desc.getPrecision(), desc.getDims(), currBlockDesc);
+
+    _outputs[name] = make_blob_with_precision(desc);
+    _outputs[name]->allocate();
+    if (desc.getPrecision() == InferenceEngine::Precision::FP32 && !graph->getProperty().batchLimit) {
+        externalPtr[name] = _outputs[name]->buffer();
     }
 }
