@@ -51,6 +51,7 @@ file(GLOB SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_strided_slice_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_space_to_depth_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_shuffle_channels_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_scatter_update_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_imp.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/list.cpp
 )
@@ -89,6 +90,7 @@ file(GLOB HEADERS
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_strided_slice_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_space_to_depth_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_shuffle_channels_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_scatter_update_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_imp.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/base.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/common/*.h
