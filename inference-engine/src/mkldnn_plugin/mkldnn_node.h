@@ -719,7 +719,7 @@ protected:
 
     virtual const std::vector<impl_desc_type>& getPrimitivesPriority();
 
-    virtual std::vector<mkldnn::memory::format_tag> getAvailableFormatsForDims(const MKLDNNDims& dims) const;
+    virtual std::vector<mkldnn::memory::format_tag> getAvailableFormatsForDims(const Shape& dims) const;
     int batchToProcess();
 
     InferenceEngine::Layout getWeightsLayoutByDims(InferenceEngine::SizeVector dims, bool isGrouped);
