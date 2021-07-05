@@ -38,6 +38,8 @@ private:
     std::vector<size_t> condOffset;
     std::vector<size_t> thenOffset;
     std::vector<size_t> elseOffset;
+    InferenceEngine::Precision conditionPrecision;
+    InferenceEngine::Precision inputPrecision;
 
     std::string errorPrefix;
 

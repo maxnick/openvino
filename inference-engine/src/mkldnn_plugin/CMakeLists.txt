@@ -45,6 +45,7 @@ file(GLOB SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_seq_len_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_loss_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_select_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/list.cpp
 )
 
@@ -76,6 +77,7 @@ file(GLOB HEADERS
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_seq_len_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_loss_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_select_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/base.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/common/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/common/*.hpp

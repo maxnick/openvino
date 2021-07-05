@@ -1671,162 +1671,163 @@ void MKLDNNGraphOptimizer::FusePerformedAsScaleShiftAndFakeQuantize(MKLDNNGraph 
     }
 }
 
-void MKLDNNGraphOptimizer::MergeTransposeAndReorder(MKLDNNGraph &graph) {
-    auto& graphNodes = graph.GetNodes();
+// TODO [mandrono]: uncomment
+// void MKLDNNGraphOptimizer::MergeTransposeAndReorder(MKLDNNGraph &graph) {
+//     auto& graphNodes = graph.GetNodes();
 
-    auto isSutableParentNode = [](MKLDNNNodePtr node) {
-        return node->getType() == Transpose && node->getChildEdges().size() == 1;
-    };
+//     auto isSutableParentNode = [](MKLDNNNodePtr node) {
+//         return node->getType() == Transpose && node->getChildEdges().size() == 1;
+//     };
 
-    auto isSutableChildNode = [](MKLDNNNodePtr node) {
-        return node->getType() == Reorder && node->getChildEdges().size() == 1;
-    };
+//     auto isSutableChildNode = [](MKLDNNNodePtr node) {
+//         return node->getType() == Reorder && node->getChildEdges().size() == 1;
+//     };
 
-    // Method checkAscendingSummaryOrder() checks that after the sequential execution of Transpose and Reorder nodes,
-    // the order of the elements in the memory will not change. In other words, that Transpose+Reorder is identical permutation.
-    auto checkAscendingSummaryOrder = [](std::shared_ptr<MKLDNNNode> &parentNode, std::shared_ptr<MKLDNNNode> &childNode) -> bool {
-        auto* transposeNode = dynamic_cast<MKLDNNTransposeNode*>(parentNode.get());
-        auto* reorderNode = dynamic_cast<MKLDNNReorderNode*>(childNode.get());
-        if (!transposeNode || !reorderNode) {
-            return false;
-        }
+//     // Method checkAscendingSummaryOrder() checks that after the sequential execution of Transpose and Reorder nodes,
+//     // the order of the elements in the memory will not change. In other words, that Transpose+Reorder is identical permutation.
+//     auto checkAscendingSummaryOrder = [](std::shared_ptr<MKLDNNNode> &parentNode, std::shared_ptr<MKLDNNNode> &childNode) -> bool {
+//         auto* transposeNode = dynamic_cast<MKLDNNTransposeNode*>(parentNode.get());
+//         auto* reorderNode = dynamic_cast<MKLDNNReorderNode*>(childNode.get());
+//         if (!transposeNode || !reorderNode) {
+//             return false;
+//         }
 
-        auto& transposeOrder = transposeNode->getOrder();
-        auto& layoutOrder = transposeNode->getSelectedPrimitiveDescriptor()->getConfig().outConfs[0].desc->as<BlockedMemoryDesc>()->getOrder();
+//         auto& transposeOrder = transposeNode->getOrder();
+//         auto& layoutOrder = transposeNode->getSelectedPrimitiveDescriptor()->getConfig().outConfs[0].desc->as<BlockedMemoryDesc>()->getOrder();
 
-        auto inDesc = reorderNode->getSelectedPrimitiveDescriptor()->getConfig().inConfs[0].desc->as<MKLDNNMemoryDesc>();
-        auto outDesc = reorderNode->getSelectedPrimitiveDescriptor()->getConfig().outConfs[0].desc->as<MKLDNNMemoryDesc>();
+//         auto inDesc = reorderNode->getSelectedPrimitiveDescriptor()->getConfig().inConfs[0].desc->as<MKLDNNMemoryDesc>();
+//         auto outDesc = reorderNode->getSelectedPrimitiveDescriptor()->getConfig().outConfs[0].desc->as<MKLDNNMemoryDesc>();
 
-        auto inBlockedDesc = MemoryDescUtils::convertToBlockedDescriptor(*inDesc);
-        auto outBlockedDesc = MemoryDescUtils::convertToBlockedDescriptor(*outDesc);
+//         auto inBlockedDesc = MemoryDescUtils::convertToBlockedDescriptor(*inDesc);
+//         auto outBlockedDesc = MemoryDescUtils::convertToBlockedDescriptor(*outDesc);
 
-        auto& inOrder = inBlockedDesc.getOrder();
-        auto& outOrder = outBlockedDesc.getOrder();
+//         auto& inOrder = inBlockedDesc.getOrder();
+//         auto& outOrder = outBlockedDesc.getOrder();
 
-        if (transposeOrder.size() != layoutOrder.size() || layoutOrder.size() != inOrder.size() || inOrder.size() != outOrder.size()) {
-            return false;
-        }
+//         if (transposeOrder.size() != layoutOrder.size() || layoutOrder.size() != inOrder.size() || inOrder.size() != outOrder.size()) {
+//             return false;
+//         }
 
-        // revLayoutOrder - reverse permutation for layoutOrder
-        auto revLayoutOrder = SizeVector(layoutOrder.size());
-        for (int i = 0; i < revLayoutOrder.size(); i++) {
-            revLayoutOrder[layoutOrder[i]] = i;
-        }
+//         // revLayoutOrder - reverse permutation for layoutOrder
+//         auto revLayoutOrder = SizeVector(layoutOrder.size());
+//         for (int i = 0; i < revLayoutOrder.size(); i++) {
+//             revLayoutOrder[layoutOrder[i]] = i;
+//         }
 
-        // newTransposeOrder - Transpose layout-aware permutation
-        auto newTransposeOrder = SizeVector(transposeOrder.size());
-        for (int i = 0; i < newTransposeOrder.size(); i++) {
-            newTransposeOrder[i] = layoutOrder[transposeOrder[revLayoutOrder[i]]];
-        }
+//         // newTransposeOrder - Transpose layout-aware permutation
+//         auto newTransposeOrder = SizeVector(transposeOrder.size());
+//         for (int i = 0; i < newTransposeOrder.size(); i++) {
+//             newTransposeOrder[i] = layoutOrder[transposeOrder[revLayoutOrder[i]]];
+//         }
 
-        // reorderOrder - Reorder layout-aware permutation
-        auto reorderOrder = SizeVector(outOrder.size());
-        for (int i = 0; i < reorderOrder.size(); i++) {
-            for (int j = 0; j < reorderOrder.size(); j++) {
-                if (outOrder[i] == inOrder[j]) {
-                    reorderOrder[i] = j;
-                    continue;
-                }
-            }
-        }
+//         // reorderOrder - Reorder layout-aware permutation
+//         auto reorderOrder = SizeVector(outOrder.size());
+//         for (int i = 0; i < reorderOrder.size(); i++) {
+//             for (int j = 0; j < reorderOrder.size(); j++) {
+//                 if (outOrder[i] == inOrder[j]) {
+//                     reorderOrder[i] = j;
+//                     continue;
+//                 }
+//             }
+//         }
 
-        // summaryOrder - resulting Transpose+Reorder permutation
-        auto summaryOrder = SizeVector(transposeOrder.size());
-        for (int i = 0; i < summaryOrder.size(); i++) {
-            summaryOrder[i] = reorderOrder[newTransposeOrder[i]];
-        }
+//         // summaryOrder - resulting Transpose+Reorder permutation
+//         auto summaryOrder = SizeVector(transposeOrder.size());
+//         for (int i = 0; i < summaryOrder.size(); i++) {
+//             summaryOrder[i] = reorderOrder[newTransposeOrder[i]];
+//         }
 
-        // check that Transpose+Reorder is the identical permutation
-        for (int i = 0; i < summaryOrder.size(); i++) {
-            if (summaryOrder[i] != i) {
-                return false;
-            }
-        }
+//         // check that Transpose+Reorder is the identical permutation
+//         for (int i = 0; i < summaryOrder.size(); i++) {
+//             if (summaryOrder[i] != i) {
+//                 return false;
+//             }
+//         }
 
-        return true;
-    };
+//         return true;
+//     };
 
-    // Transpose and Reorder do opposite permutation to each other.
-    // Example:
-    //      chain [physical layout: NCHW, logical layout: NCHW] -> Transpose(order=0312) -> [physical layout: NWCH, logical layout: NCHW] ->
-    //      Reorder(nchw->nhwc) -> [physical layout: NCHW, logical layout: NHWC] can be replaced with Reorder(nchw->nhwc; isOptimized=true)
-    //      which will just reinterprets layout without physical change of the memory.
-    // Two cases are possible:
-    //      1) inPrec = outPrec
-    //          In this case, we replace Transpose+Reorder pattern with a new Reorder that does nothing.
-    //      2) inPrec != outPrec
-    //          As in the first case, we also replace Transpose+Reorder pattern with a new Reorder.
-    //          Additionally, we insert another Reorder that performs the conversion from the input precision (inPrec)
-    //          to the output precision (outPrec)
-    auto mergeTransposeAndReorder = [&](std::shared_ptr<MKLDNNNode>& parentNode, std::shared_ptr<MKLDNNNode>& childNode) {
-        auto parentParentNode = parentNode->getParentEdgesAtPort(0)[0]->getParent();
-        auto parentParentConstNode = parentNode->getParentEdgesAtPort(1)[0]->getParent();
-        auto childChildNode = childNode->getChildEdgeAt(0)->getChild();
+//     // Transpose and Reorder do opposite permutation to each other.
+//     // Example:
+//     //      chain [physical layout: NCHW, logical layout: NCHW] -> Transpose(order=0312) -> [physical layout: NWCH, logical layout: NCHW] ->
+//     //      Reorder(nchw->nhwc) -> [physical layout: NCHW, logical layout: NHWC] can be replaced with Reorder(nchw->nhwc; isOptimized=true)
+//     //      which will just reinterprets layout without physical change of the memory.
+//     // Two cases are possible:
+//     //      1) inPrec = outPrec
+//     //          In this case, we replace Transpose+Reorder pattern with a new Reorder that does nothing.
+//     //      2) inPrec != outPrec
+//     //          As in the first case, we also replace Transpose+Reorder pattern with a new Reorder.
+//     //          Additionally, we insert another Reorder that performs the conversion from the input precision (inPrec)
+//     //          to the output precision (outPrec)
+//     auto mergeTransposeAndReorder = [&](std::shared_ptr<MKLDNNNode>& parentNode, std::shared_ptr<MKLDNNNode>& childNode) {
+//         auto parentParentNode = parentNode->getParentEdgesAtPort(0)[0]->getParent();
+//         auto parentParentConstNode = parentNode->getParentEdgesAtPort(1)[0]->getParent();
+//         auto childChildNode = childNode->getChildEdgeAt(0)->getChild();
 
-        auto &remEdge = parentParentConstNode->getChildEdgeAt(0);
-        remEdge->drop();
-        auto& edges = graph.GetEdges();
-        for (auto it = edges.begin(); it != edges.end(); it++) {
-            if ((*it) == remEdge) {
-                edges.erase(it);
-                parentParentConstNode->remove();
-                break;
-            }
-        }
+//         auto &remEdge = parentParentConstNode->getChildEdgeAt(0);
+//         remEdge->drop();
+//         auto& edges = graph.GetEdges();
+//         for (auto it = edges.begin(); it != edges.end(); it++) {
+//             if ((*it) == remEdge) {
+//                 edges.erase(it);
+//                 parentParentConstNode->remove();
+//                 break;
+//             }
+//         }
 
-        graph.DropNode(parentNode);
-        graph.DropNode(childNode);
+//         graph.DropNode(parentNode);
+//         graph.DropNode(childNode);
 
-        auto& inDesc = parentNode->getSelectedPrimitiveDescriptor()->getConfig().inConfs[0].desc;
-        auto& outDesc = childNode->getSelectedPrimitiveDescriptor()->getConfig().outConfs[0].desc;
+//         auto& inDesc = parentNode->getSelectedPrimitiveDescriptor()->getConfig().inConfs[0].desc;
+//         auto& outDesc = childNode->getSelectedPrimitiveDescriptor()->getConfig().outConfs[0].desc;
 
-        auto inPrec = inDesc->getPrecision();
-        auto outPrec = outDesc->getPrecision();
+//         auto inPrec = inDesc->getPrecision();
+//         auto outPrec = outDesc->getPrecision();
 
-        auto reorderInDesc = inDesc->clone();
-        auto reorderOutDesc = outDesc->clone();
-        reorderOutDesc->setPrecision(inPrec);
+//         auto reorderInDesc = inDesc->clone();
+//         auto reorderOutDesc = outDesc->clone();
+//         reorderOutDesc->setPrecision(inPrec);
 
-        std::string reorderlayerName = parentParentNode->getName() + "_" +
-                MKLDNNExtensionUtils::getReorderArgs(*reorderInDesc, *reorderOutDesc) + "_" + "fake";
+//         std::string reorderlayerName = parentParentNode->getName() + "_" +
+//                 MKLDNNExtensionUtils::getReorderArgs(*reorderInDesc, *reorderOutDesc) + "_" + "fake";
 
-        MKLDNNEdgePtr edge;
-        for (auto &childEdge : parentParentNode->getChildEdges()) {
-            if (childEdge.lock()->getChild() == childChildNode) {
-                edge = childEdge.lock();
-                break;
-            }
-        }
-        if (!edge) {
-            IE_THROW() << "Transpose node '" << parentNode->getName() << "' has invalid edges.";
-        }
+//         MKLDNNEdgePtr edge;
+//         for (auto &childEdge : parentParentNode->getChildEdges()) {
+//             if (childEdge.lock()->getChild() == childChildNode) {
+//                 edge = childEdge.lock();
+//                 break;
+//             }
+//         }
+//         if (!edge) {
+//             IE_THROW() << "Transpose node '" << parentNode->getName() << "' has invalid edges.";
+//         }
 
-        auto reorderNode = graph.InsertReorder(edge, reorderlayerName, *reorderInDesc, *reorderOutDesc, true);
+//         auto reorderNode = graph.InsertReorder(edge, reorderlayerName, *reorderInDesc, *reorderOutDesc, true);
 
-        // case 2
-        if (inPrec != outPrec) {
-            auto reorderInDesc2 = reorderOutDesc->clone();
-            auto reorderOutDesc2 = outDesc->clone();
+//         // case 2
+//         if (inPrec != outPrec) {
+//             auto reorderInDesc2 = reorderOutDesc->clone();
+//             auto reorderOutDesc2 = outDesc->clone();
 
-            std::string reorderLayerName2 = reorderNode->getName() + "_" +
-                                    MKLDNNExtensionUtils::getReorderArgs(*reorderInDesc2, *reorderOutDesc2) + "_" + childChildNode->getName();
+//             std::string reorderLayerName2 = reorderNode->getName() + "_" +
+//                                     MKLDNNExtensionUtils::getReorderArgs(*reorderInDesc2, *reorderOutDesc2) + "_" + childChildNode->getName();
 
-            graph.InsertReorder(reorderNode->getChildEdgeAt(0), reorderLayerName2, *reorderInDesc2, *reorderOutDesc2, false);
-        }
-    };
+//             graph.InsertReorder(reorderNode->getChildEdgeAt(0), reorderLayerName2, *reorderInDesc2, *reorderOutDesc2, false);
+//         }
+//     };
 
-    for (int i = 0; i < graphNodes.size(); i++) {
-        auto parentNode = graphNodes[i];
-        if (!isSutableParentNode(parentNode)) {
-            continue;
-        }
-        auto childNode = parentNode->getChildEdgeAt(0)->getChild();
-        if (!isSutableChildNode(childNode)) {
-            continue;
-        }
+//     for (int i = 0; i < graphNodes.size(); i++) {
+//         auto parentNode = graphNodes[i];
+//         if (!isSutableParentNode(parentNode)) {
+//             continue;
+//         }
+//         auto childNode = parentNode->getChildEdgeAt(0)->getChild();
+//         if (!isSutableChildNode(childNode)) {
+//             continue;
+//         }
 
-        if (checkAscendingSummaryOrder(parentNode, childNode)) {
-            mergeTransposeAndReorder(parentNode, childNode);
-        }
-    }
-}
+//         if (checkAscendingSummaryOrder(parentNode, childNode)) {
+//             mergeTransposeAndReorder(parentNode, childNode);
+//         }
+//     }
+// }

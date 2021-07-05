@@ -38,7 +38,7 @@ private:
     void FuseEltwiseAndSimple(MKLDNNGraph &graph);
     void FusePerformedAsScaleShiftAndFakeQuantize(MKLDNNGraph &graph);
     void FuseClampAndFakeQuantize(MKLDNNGraph &graph);
-    void MergeTransposeAndReorder(MKLDNNGraph &graph);
+    // void MergeTransposeAndReorder(MKLDNNGraph &graph);
 
     void removeEdge(MKLDNNGraph &graph, MKLDNNEdgePtr& edge);
 };
