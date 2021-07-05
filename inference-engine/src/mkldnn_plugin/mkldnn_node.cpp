@@ -254,8 +254,11 @@ MKLDNNNode::MKLDNNNode(const std::shared_ptr<ngraph::Node>& op, const mkldnn::en
     for (size_t i = 0; i < op->get_input_size(); i++) {
         const auto &shape = op->get_input_partial_shape(i);
         // TODO [DS]: How should we handle scalar shapes?
-        inputShapes.emplace_back(shape);
-//        inputShapes.emplace_back(ngraph::is_scalar(shape) ? ngraph::Shape{1} : shape);
+        bool isScalar = false;
+        if (shape.rank().is_static()) {
+            isScalar = shape.rank().get_length() == 0;
+        }
+        inputShapes.emplace_back(isScalar ? ngraph::PartialShape{1} : shape);
         originalInputPrecisions.emplace_back(details::convertPrecision(op->get_input_element_type(i)));
     }
 
@@ -266,8 +269,11 @@ MKLDNNNode::MKLDNNNode(const std::shared_ptr<ngraph::Node>& op, const mkldnn::en
         for (size_t i = 0; i < op->get_output_size(); i++) {
             const auto &shape = op->get_output_partial_shape(i);
             // TODO [DS]: How should we handle scalar shapes?
-            outputShapes.emplace_back(shape);
-//            outDims.emplace_back(ngraph::is_scalar(shape) ? ngraph::Shape{1} : shape);
+            bool isScalar = false;
+            if (shape.rank().is_static()) {
+                isScalar = shape.rank().get_length() == 0;
+            }
+            outputShapes.emplace_back(isScalar ? ngraph::PartialShape{1} : shape);
             originalOutputPrecisions.emplace_back(details::convertPrecision(op->get_output_element_type(i)));
         }
     }

@@ -60,6 +60,13 @@ file(GLOB SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reshape_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reorg_yolo_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_region_yolo_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reduce_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_range_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_pad_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_one_hot_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_normalize_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_non_max_suppression_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_mvn_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_imp.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/list.cpp
 )
@@ -107,6 +114,13 @@ file(GLOB HEADERS
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reshape_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reorg_yolo_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_region_yolo_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reduce_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_range_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_pad_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_one_hot_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_normalize_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_non_max_suppression_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_mvn_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_imp.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/base.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/common/*.h
