@@ -83,6 +83,16 @@ file(GLOB SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_packed_sum_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_sum_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_segments_sum_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_space_to_batch_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_grn_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_tree_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_nd_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_elements_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_extract_image_patches_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_dft_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detection_output_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_depth_to_space_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_imp.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/list.cpp
 )
@@ -153,6 +163,16 @@ file(GLOB HEADERS
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_packed_sum_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_sum_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_segments_sum_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_space_to_batch_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_grn_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_tree_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_nd_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_elements_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_extract_image_patches_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_dft_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detection_output_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_depth_to_space_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_imp.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/base.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/common/*.h
