@@ -74,6 +74,15 @@ file(GLOB SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_lrn_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_log_softmax_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_interpolate_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_experimental_detectron_detection_output_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_experimental_detectron_generate_proposals_single_image_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_experimental_detectron_priorgridgenerator_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_experimental_detectron_roifeatureextractor_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_experimental_detectron_topkrois_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_offset_sum_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_packed_sum_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_sum_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_segments_sum_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_imp.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/list.cpp
 )
@@ -135,6 +144,15 @@ file(GLOB HEADERS
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_lrn_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_log_softmax_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_interpolate_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_experimental_detectron_detection_output_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_experimental_detectron_generate_proposals_single_image_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_experimental_detectron_priorgridgenerator_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_experimental_detectron_roifeatureextractor_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_experimental_detectron_topkrois_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_offset_sum_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_packed_sum_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_sum_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_segments_sum_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_imp.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/base.hpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/common/*.h
