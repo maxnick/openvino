@@ -94,9 +94,9 @@ file(GLOB SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_depth_to_space_node.cpp
         # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_deconv_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_node.cpp
-        # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_softmax_node.cpp
-        # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_fullyconnected_node.cpp
-        # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_matmul_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_softmax_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_fullyconnected_node.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_matmul_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_pooling_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_def_conv_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_imp.cpp
@@ -180,9 +180,9 @@ file(GLOB HEADERS
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_depth_to_space_node.h
         # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_deconv_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_node.h
-        # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_softmax_node.h
-        # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_fullyconnected_node.h
-        # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_matmul_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_softmax_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_fullyconnected_node.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_matmul_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_pooling_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_def_conv_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_imp.hpp
