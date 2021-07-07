@@ -92,7 +92,6 @@ file(GLOB SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_dft_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detection_output_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_depth_to_space_node.cpp
-        # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_deconv_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_softmax_node.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_fullyconnected_node.cpp
@@ -178,7 +177,6 @@ file(GLOB HEADERS
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_dft_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detection_output_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_depth_to_space_node.h
-        # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_deconv_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_softmax_node.h
         ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_fullyconnected_node.h
