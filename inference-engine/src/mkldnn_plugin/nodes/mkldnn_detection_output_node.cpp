@@ -293,7 +293,7 @@ void MKLDNNDetectionOutputNode::execute(mkldnn::stream strm) {
     else
         dst_data_size = N * _num_classes * _num_priors * DETECTION_SIZE * sizeof(float);
 
-    if (dst_data_size > getChildEdgesAtPort(0)[0]->getShape().getElementsCount() * getChildEdgesAtPort(0)[0]->getMemory().GetDesc().getPrecision().size()) {
+    if (dst_data_size > getChildEdgesAtPort(0)[0]->getMemory().GetSize()) {
         IE_THROW() << OUT_OF_BOUNDS;
     }
     memset(dst_data, 0, dst_data_size);

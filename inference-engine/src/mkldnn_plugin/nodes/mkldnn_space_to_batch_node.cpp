@@ -112,7 +112,6 @@ void MKLDNNSpaceToBatchNode::SpaceToBatchKernel() {
     const auto *srcData = reinterpret_cast<const T *>(getParentEdgeAt(0)->getMemoryPtr()->GetPtr());
     auto *dstData = reinterpret_cast<T *>(getChildEdgeAt(0)->getMemoryPtr()->GetPtr());
 
-    // const auto layout = getParentEdgeAt(0)->GetDesc().getLayout();
     const bool blocked = getParentEdgeAt(0)->getMemory().GetDesc().checkGeneralLayout(GeneralLayout::nCsp16c) ||
                          getParentEdgeAt(0)->getMemory().GetDesc().checkGeneralLayout(GeneralLayout::nCsp8c);
     const auto dimsSize = inDims.size();
@@ -130,8 +129,9 @@ void MKLDNNSpaceToBatchNode::SpaceToBatchKernel() {
         blockShape.erase(blockShape.begin() + 1);
     }
 
-    const size_t blockSize = blocked ? getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>().getBlockDims().back() : 1lu;
-    const size_t blockCountInput = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>().getBlockDims()[1];
+    const auto outBlkDims = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>().getBlockDims();
+    const size_t blockSize = blocked ? outBlkDims.back() : 1lu;
+    const size_t blockCountInput = outBlkDims[1];
     const size_t blockCountOutput = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>().getBlockDims()[1];
     const auto blockRemainder = inShape5D[1] % blockSize;
     const auto lastBlock = blockRemainder == 0 ? blockSize : blockRemainder;

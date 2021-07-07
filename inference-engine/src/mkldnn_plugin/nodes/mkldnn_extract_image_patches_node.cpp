@@ -12,7 +12,6 @@
 #include "list.hpp"
 #include <cpu/x64/jit_generator.hpp>
 #include "caseless.hpp"
-#include <cpu_memory_desc_utils.h>
 
 using namespace MKLDNNPlugin;
 using namespace InferenceEngine;

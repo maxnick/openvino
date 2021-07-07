@@ -12,7 +12,6 @@
 #include <precision_utils.h>
 #include <utils/general_utils.h>
 #include "common/cpu_memcpy.h"
-#include <cpu_memory_desc_utils.h>
 
 using namespace MKLDNNPlugin;
 using namespace InferenceEngine;
@@ -155,8 +154,7 @@ void MKLDNNGatherNDNode::gatherBlocks() {
 
     const size_t batchStep = _batchStep * _dataTypeSize;
     const size_t dataStep = _blockSize * _dataTypeSize;
-    const size_t cycles = getChildEdgeAt(0)->getShape().getElementsCount() *
-                          getChildEdgeAt(0)->getMemory().GetDesc().getPrecision().size() / (dataStep * _batchNum);
+    const size_t cycles = getChildEdgeAt(0)->getMemory().GetSize() / (dataStep * _batchNum);
     const size_t CS = cycles * _sliceRank;
     const size_t CB = cycles * dataStep;
     const size_t workAmount = _batchNum * cycles;
