@@ -171,9 +171,9 @@ void MKLDNNSplitNode::initSupportedPrimitiveDescriptors() {
     for (auto refPdIndex : pdIndexesToReuse) {
         const auto& refConfig = supportedPrimitiveDescriptors[refPdIndex].getConfig();
         auto config = refConfig;
-        const auto inBlockingDesc = MemoryDescUtils::convertToBlockedDescriptor(*refConfig.inConfs[0].desc);
-        const auto& order = inBlockingDesc.getOrder();
-        const auto& blkDims = inBlockingDesc.getBlockDims();
+        const auto inBlockingDesc = refConfig.inConfs[0].desc->as<BlockedMemoryDesc>();
+        const auto& order = inBlockingDesc->getOrder();
+        const auto& blkDims = inBlockingDesc->getBlockDims();
         auto numOfDim = blkDims.size();
 
         SizeVector offsets(numOfDim, 0lu);

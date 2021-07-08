@@ -163,8 +163,8 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
         const auto& refConfig = supportedPrimitiveDescriptors[refPdIndex].getConfig();
         auto config = refConfig;
 
-        const auto order = MemoryDescUtils::convertToBlockedDescriptor(*refConfig.outConfs[0].desc).getOrder();
-        const auto blkDims = MemoryDescUtils::convertToBlockedDescriptor(*refConfig.outConfs[0].desc).getBlockDims();
+        const auto &order = refConfig.outConfs[0].desc->as<BlockedMemoryDesc>()->getOrder();
+        const auto &blkDims = refConfig.outConfs[0].desc->as<BlockedMemoryDesc>()->getBlockDims();
         auto numOfDim = blkDims.size();
 
         SizeVector offsets(numOfDim, 0lu);
@@ -183,7 +183,7 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
         config.outConfs[0].desc = make_unique<BlockedMemoryDesc>(outputPrecision, dstDims, blkDims, order, offset, offsets, strides);
 
         for (size_t i = 0; i < getParentEdges().size(); i++) {
-            const auto srcBlkDims = MemoryDescUtils::convertToBlockedDescriptor(*refConfig.inConfs[i].desc).getBlockDims();
+            const auto& srcBlkDims = refConfig.inConfs[i].desc->as<BlockedMemoryDesc>()->getBlockDims();
             const auto& dims = refConfig.inConfs[i].desc->getShape().getStaticDims();
 
             config.inConfs[i].inPlace = 0;
@@ -441,8 +441,7 @@ void MKLDNNConcatNode::initOptimalPrimitiveDescriptor() {
     auto firstOutBlockingDesc = MemoryDescUtils::convertToBlockedDescriptor(*config.outConfs[0].desc);
     size_t offset = 0;
     for (size_t i = 0; i < config.inConfs.size(); i++) {
-        auto inpDesc = config.inConfs[i].desc->clone();
-        auto inpBlockingDesc = MemoryDescUtils::convertToBlockedDescriptor(*inpDesc);
+        auto inpBlockingDesc = MemoryDescUtils::convertToBlockedDescriptor(*config.inConfs[i].desc);
         config.inConfs[i].desc = make_unique<BlockedMemoryDesc>(inpBlockingDesc.getPrecision(),
                                                                 inpBlockingDesc.getShape().getStaticDims(),
                                                                 inpBlockingDesc.getBlockDims(),

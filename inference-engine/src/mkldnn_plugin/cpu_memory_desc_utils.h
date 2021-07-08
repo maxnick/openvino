@@ -23,11 +23,6 @@ public:
     static MKLDNNMemoryDesc convertToMKLDNNMemoryDesc(const InferenceEngine::TensorDesc& desc);
     static BlockedMemoryDesc convertToBlockedDescriptor(const MemoryDesc& desc);
     static BlockedMemoryDesc convertToBlockedDescriptor(const MKLDNNMemoryDesc& inpDesc);
-
-private:
-    friend class MKLDNNMemory;
-    friend class MKLDNNGraphOptimizer;
-
     //static MemoryDescPtr getUndefinedMemoryDesc(const MKLDNNMemoryDesc& desc);
 };
 
