@@ -76,12 +76,10 @@ std::vector<std::string> disabledTestPatterns() {
 
 
         // INVESTIGATE
-        // R"(.*FakeQuantizeLayerTest.*)",
         R"(.*OnnxModelWithCustomAbs.*)",
         R"(.*XmlModelWithCustomAbs.*)",
         R"(.*SetMean.*)",
         R"(.*SetScale.*)",
-        // R"(.*smoke_LPT.*)",
         R"(.*GRUSequenceCPUTest.*)", // reorder BF16
         R"(.*LSTMSequenceCPUTest.*)", // reorder BF16
         R"(.*RNNSequenceCPUTest.*)" // reorder BF16
