@@ -347,11 +347,11 @@ BlockedMemoryDesc MemoryDescUtils::convertToBlockedDescriptor(const MemoryDesc &
 
 MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const MKLDNNMemoryDesc& desc) {
     if (desc.getFormatKind() != dnnl_format_kind_t::dnnl_blocked)
-        return make_unique<MKLDNNMemoryDesc>(desc);
+        return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(desc);
 
     mkldnn::memory::desc retDesc = desc;
     retDesc.data.offset0 = Shape::UNDEFINED_DIM;
-    return make_unique<MKLDNNMemoryDesc>(retDesc);
+    return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(retDesc);
 }
 
 MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const BlockedMemoryDesc &desc) {
@@ -362,20 +362,20 @@ MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const BlockedMemoryDesc &des
     offsetPaddingToData.resize(desc.getBlockDims().size(), 0);
     size_t offsetPadding = Shape::UNDEFINED_DIM;
 
-    return make_unique<BlockedMemoryDesc>(desc.getPrecision(), desc.getShape().getDims(), desc.getBlockDims(),
+    return MKLDNNPlugin::make_unique<BlockedMemoryDesc>(desc.getPrecision(), desc.getShape().getDims(), desc.getBlockDims(),
                                                   desc.getOrder(), offsetPadding, offsetPaddingToData, strides);
 }
 
 MemoryDescPtr MemoryDescUtils::resetOffset(const MemoryDesc* desc) {
     if (MemoryDescType::Blocked == desc->getType()) {
         auto blockedDesc = desc->as<BlockedMemoryDesc>();
-        return make_unique<BlockedMemoryDesc>(blockedDesc->getPrecision(), blockedDesc->getShape().getDims(),
+        return MKLDNNPlugin::make_unique<BlockedMemoryDesc>(blockedDesc->getPrecision(), blockedDesc->getShape().getDims(),
                                               blockedDesc->getBlockDims(), blockedDesc->getOrder());
     } else if (MemoryDescType::Mkldnn == desc->getType()) {
         auto mkldnnDesc = desc->as<MKLDNNMemoryDesc>();
         mkldnn::memory::desc retDesc = *mkldnnDesc;
         retDesc.data.offset0 = 0;
-        return make_unique<MKLDNNMemoryDesc>(retDesc);
+        return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(retDesc);
     }
     return desc->clone();
 }
