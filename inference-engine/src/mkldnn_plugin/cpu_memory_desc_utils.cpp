@@ -134,6 +134,21 @@ MKLDNNMemoryDesc MemoryDescUtils::convertToMKLDNNMemoryDesc(const MemoryDesc& de
 
 MKLDNNMemoryDesc MemoryDescUtils::convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc) {
     dnnl_memory_desc_t mkldnnDesc;
+
+    // scalar case
+    if (desc.getShape().getRank() == 0) {
+        mkldnn::memory::desc convertedDesc;
+        convertedDesc.data.format_kind = dnnl_blocked;
+        convertedDesc.data.data_type = memory::convert_to_c(MKLDNNMemory::convertToDataType(desc.getPrecision()));
+        convertedDesc.data.ndims = 1;
+        convertedDesc.data.dims[0] = 1;
+        convertedDesc.data.padded_dims[0] = 1;
+        convertedDesc.data.format_desc.blocking.strides[0] = 1;
+        convertedDesc.data.padded_offsets[0] = 0;
+        convertedDesc.data.offset0 = desc.getOffsetPadding();
+        return MKLDNNMemoryDesc(convertedDesc);
+    }
+
     auto dims = desc.getShape().getStaticDims();
 
     auto ie_blkdDims = desc.getBlockDims();
