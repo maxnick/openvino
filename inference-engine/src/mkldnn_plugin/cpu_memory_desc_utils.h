@@ -21,11 +21,10 @@ public:
     static MKLDNNMemoryDesc convertToMKLDNNMemoryDesc(const MemoryDesc& desc);
     static MKLDNNMemoryDesc convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc);
     static MKLDNNMemoryDesc convertToMKLDNNMemoryDesc(const InferenceEngine::TensorDesc& desc);
+    static BlockedMemoryDesc convertToBlockedDescriptor(const MemoryDesc& desc);
+    static BlockedMemoryDesc convertToBlockedDescriptor(const MKLDNNMemoryDesc& inpDesc);
 
 private:
-    static BlockedMemoryDesc convertToBlockedDescriptor(const MKLDNNMemoryDesc& inpDesc);
-    static BlockedMemoryDesc convertToBlockedDescriptor(const MemoryDesc& desc);
-
     friend class MKLDNNMemory;
     friend class MKLDNNGraphOptimizer;
 
