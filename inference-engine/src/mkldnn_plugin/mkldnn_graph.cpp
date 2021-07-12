@@ -947,13 +947,13 @@ Config MKLDNNGraph::getProperty() const {
 
 void MKLDNNGraph::getInputBlobs(InferenceEngine::BlobMap &resp) {
     for (auto &it : inputNodesMap) {
-        resp[it.first] = MemoryDescUtils::convertMemToBlob(it.second->getChildEdgeAt(0)->getMemory());
+        resp[it.first] = MemoryDescUtils::interpretAsBlob(it.second->getChildEdgeAt(0)->getMemory());
     }
 }
 
 void MKLDNNGraph::getOutputBlobs(InferenceEngine::BlobMap &resp) {
     for (auto &it : outputNodesMap) {
-        resp[it.first] = MemoryDescUtils::convertMemToBlob(it.second->getParentEdgeAt(0)->getMemory());
+        resp[it.first] = MemoryDescUtils::interpretAsBlob(it.second->getParentEdgeAt(0)->getMemory());
     }
 }
 

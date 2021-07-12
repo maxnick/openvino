@@ -27,7 +27,7 @@ public:
     static MemoryDescPtr applyUndefinedOffset(const MKLDNNMemoryDesc& desc);
     static MemoryDescPtr applyUndefinedOffset(const BlockedMemoryDesc& desc);
     static MemoryDescPtr resetOffset(const MemoryDesc* desc);
-    static InferenceEngine::Blob::Ptr convertMemToBlob(const MKLDNNMemory& mem);
+    static InferenceEngine::Blob::Ptr interpretAsBlob(const MKLDNNMemory& mem);
 };
 
 }  // namespace MKLDNNPlugin

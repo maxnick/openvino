@@ -382,7 +382,7 @@ MemoryDescPtr MemoryDescUtils::resetOffset(const MemoryDesc* desc) {
     return desc->clone();
 }
 
-InferenceEngine::Blob::Ptr MemoryDescUtils::convertMemToBlob(const MKLDNNMemory &mem) {
+InferenceEngine::Blob::Ptr MemoryDescUtils::interpretAsBlob(const MKLDNNMemory &mem) {
     // TODO [DS]: Rewrite when IE is moved to the new TensorDescriptor
     auto& memDesc = mem.GetDesc();
     InferenceEngine::TensorDesc desc = convertToTensorDesc(memDesc);
