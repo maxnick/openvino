@@ -38,7 +38,7 @@ struct IEB_HEADER {
     unsigned long scaling_data_size;
 };
 
-static IEB_HEADER prepare_header(const MKLDNNMemoryDesc& desc) {
+static IEB_HEADER prepare_header(const MemoryDesc& desc) {
     IEB_HEADER header = {};
 
     header.magic[0] = IEB_MAGIC[0];
@@ -84,19 +84,14 @@ static MKLDNNMemoryDesc parse_header(IEB_HEADER &header) {
     return MKLDNNMemoryDesc{MKLDNNDims(dims), prc, MKLDNNMemory::GetPlainFormatByRank(dims.size()) };
 }
 
-size_t product(const mkldnn::memory::dims &vector) {
-    return std::accumulate(vector.begin(), vector.end(), (size_t)1, std::multiplies<size_t>());
-}
-
 static void prepare_plain_data(const MKLDNNMemoryPtr &memory, std::vector<uint8_t> &data) {
-    const auto mdesc = memory->GetDescWithType<MKLDNNMemoryDesc>();
-    size_t data_size = product(memory->GetDims());
     const auto &desc = memory->GetDesc();
+    size_t data_size = desc.getShape().getElementsCount();
     const auto size = data_size * desc.getPrecision().size();
     data.resize(size);
 
     // check if it already plain
-    if (mdesc.checkGeneralLayout(GeneralLayout::ncsp)) {
+    if (desc.checkGeneralLayout(GeneralLayout::ncsp)) {
         cpu_memcpy(data.data(), reinterpret_cast<const uint8_t*>(memory->GetPtr()), size);
         return;
     }
@@ -104,7 +99,7 @@ static void prepare_plain_data(const MKLDNNMemoryPtr &memory, std::vector<uint8_
     // Copy to plain
     const void *ptr = memory->GetData();
 
-    switch (mdesc.getPrecision()) {
+    switch (desc.getPrecision()) {
         case Precision::FP32:
         case Precision::I32: {
             auto *pln_blob_ptr = reinterpret_cast<int32_t *>(data.data());
@@ -137,7 +132,7 @@ void BlobDumper::dump(std::ostream &stream) const {
     if (memory == nullptr)
         IE_THROW() << "Dumper cannot dump. Memory is not allocated.";
 
-    IEB_HEADER header = prepare_header(memory->GetDescWithType<MKLDNNMemoryDesc>());
+    IEB_HEADER header = prepare_header(memory->GetDesc());
     std::vector<uint8_t> data;
     prepare_plain_data(this->memory, data);
 
@@ -155,7 +150,8 @@ void BlobDumper::dumpAsTxt(std::ostream &stream) const {
         IE_THROW() << "Dumper cannot dump. Memory is not allocated.";
 
     const auto dims = memory->GetDims();
-    size_t data_size = product(dims);
+    const auto &desc = memory->GetDesc();
+    size_t data_size = desc.getShape().getElementsCount();
 
     // Header like "U8 4D shape: 2 3 224 224 ()
     stream << memory->GetDesc().getPrecision().name() << " "
@@ -166,7 +162,6 @@ void BlobDumper::dumpAsTxt(std::ostream &stream) const {
     " by address 0x" << std::hex << reinterpret_cast<const long long *>(memory->GetData()) << std::dec <<std::endl;
 
     const void *ptr = memory->GetData();
-    const auto &desc = memory->GetDesc();
 
     switch (desc.getPrecision()) {
         case Precision::FP32 : {
