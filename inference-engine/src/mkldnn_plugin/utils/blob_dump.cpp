@@ -84,9 +84,15 @@ static MKLDNNMemoryDesc parse_header(IEB_HEADER &header) {
     return MKLDNNMemoryDesc{MKLDNNDims(dims), prc, MKLDNNMemory::GetPlainFormatByRank(dims.size()) };
 }
 
+size_t product(const mkldnn::memory::dims &vector) {
+    return std::accumulate(vector.begin(), vector.end(), (size_t)1, std::multiplies<size_t>());
+}
+
 static void prepare_plain_data(const MKLDNNMemoryPtr &memory, std::vector<uint8_t> &data) {
     const auto mdesc = memory->GetDescWithType<MKLDNNMemoryDesc>();
-    const auto size = memory->GetSize();
+    size_t data_size = product(memory->GetDims());
+    const auto &desc = memory->GetDesc();
+    const auto size = data_size * desc.getPrecision().size();
     data.resize(size);
 
     // check if it already plain
@@ -96,9 +102,6 @@ static void prepare_plain_data(const MKLDNNMemoryPtr &memory, std::vector<uint8_
     }
 
     // Copy to plain
-    mkldnn::memory::desc desc = mdesc;
-    mkldnn::impl::memory_desc_wrapper mem_wrp(desc.data);
-    size_t data_size = mem_wrp.nelems();
     const void *ptr = memory->GetData();
 
     switch (mdesc.getPrecision()) {
@@ -107,14 +110,14 @@ static void prepare_plain_data(const MKLDNNMemoryPtr &memory, std::vector<uint8_
             auto *pln_blob_ptr = reinterpret_cast<int32_t *>(data.data());
             auto *blob_ptr = reinterpret_cast<const int32_t *>(ptr);
             for (size_t i = 0; i < data_size; i++)
-                pln_blob_ptr[i] = blob_ptr[mem_wrp.off_l(i)];
+                pln_blob_ptr[i] = blob_ptr[desc.getOffset(i)];
             break;
         }
         case Precision::BF16: {
             auto *pln_blob_ptr = reinterpret_cast<int16_t *>(data.data());
             auto *blob_ptr = reinterpret_cast<const int16_t *>(ptr);
             for (size_t i = 0; i < data_size; i++)
-                pln_blob_ptr[i] = blob_ptr[mem_wrp.off_l(i)];
+                pln_blob_ptr[i] = blob_ptr[desc.getOffset(i)];
             break;
         }
         case Precision::I8:
@@ -122,7 +125,7 @@ static void prepare_plain_data(const MKLDNNMemoryPtr &memory, std::vector<uint8_
             auto *pln_blob_ptr = reinterpret_cast<int8_t*>(data.data());
             auto *blob_ptr = reinterpret_cast<const int8_t *>(ptr);
             for (size_t i = 0; i < data_size; i++)
-                pln_blob_ptr[i] = blob_ptr[mem_wrp.off_l(i)];
+                pln_blob_ptr[i] = blob_ptr[desc.getOffset(i)];
             break;
         }
         default:
@@ -152,54 +155,52 @@ void BlobDumper::dumpAsTxt(std::ostream &stream) const {
         IE_THROW() << "Dumper cannot dump. Memory is not allocated.";
 
     const auto dims = memory->GetDims();
+    size_t data_size = product(dims);
 
     // Header like "U8 4D shape: 2 3 224 224 ()
-    stream << MKLDNNExtensionUtils::DataTypeToIEPrecision(memory->GetDataType()).name() << " "
+    stream << memory->GetDesc().getPrecision().name() << " "
            << dims.size() << "D "
            << "shape: ";
     for (size_t d : dims) stream << d << " ";
-    stream << "(" << memory->GetElementsCount() << ")" <<
+    stream << "(" << data_size << ")" <<
     " by address 0x" << std::hex << reinterpret_cast<const long long *>(memory->GetData()) << std::dec <<std::endl;
 
-    mkldnn::memory::desc mkldnnDesc = memory->GetDescWithType<MKLDNNMemoryDesc>();
-    mkldnn::impl::memory_desc_wrapper mem_wrp(mkldnnDesc.data);
     const void *ptr = memory->GetData();
+    const auto &desc = memory->GetDesc();
 
-    size_t data_size = memory->GetElementsCount();
-    switch (mkldnnDesc.data_type()) {
-        case mkldnn::memory::data_type::f32 : {
+    switch (desc.getPrecision()) {
+        case Precision::FP32 : {
             auto *blob_ptr = reinterpret_cast<const float*>(ptr);
             for (size_t i = 0; i < data_size; i++)
-                stream << blob_ptr[mem_wrp.off_l(i)] << std::endl;
+                stream << blob_ptr[desc.getOffset(i)] << std::endl;
             break;
         }
-        case mkldnn::memory::data_type::bf16:
-        {
+        case Precision::BF16: {
             auto *blob_ptr = reinterpret_cast<const int16_t*>(ptr);
             for (size_t i = 0; i < data_size; i++) {
-                int i16n = blob_ptr[mem_wrp.off_l(i)];
+                int i16n = blob_ptr[desc.getOffset(i)];
                 i16n = i16n << 16;
                 float fn = *(reinterpret_cast<const float *>(&i16n));
                 stream << fn << std::endl;
             }
             break;
         }
-        case mkldnn::memory::data_type::s32: {
+        case Precision::I32: {
             auto *blob_ptr = reinterpret_cast<const int32_t*>(ptr);
             for (size_t i = 0; i < data_size; i++)
-                stream << blob_ptr[mem_wrp.off_l(i)] << std::endl;
+                stream << blob_ptr[desc.getOffset(i)] << std::endl;
             break;
         }
-        case mkldnn::memory::data_type::s8: {
+        case Precision::I8: {
             auto *blob_ptr = reinterpret_cast<const int8_t*>(ptr);
             for (size_t i = 0; i < data_size; i++)
-                stream << static_cast<int>(blob_ptr[mem_wrp.off_l(i)]) << std::endl;
+                stream << static_cast<int>(blob_ptr[desc.getOffset(i)]) << std::endl;
             break;
         }
-        case mkldnn::memory::data_type::u8: {
+        case Precision::U8: {
             auto *blob_ptr = reinterpret_cast<const uint8_t*>(ptr);
             for (size_t i = 0; i < data_size; i++)
-                stream << static_cast<int>(blob_ptr[mem_wrp.off_l(i)]) << std::endl;
+                stream << static_cast<int>(blob_ptr[desc.getOffset(i)]) << std::endl;
             break;
         }
         default:

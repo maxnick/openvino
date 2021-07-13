@@ -121,7 +121,7 @@ void NodeDumper::dumpInternalBlobs(const MKLDNNNodePtr& node) const {
         if (desc.getPrecision() == Precision::BIN)
             continue;
 
-        MKLDNNMemoryPtr memory = MKLDNNMemoryPtr(new MKLDNNMemory(node->getEngine()));
+        MKLDNNMemoryPtr memory = std::make_shared<MKLDNNMemory>(node->getEngine());
         memory->Create(MemoryDescUtils::convertToMKLDNNMemoryDesc(desc), blb->buffer());
         BlobDumper dumper(memory);
         dump(dumper, dump_file);

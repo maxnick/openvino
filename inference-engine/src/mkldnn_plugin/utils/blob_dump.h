@@ -28,6 +28,7 @@ public:
     BlobDumper(const MKLDNNMemoryDesc &desc) {
         data.resize(desc.getMemSize());
         mkldnn::engine eng;
+        memory = std::make_shared<MKLDNNMemory>(eng);
         memory->Create(desc, data.data());
     }
     BlobDumper(const BlobDumper&) = default;
