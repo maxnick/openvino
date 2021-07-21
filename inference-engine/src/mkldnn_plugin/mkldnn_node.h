@@ -656,7 +656,7 @@ protected:
         this->type = type;
     }
 
-    virtual int getMaxBatch();
+    virtual size_t getMaxBatch();
 
 
     virtual std::unique_ptr<MemoryDesc> getDefinedInputDesc(const NodeConfig &config, size_t idx) const;
