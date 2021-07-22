@@ -833,6 +833,11 @@ void MKLDNNGraph::Infer(MKLDNNInferRequest* request, int batch) {
 
         OV_ITT_SCOPED_TASK(itt::domains::MKLDNNPlugin, node->profiling.execute);
         node->execute(stream);
+        if (node->isDynamicNode()) {
+            node->executeDynamic(stream);
+        } else {
+            node->execute(stream);
+        }
 
         ENABLE_CPU_DEBUG_CAP(nd.dumpOutputBlobs(node));
     }
