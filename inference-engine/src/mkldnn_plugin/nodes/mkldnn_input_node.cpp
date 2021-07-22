@@ -242,7 +242,7 @@ MKLDNNInputNode::MKLDNNInputNode(const std::shared_ptr<ngraph::Node>& op, const 
     if (constOp) {
         constant = ConstantType::Const;
         cloneBlobIfRequired();
-     }
+    }
 }
 
 void MKLDNNInputNode::cloneBlobIfRequired() {
@@ -381,6 +381,17 @@ void MKLDNNInputNode::getSupportedDescriptors() {
             IE_THROW() << "Incorrect number of input edges for layer " << getName();
         if (!getChildEdges().empty())
             IE_THROW() << "Incorrect number of output edges for layer " << getName();
+    }
+}
+
+void MKLDNNInputNode::redefineOutputMemory(std::vector<std::vector<size_t>> newShapes) {
+    if (newShapes.empty()) return;
+
+    if (newShapes.size() != getOriginalOutputsNumber()) {
+        IE_THROW() << "Number shapes mismatch with real outputs number for node with name: " << getName();
+    }
+    for (size_t i = 0; i < getOriginalOutputsNumber(); i++) {
+        getChildEdgesAtPort(i)[0]->getMemoryPtr()->redefineDesc(getOutputMemDescAtPort(i)->cloneWithNewDims(newShapes[i]));
     }
 }
 

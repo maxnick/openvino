@@ -484,7 +484,11 @@ public:
     virtual void setDynamicBatchLim(int lim);
 
     void resolveNotAllocatedEdges();
+
     virtual void execute(mkldnn::stream strm);
+    void executeDynamic(mkldnn::stream strm);
+    virtual void executeDynamicBody(mkldnn::stream strm);
+
     virtual void initSupportedPrimitiveDescriptors();
 
     /**
@@ -507,6 +511,8 @@ public:
     virtual bool created(const MKLDNNExtensionManager::Ptr& extMgr) {
         return created();
     }
+
+    virtual void redefineOutputMemory(std::vector<std::vector<size_t>> newShapes = {});
 
     /**
      * @brief Performs Node initialization based on graph context.
@@ -663,7 +669,15 @@ public:
 
     bool canBePerformedAsScaleShift(const MKLDNNNode *parentNode = nullptr) const;
 
+    bool isDynamicNode() const {
+        return isDynamic;
+    }
+
 protected:
+    virtual std::vector<std::vector<size_t>> shapeInfer() const {
+        IE_THROW() << "MKLDNNNode::shapeInfer not defined for node with type: " << getTypeStr();
+    }
+
     bool canFuseSimpleOperation(const MKLDNNNodePtr& node) const;
     // TODO [mandrono]: place outside of the node API
     void fillScalesAndShifts(const MKLDNNNode *parentNode, std::vector<float> &scales, std::vector<float> &shifts, const int align = -1);
@@ -798,6 +812,8 @@ protected:
     }
 
 private:
+    bool isDynamic = false;
+
     std::vector<MKLDNNEdgeWeakPtr> parentEdges;
     std::vector<MKLDNNEdgeWeakPtr> childEdges;
 

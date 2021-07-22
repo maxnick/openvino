@@ -97,8 +97,13 @@ public:
     const std::vector<size_t>& getDims() const {
         return dims;
     }
+
     bool isStatic() const {
         return type == ShapeType::Static;
+    }
+
+    bool isDynamic() const {
+        return type == ShapeType::Dynamic;
     }
 
     size_t getRank() const {

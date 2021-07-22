@@ -20,9 +20,14 @@ public:
     void execute(mkldnn::stream strm) override;
     bool created() const override;
 
+    std::vector<std::vector<size_t>> shapeInfer() const override;
+    void executeDynamicBody(mkldnn::stream strm) override;
+
 private:
     const std::shared_ptr<ngraph::Node> ngraphOp;
     const std::string additionalErrorMessage;
+
+    ngraph::OutputVector inputsForShapeInfer;
 };
 
 }  // namespace MKLDNNPlugin

@@ -82,6 +82,8 @@ public:
     bool isWithBroadcast();
     bool isSpecialConvolutionAddFusing() const { return specialConvolutionAddFusing; }
 
+    static bool isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept;
+
 private:
     mkldnn::algorithm mkldnnAlgorithm = mkldnn::algorithm::undef;
 
