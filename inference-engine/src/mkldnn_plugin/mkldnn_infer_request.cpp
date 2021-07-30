@@ -209,21 +209,21 @@ std::map<std::string, InferenceEngine::InferenceEngineProfileInfo> MKLDNNPlugin:
 }
 
 void MKLDNNPlugin::MKLDNNInferRequest::createInputBlob(const std::string &name) {
-    if (!graph->hasInputWithName(name))
+    const auto inputNode = graph->inputNodesMap.find(name);
+    if (inputNode == graph->inputNodesMap.end())
         IE_THROW() << "CPU execution graph doesn't contain input node with name: " << name;
 
-    const auto inputNode = graph->inputNodesMap.at(name);
-    if (inputNode->isDynamicNode() && m_realShapes.count(name) == 0) {
-        IE_THROW() << "Cannot get blob " << name << " which contains dynamic shapes";
+    if (inputNode->second->isDynamicNode() && m_realShapes.count(name) == 0) {
+        IE_THROW() << "Cannot create blob " << name << " with dynamic shapes";
     }
 
-    InferenceEngine::TensorDesc origDesc = MemoryDescUtils::convertToTensorDesc(inputNode->getChildEdgesAtPort(0)[0]->getMemory().GetDesc());
+    InferenceEngine::TensorDesc origDesc = MemoryDescUtils::convertToTensorDesc(inputNode->second->getChildEdgesAtPort(0)[0]->getMemory().GetDesc());
     InferenceEngine::TensorDesc desc = origDesc;
 
     if (_networkInputs.find(name) != _networkInputs.end()) {
         InferenceEngine::Layout l = _networkInputs[name]->getLayout();
         InferenceEngine::Precision p = _networkInputs[name]->getPrecision();
-        InferenceEngine::SizeVector dims = inputNode->isDynamicNode() ? m_realShapes.at(name) : _networkInputs[name]->getTensorDesc().getDims();
+        InferenceEngine::SizeVector dims = inputNode->second->isDynamicNode() ? m_realShapes.at(name) : _networkInputs[name]->getTensorDesc().getDims();
 
         desc = InferenceEngine::TensorDesc(p, dims, l);
     }
@@ -232,7 +232,7 @@ void MKLDNNPlugin::MKLDNNInferRequest::createInputBlob(const std::string &name) 
     _inputs[name]->allocate();
 
     // TODO [DS]: enable inplace for dynamic input/output
-    if (!inputNode->isDynamicNode() &&
+    if (!inputNode->second->isDynamicNode() &&
         origDesc == desc &&
         graph->_normalizePreprocMap.find(name) == graph->_normalizePreprocMap.end() && !graph->getProperty().batchLimit) {
         externalPtr[name] = _inputs[name]->buffer();
@@ -393,8 +393,9 @@ void MKLDNNPlugin::MKLDNNInferRequest::SetBlob(const std::string& name, const In
             }
 
             if (foundInput->getInputData()->isDynamic()) {
-                m_realShapes[name] = data->getTensorDesc().getDims();
-                inputNode->second->redefineOutputMemory({m_realShapes[name]});
+                const auto &newShape = data->getTensorDesc().getDims();
+                m_realShapes[name] = newShape;
+                inputNode->second->redefineOutputMemory({newShape});
             } else {
                 size_t inputSize = foundInput->getTensorDesc().getLayout() != InferenceEngine::Layout::SCALAR ?
                                    InferenceEngine::details::product(foundInput->getTensorDesc().getDims()) : 1;
@@ -593,5 +594,5 @@ void MKLDNNPlugin::MKLDNNInferRequest::SetShape(const std::string& name, const I
     if (inputNode == graph->inputNodesMap.end()) {
         IE_THROW() << "CPU execution graph doesn't contain input node with name: " << name;
     }
-    inputNode->second->redefineOutputMemory({m_realShapes.at(name)});
+    inputNode->second->redefineOutputMemory({dims});
 }

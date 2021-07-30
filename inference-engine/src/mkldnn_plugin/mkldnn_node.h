@@ -487,7 +487,6 @@ public:
 
     virtual void execute(mkldnn::stream strm);
     void executeDynamic(mkldnn::stream strm);
-    virtual void executeDynamicBody(mkldnn::stream strm);
 
     virtual void initSupportedPrimitiveDescriptors();
 
@@ -677,6 +676,7 @@ protected:
     virtual std::vector<std::vector<size_t>> shapeInfer() const {
         IE_THROW() << "MKLDNNNode::shapeInfer not defined for node with type: " << getTypeStr();
     }
+    virtual void executeDynamicBody(mkldnn::stream strm);
 
     bool canFuseSimpleOperation(const MKLDNNNodePtr& node) const;
     // TODO [mandrono]: place outside of the node API
