@@ -40,6 +40,76 @@ TEST(MemDescTest, Conversion) {
         ASSERT_TRUE(converted_correctly(p.first, p.second));
 }
 
+TEST(MemDescTest, UndefinedStateConversion) {
+    ngraph::PartialShape ngraphUndefinedShape({{16}, {7, 15}, {-1, -1}, {3}});
+    Shape cpuShape(ngraphUndefinedShape);
+
+    const std::vector<mkldnn::memory::format_tag> vecTags = {
+            mkldnn::memory::format_tag::nChw8c,
+            mkldnn::memory::format_tag::nhwc,
+            mkldnn::memory::format_tag::nChw16c,
+            mkldnn::memory::format_tag::ABcd16a16b,
+            mkldnn::memory::format_tag::OIhw4i16o4i
+    };
+
+    for (auto tag : vecTags) {
+        MKLDNNMemoryDesc mkldnnDesc(cpuShape, mkldnn::memory::data_type::f32, tag);
+
+        ASSERT_FALSE(mkldnnDesc.isDefined());
+
+        auto blockedDesc = MemoryDescUtils::convertToBlockedDescriptor(mkldnnDesc);
+
+        ASSERT_TRUE(mkldnnDesc.isCompatible(blockedDesc));
+        ASSERT_TRUE(blockedDesc.isCompatible(mkldnnDesc));
+
+        auto reconstructedDesc = MemoryDescUtils::convertToMKLDNNMemoryDesc(blockedDesc);
+
+        ASSERT_TRUE(mkldnnDesc.isCompatible(reconstructedDesc));
+        ASSERT_TRUE(blockedDesc.isCompatible(reconstructedDesc));
+
+        mkldnn::memory::desc dnnlDesc = mkldnnDesc;
+        mkldnn::memory::desc reconstDnnlDesc = reconstructedDesc;
+
+        ASSERT_EQ(dnnlDesc, reconstDnnlDesc);
+
+        auto definedMemDesc = mkldnnDesc.cloneWithNewDims({16, 10, 15, 3});
+        auto definedReconstructedMkldnnDesc = reconstructedDesc.cloneWithNewDims({16, 10, 15, 3});
+
+        ASSERT_TRUE(definedMemDesc->isCompatible(*definedReconstructedMkldnnDesc));
+    }
+}
+
+TEST(MemDescTest, TurnToUninit) {
+    Shape cpuShape(SizeVector{7, 19, 43, 20});
+
+    auto& blokcedDescCreators = BlockedDescCreator::getCommonCreators();
+
+    for (auto item : blokcedDescCreators) {
+        auto creator = item.second;
+
+        auto blockedDesc = creator->createDesc(Precision::FP32, cpuShape);
+        auto mkldnnDesc = MemoryDescUtils::convertToMKLDNNMemoryDesc(blockedDesc);
+
+        auto uninitMkldnnDesc = MemoryDescUtils::applyUndefinedOffset(mkldnnDesc);
+
+        ASSERT_TRUE(uninitMkldnnDesc->isCompatible(mkldnnDesc));
+
+        auto strides = blockedDesc.getStrides();
+        std::transform(strides.begin(), strides.begin() + cpuShape.getRank(), strides.begin(), [](size_t x) { return x * 3; });
+
+        auto stridedBlockedDesc = BlockedMemoryDesc(blockedDesc.getPrecision(), blockedDesc.getShape(), blockedDesc.getBlockDims(), blockedDesc.getOrder(),
+                                                    100500, blockedDesc.getOffsetPaddingToData(), strides);
+
+        ASSERT_FALSE(blockedDesc.isCompatible(stridedBlockedDesc));
+        ASSERT_TRUE(uninitMkldnnDesc->isCompatible(stridedBlockedDesc));
+
+        auto initMkldnnDesc = MemoryDescUtils::resetOffset(uninitMkldnnDesc.get());
+
+        ASSERT_TRUE(initMkldnnDesc->isCompatible(blockedDesc));
+        ASSERT_FALSE(initMkldnnDesc->isCompatible(stridedBlockedDesc));
+    }
+}
+
 TEST(MemDescTest, CompareWithTensorDescRecomputedStrides) {
     auto converted_correctly = [] (dnnl::memory::format_tag fmt, dnnl::memory::dims dims) {
         dnnl::memory::desc orig_tdesc {dims, dnnl::memory::data_type::u8, fmt};

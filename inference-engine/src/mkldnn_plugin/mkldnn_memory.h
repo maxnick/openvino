@@ -8,6 +8,7 @@
 #include "mkldnn_dims.h"
 #include "cpu_memory_desc.h"
 #include "mkldnn_extension_utils.h"
+#include "cpu_memory_desc_utils.h"
 #include <mkldnn.hpp>
 #include <mkldnn_types.h>
 #include <cpu_shape.h>
@@ -124,9 +125,18 @@ private:
     std::vector<size_t> getBlockDims() const;
 
 private:
+    MKLDNNMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
+        const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
+        const std::vector<size_t>& strides = {});
+
     static constexpr size_t UNREACHABLE_DIM = std::numeric_limits<size_t>::max();
     mkldnn::memory::desc desc;
     std::vector<size_t> order;
+
+    friend BlockedMemoryDesc MemoryDescUtils::convertToBlockedDescriptor(const MKLDNNMemoryDesc& inpDesc);
+    friend MKLDNNMemoryDesc MemoryDescUtils::convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc);
+    friend MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const MKLDNNMemoryDesc& desc);
+    friend MemoryDescPtr MemoryDescUtils::resetOffset(const MemoryDesc* desc);
 };
 
 

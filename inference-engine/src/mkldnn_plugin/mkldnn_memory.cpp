@@ -18,8 +18,6 @@
 #include "nodes/common/cpu_convert.h"
 #include "mkldnn/ie_mkldnn.h"
 #include "cpu_shape.h"
-#include "cpu_memory_desc_utils.h"
-#include "mkldnn_extension_utils.h"
 
 namespace dnnl {
 namespace impl {
@@ -901,13 +899,10 @@ bool MKLDNNMemoryDesc::isCompatible(const BlockedMemoryDesc &rhs) const {
         return false;
     }
 
-    //TODO [DS]: undefined offset is also used now as an indicator of undefined strides
-    if (desc.data.offset0 != Shape::UNDEFINED_DIM) {
-        size_t skipAxis = this->getShape().getRank() > 0 && this->getShape().getDims().front() == 1 ? 0 :
-                Shape::UNDEFINED_DIM; //ignore batch axis if batch size == 1
-        if (!dimsEqualWeak(getStrides(), rhs.getStrides(), skipAxis)) {
-            return false;
-        }
+    size_t skipAxis = this->getShape().getRank() > 0 && this->getShape().getDims().front() == 1 ? 0 :
+            Shape::UNDEFINED_DIM; //ignore batch axis if batch size == 1
+    if (!dimsEqualWeak(getStrides(), rhs.getStrides(), skipAxis)) {
+        return false;
     }
 
     if (!dimsEqualWeak(getBlockDims(), rhs.getBlockDims())) {
@@ -1099,5 +1094,161 @@ MKLDNNMemoryDesc::MKLDNNMemoryDesc(const Shape &shape, dnnl::memory::data_type d
         // This WA is needed since memory::format_tag doesn't contain plain tag for tensors with rank > 6D
         InitializePlain(shape.getDims(), dataType);
     }
+}
+
+
+/**
+ * Construct from blocked parameters
+ *
+ * IE  IOhw_4i16o4i   dims(N) = {32, 64, 128, 128}
+ *   blockedDims  {4, 2, 128, 128, 4, 16, 4}                      // total dims(inner, outermost, auto blocked/padded). Generally sorted by strides.
+ *   strides      {8388608, 4194304,  32768, 256, 64,  4, 1}      // strides for blockedDims, growing sequence
+ *   order        {1, 0,   2,   3, 1,  0, 1}                      // matching to original dims
+ *
+ *   All vectors blockedDims/strides/order have same size equals total num of internal blocked dims(inner_dims + outer_dims)
+ *
+ *   Tensor descriptor filing is not deterministic. It allows any permutation of index which keeps order of
+ *   real dims spliting.
+ *      for {1, 0, 2, 3, 1, 0, 1} we can swap elements [1] <=> [4]
+ *      but not [0]<=>[4] because it break splitting original dims into internal blocked dims
+ *   Normalization of representation: Make strides growing but keep layout same as original. Not all
+ *   layout allow us to meet normalize form of tensor desc.
+ *
+ *   Limitation of conversion first N elements of order should be permutation of [0,1,2 ... N]
+ */
+
+MKLDNNMemoryDesc::MKLDNNMemoryDesc(InferenceEngine::Precision prc, const Shape &shape, const std::vector<size_t> &blockedDims,
+                                   const std::vector<size_t> &order, size_t offsetPadding, const std::vector<size_t> &offsetPaddingToData,
+                                   const std::vector<size_t> &strides) : MemoryDesc(shape, Mkldnn) {
+        // scalar case
+        if (shape.getRank() == 0) {
+            desc.data.format_kind = dnnl_blocked;
+            desc.data.data_type = memory::convert_to_c(MKLDNNMemory::convertToDataType(prc));
+            desc.data.ndims = 1;
+            desc.data.dims[0] = 1;
+            desc.data.padded_dims[0] = 1;
+            desc.data.format_desc.blocking.strides[0] = 1;
+            desc.data.padded_offsets[0] = 0;
+            desc.data.offset0 = offsetPadding;
+            return;
+        }
+
+        if (order.size() != blockedDims.size()) {
+            IE_THROW() << "Can not construct MKLDNNMemoryDesc, order and blocked dims must have equals size";
+        }
+
+        if (!offsetPaddingToData.empty() && offsetPaddingToData.size() != order.size()) {
+            IE_THROW() << "Can not construct MKLDNNMemoryDesc, offsetPaddingToData must have equal size with order and blocked dims";
+        }
+
+        if (!strides.empty() && strides.size() != order.size()) {
+            IE_THROW() << "Can not construct MKLDNNMemoryDesc, strides must have equal size with order and blocked dims";
+        }
+
+        if (std::any_of(order.begin(), order.end(), [](size_t val) { return val == Shape::UNDEFINED_DIM; })) {
+            IE_THROW() << "MKLDNNMemoryDesc doesn't support undefined order.";
+        }
+
+        if (std::any_of(blockedDims.begin() + shape.getRank(), blockedDims.end(), [](size_t val) { return val == Shape::UNDEFINED_DIM; })) {
+            IE_THROW() << "MKLDNNMemoryDesc doesn't support undefined blockedDims.";
+        }
+
+        auto dims = MKLDNNExtensionUtils::convertToDnnlDims(shape.getDims());
+
+        size_t outer_ndims = dims.size();
+        size_t inner_ndims = order.size() - dims.size();
+
+        if (!strides.empty()) {
+            bool is_descending_strides = true;
+            for (int i = 1; i < strides.size(); i++) {
+                is_descending_strides &= (strides[i - 1] >= strides[i]);
+            }
+
+            // TODO: That's strong constrains and can be mitigated. IE::TensorDesc allow to transpose blocked dims
+            //       and may be we can achieve correct "descending strides" form which allow conversion.
+            if (!is_descending_strides)
+                IE_THROW() << "Can not construct MKLDNNMemoryDesc from strides: " << vec2str(strides);
+        }
+
+        std::vector<size_t> outer_order(outer_ndims, outer_ndims + 1); // outer_order[i] is index of stride for i-th dimension
+        for (size_t i = 0; i < outer_ndims; i++) {
+            outer_order[order[i]] = i;
+        }
+        bool outer_is_correct_permutation_of_n =
+                std::find(outer_order.begin(), outer_order.end(), outer_ndims + 1) == outer_order.end();
+
+        if (!outer_is_correct_permutation_of_n)
+            IE_THROW() << "Can not construct MKLDNNMemoryDesc because of incorrect order: " << vec2str(order);
+
+        if (!strides.empty() && std::none_of(strides.begin(), strides.end(), [](size_t x) { return Shape::UNDEFINED_DIM == x; })) {
+            bool inner_block_are_dense = one_of(strides.back(), 0, 1);  // stride 1 - is dense case, 0 - broad casted
+            for (int i = outer_ndims; i < strides.size() - 1; i++) {
+                inner_block_are_dense &= (strides[i] == strides[i + 1] * blockedDims[i + 1]);
+            }
+
+            if (!inner_block_are_dense)
+                IE_THROW() << "Can not construct MKLDNNMemoryDesc from strides: " << vec2str(strides) << " inner blocks are not dense.";
+        }
+
+        // Fill general memory desc fields
+        desc.data.format_kind = dnnl_blocked;
+        desc.data.extra.flags = 0;
+        desc.data.data_type = memory::convert_to_c(MKLDNNMemory::convertToDataType(prc));
+        desc.data.ndims = dims.size();
+        desc.data.offset0 = offsetPadding;
+        std::copy(dims.begin(), dims.end(), desc.data.dims);
+
+        if (!offsetPaddingToData.empty()) {
+            bool inner_pad_offsets_is_zero = std::all_of(offsetPaddingToData.begin() + outer_ndims, offsetPaddingToData.end(),
+                                                         [](size_t pad) { return pad == 0; });
+
+            if (!inner_pad_offsets_is_zero)
+                IE_THROW() << "Can not construct MKLDNNMemoryDesc, inner pad offsets is not zero: " << vec2str(offsetPaddingToData);
+            auto dnnlPaddedOffsets = MKLDNNExtensionUtils::convertToDnnlDims(offsetPaddingToData);
+            std::copy(dnnlPaddedOffsets.begin(), dnnlPaddedOffsets.begin() + outer_ndims, desc.data.padded_offsets);
+        } else {
+            std::fill(std::begin(desc.data.padded_offsets), std::begin(desc.data.padded_offsets) + outer_ndims, 0);
+        }
+
+        std::fill(desc.data.padded_dims, desc.data.padded_dims + outer_ndims, 1);
+        auto dnnlBlkDims = MKLDNNExtensionUtils::convertToDnnlDims(blockedDims);
+
+        for (size_t i = 0; i < order.size(); i++) {
+            auto idx = order[i];
+            if (desc.data.padded_dims[idx] != DNNL_RUNTIME_DIM_VAL && dnnlBlkDims[i] != DNNL_RUNTIME_DIM_VAL) {
+                desc.data.padded_dims[idx] *= dnnlBlkDims[i];
+            } else {
+                desc.data.padded_dims[idx] = DNNL_RUNTIME_DIM_VAL;
+            }
+        }
+
+        // Fill blocking desc
+        auto &dnn_blk_desc = desc.data.format_desc.blocking;
+        dnn_blk_desc.inner_nblks = inner_ndims;
+        std::copy(dnnlBlkDims.end() - inner_ndims, dnnlBlkDims.end(), dnn_blk_desc.inner_blks);
+        std::copy(order.end() - inner_ndims, order.end(), dnn_blk_desc.inner_idxs);
+
+        if (strides.empty()) {
+            if (std::any_of(dnnlBlkDims.begin(), dnnlBlkDims.end(), [](memory::dim val) { return val == DNNL_RUNTIME_DIM_VAL; })) {
+                std::fill(std::begin(dnn_blk_desc.strides), std::begin(dnn_blk_desc.strides) + outer_ndims, DNNL_RUNTIME_DIM_VAL);
+            } else {
+                //TODO [DS]: phase 2: refactor
+                std::vector<memory::dim> tmpStrides(order.size());
+                tmpStrides[order.size() - 1] = 1;
+                for (size_t i = 2; i <= order.size(); i++) {
+                    tmpStrides[order.size() - i] = tmpStrides[order.size() - (i - 1)] * dnnlBlkDims[blockedDims.size() - (i - 1)];
+                }
+                for (size_t i = 0; i < outer_ndims; i++) {
+                    dnn_blk_desc.strides[i] = tmpStrides[outer_order[i]];
+                }
+            }
+        } else {
+            for (size_t i = 0; i < outer_ndims; i++) {
+                auto dnnlStrides = MKLDNNExtensionUtils::convertToDnnlDims(strides);
+                dnn_blk_desc.strides[i] = dnnlStrides[outer_order[i]];
+            }
+        }
+
+        this->order = order;
 }
 }  // namespace MKLDNNPlugin
