@@ -678,6 +678,20 @@ public:
         return isDynamic;
     }
 
+    Shape getOriginalInputShapeAtPort(size_t port) const {
+        if (inputShapes.size() <= port) {
+            IE_THROW() << "Incorrect input port number for node " << getName();
+        }
+        return inputShapes[port];
+    }
+
+    Shape getOriginalOutputShapeAtPort(size_t port) const {
+        if (outputShapes.size() <= port) {
+            IE_THROW() << "Incorrect output port number for node " << getName();
+        }
+        return outputShapes[port];
+    }
+
 protected:
     virtual std::vector<std::vector<size_t>> shapeInfer() const {
         IE_THROW() << "MKLDNNNode::shapeInfer not defined for node with type: " << getTypeStr();

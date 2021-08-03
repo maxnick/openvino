@@ -1072,6 +1072,7 @@ int MKLDNNNode::batchToProcess() {
     return dynBatchLim == 0 ? getMaxBatch() : std::min<int>(getMaxBatch(), dynBatchLim);
 }
 
+// TODO [DS]: how we should process this for dynamic shape?
 size_t MKLDNNNode::getMaxBatch() {
     // FIXME: batch != 0 dims number
     if (!inputShapes.empty()) {

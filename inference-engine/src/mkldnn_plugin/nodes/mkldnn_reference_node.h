@@ -25,9 +25,8 @@ public:
 
 private:
     const std::shared_ptr<ngraph::Node> ngraphOp;
+    std::shared_ptr<ngraph::Node> opToShapeInfer;
     const std::string additionalErrorMessage;
-
-    ngraph::OutputVector inputsForShapeInfer;
 };
 
 }  // namespace MKLDNNPlugin

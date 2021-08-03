@@ -263,13 +263,20 @@ MemoryDescPtr MemoryDescUtils::resetOffset(const MemoryDesc* desc) {
     }
 }
 
-InferenceEngine::Blob::Ptr MemoryDescUtils::interpretAsBlob(const MKLDNNMemory &mem) {
+InferenceEngine::Blob::Ptr MemoryDescUtils::createIEBlob(const MKLDNNMemory &mem, const bool &allocate) {
     // TODO [DS]: Rewrite when IE is moved to the new TensorDescriptor
     auto& memDesc = mem.GetDesc();
     InferenceEngine::TensorDesc desc = convertToTensorDesc(memDesc);
 
     desc = InferenceEngine::TensorDesc(desc.getPrecision(), memDesc.getShape().getStaticDims(), desc.getBlockingDesc());
-    return make_blob_with_precision(desc, mem.GetData());
+    InferenceEngine::Blob::Ptr blob;
+    if (!allocate) {
+        blob = make_blob_with_precision(desc, mem.GetData());
+    } else {
+        blob = make_blob_with_precision(desc);
+        blob->allocate();
+    }
+    return blob;
 }
 
 } // namespace MKLDNNPlugin

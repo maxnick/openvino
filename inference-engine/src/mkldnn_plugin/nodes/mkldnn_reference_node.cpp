@@ -24,10 +24,12 @@ MKLDNNReferenceNode::MKLDNNReferenceNode(const std::shared_ptr<ngraph::Node>& op
     setTypeStr("Reference");
 
     if (isDynamicNode()) {
+        ngraph::OutputVector inputsForShapeInfer;
         for (size_t i = 0; i < inputShapes.size(); i++) {
             inputsForShapeInfer.push_back(std::make_shared<ngraph::opset1::Parameter>(ngraphOp->get_input_element_type(i),
                                                                                       ngraphOp->get_input_partial_shape(i)));
         }
+        opToShapeInfer = ngraphOp->clone_with_new_inputs(inputsForShapeInfer);
     }
 }
 
@@ -55,20 +57,18 @@ void MKLDNNReferenceNode::initSupportedPrimitiveDescriptors() {
 void MKLDNNReferenceNode::createPrimitive() {}
 
 std::vector<std::vector<size_t>> MKLDNNReferenceNode::shapeInfer() const {
-    for (size_t i = 0; i < inputsForShapeInfer.size(); i++) {
-        static_cast<ngraph::opset1::Parameter *>(inputsForShapeInfer[i].get_node())->set_partial_shape(
+    for (size_t i = 0; i < opToShapeInfer->get_input_size(); i++) {
+        opToShapeInfer->get_input_tensor(i).set_partial_shape(
             getParentEdgesAtPort(i)[0]->getMemory().GetDesc().getShape().toPartialShape());
-        inputsForShapeInfer[i].get_node()->validate_and_infer_types();
     }
 
-    const auto opWithNewOutputShape = ngraphOp->clone_with_new_inputs(inputsForShapeInfer);
-    opWithNewOutputShape->validate_and_infer_types();
+    opToShapeInfer->validate_and_infer_types();
 
-    IE_ASSERT(opWithNewOutputShape->get_output_size() == getOriginalOutputsNumber());
+    IE_ASSERT(opToShapeInfer->get_output_size() == getOriginalOutputsNumber());
 
     std::vector<std::vector<size_t>> newShapes(getOriginalOutputsNumber());
     for (size_t i = 0; i < newShapes.size(); i++) {
-        newShapes[i] = opWithNewOutputShape->get_output_partial_shape(i).get_shape();
+        newShapes[i] = opToShapeInfer->get_output_partial_shape(i).get_shape();
     }
     return newShapes;
 }

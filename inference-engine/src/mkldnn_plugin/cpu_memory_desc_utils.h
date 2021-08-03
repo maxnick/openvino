@@ -80,9 +80,10 @@ public:
     /**
      * @brief Creates InferenceEngine::Blob from MKLDNNMemory
      * @param desc MKLDNNMemory from which will be created InferenceEngine::Blob
+     * @param allocate flag that specify should we use memory from edge or allocate own
      * @return pointer to InferenceEngine::Blob
      */
-    static InferenceEngine::Blob::Ptr interpretAsBlob(const MKLDNNMemory& mem);
+    static InferenceEngine::Blob::Ptr createIEBlob(const MKLDNNMemory& mem, const bool &allocate = false);
 };
 
 }  // namespace MKLDNNPlugin

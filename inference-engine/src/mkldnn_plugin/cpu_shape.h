@@ -148,6 +148,10 @@ public:
         return !(*this == rhs);
     }
 
+    bool isDefinedUpperBounds() const {
+        return std::all_of(maxDims.begin(), maxDims.end(), [](size_t dim){ return dim != UNDEFINED_DIM; });
+    }
+
     enum : size_t {
         UNDEFINED_DIM = 0xffffffffffffffff
     };

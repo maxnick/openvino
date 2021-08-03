@@ -83,7 +83,7 @@ TEST_P(InferRequestDynamicTests, InferDynamicNetworkBoundWithoutSetShape) {
 TEST_P(InferRequestDynamicTests, InferDynamicNetworkWithGetBlob) {
     const std::string param_name = "Param_1";
     const InferenceEngine::SizeVector refShape = {1, 4, 20, 20};
-    const InferenceEngine::SizeVector refOutShape = {1, 10, 18, 18};
+    const InferenceEngine::SizeVector refOutShape = {1, 4, 20, 20};
     // Skip test according to plugin specific disabledTestPatterns() (if any)
     SKIP_IF_CURRENT_TEST_IS_DISABLED()
     // Create CNNNetwork from ngrpah::Function
@@ -182,8 +182,8 @@ TEST_P(InferRequestDynamicTests, InferDynamicNetworkWithGetBlob2times) {
     const std::string param_name = "Param_1";
     const InferenceEngine::SizeVector refShape = {1, 4, 20, 20};
     const InferenceEngine::SizeVector refShape2 = {2, 4, 20, 20};
-    const InferenceEngine::SizeVector refOutShape = {1, 10, 18, 18};
-    const InferenceEngine::SizeVector refOutShape2 = {2, 10, 18, 18};
+    const InferenceEngine::SizeVector refOutShape = {1, 4, 20, 20};
+    const InferenceEngine::SizeVector refOutShape2 = {2, 4, 20, 20};
     // Skip test according to plugin specific disabledTestPatterns() (if any)
     SKIP_IF_CURRENT_TEST_IS_DISABLED()
     // Create CNNNetwork from ngrpah::Function
@@ -222,7 +222,7 @@ TEST_P(InferRequestDynamicTests, InferDynamicNetworkWithGetBlob2times) {
 TEST_P(InferRequestDynamicTests, InferDynamicNetworkWithSetBlob) {
     const std::string param_name = "Param_1";
     const InferenceEngine::SizeVector refShape = {1, 4, 20, 20};
-    const InferenceEngine::SizeVector refOutShape = {1, 10, 18, 18};
+    const InferenceEngine::SizeVector refOutShape = {1, 4, 20, 20};
     // Skip test according to plugin specific disabledTestPatterns() (if any)
     SKIP_IF_CURRENT_TEST_IS_DISABLED()
     // Create CNNNetwork from ngrpah::Function
@@ -252,8 +252,8 @@ TEST_P(InferRequestDynamicTests, InferDynamicNetworkWithSetBlob2times) {
     const std::string param_name = "Param_1";
     const InferenceEngine::SizeVector refShape = {1, 4, 20, 20};
     const InferenceEngine::SizeVector refShape2 = {2, 4, 20, 20};
-    const InferenceEngine::SizeVector refOutShape = {1, 10, 18, 18};
-    const InferenceEngine::SizeVector refOutShape2 = {2, 10, 18, 18};
+    const InferenceEngine::SizeVector refOutShape = {1, 4, 20, 20};
+    const InferenceEngine::SizeVector refOutShape2 = {2, 4, 20, 20};
     // Skip test according to plugin specific disabledTestPatterns() (if any)
     SKIP_IF_CURRENT_TEST_IS_DISABLED()
     // Create CNNNetwork from ngrpah::Function
