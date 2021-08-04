@@ -180,13 +180,23 @@ CNNNetworkNGraphImpl::CNNNetworkNGraphImpl(const CNNNetwork& network) {
     }
     for (const auto& inputInfo : inputs) {
         InputInfo::Ptr info = std::make_shared<InputInfo>();
-        const auto& name = inputInfo.second->getInputData()->getName();
-        DataPtr input = std::make_shared<Data>(name, inputInfo.second->getInputData()->getTensorDesc());
+        const auto inData = inputInfo.second->getInputData();
+        const auto& name = inData->getName();
+
+        DataPtr input;
+        if (inData->isDynamic()) {
+            input = std::make_shared<Data>(name, inData->getPrecision(), inData->getPartialShape(),
+                                                 TensorDesc::getLayoutByRank(inData->getPartialShape().rank().get_length()));
+        } else {
+            input = std::make_shared<Data>(name, inputInfo.second->getInputData()->getTensorDesc());
+        }
         _data[name] = input;
         info->setInputData(input);
         info->getPreProcess() = inputInfo.second->getPreProcess();
         info->setPrecision(inputInfo.second->getPrecision());
-        info->setLayout(inputInfo.second->getLayout());
+        // TODO [DS]: can we set layout for dynamic shapes? need to fix TensorDesc::setLayout
+        if (!inData->isDynamic())
+            info->setLayout(inputInfo.second->getLayout());
         _inputData[name] = info;
     }
 }
