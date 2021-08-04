@@ -53,6 +53,9 @@ using namespace MKLDNNPlugin;
 using namespace InferenceEngine;
 using namespace InferenceEngine::details;
 
+typedef std::unordered_set<MKLDNNEdgePtr> edge_cluster_t;
+typedef std::vector<edge_cluster_t> edge_clusters_t;
+
 mkldnn::engine MKLDNNGraph::eng(mkldnn::engine::kind::cpu, 0);
 
 template<typename NET>
@@ -512,8 +515,57 @@ static inline bool isConstOutput(MKLDNNEdgePtr edge) {
     return edge->getParent()->isConstant() && !edge->getChild()->isConstant();
 }
 
+static edge_clusters_t findEdgeClusters(const std::vector<MKLDNNEdgePtr> & graphEdges) {
+    typedef std::unordered_map<MKLDNNEdgePtr, size_t> edge_cluster_idx_map_t;
+
+    edge_clusters_t edge_clusters;
+    edge_cluster_idx_map_t edge_cluster_indices;
+
+    for (auto &edge : graphEdges) {
+        if (!edge->canProvideMaxSize())
+            continue;
+
+        auto edge_it = edge_cluster_indices.find(edge);
+
+        if (edge_it != edge_cluster_indices.end())
+            continue;   // edge is visited
+
+        size_t cluster_idx = edge_clusters.size();
+        MKLDNNEdgePtr last_shared_edge = nullptr;
+
+        // find cluster index
+        for (auto shared_edge = edge->getSharedEdge(std::nothrow);
+            shared_edge;
+            shared_edge = shared_edge->getSharedEdge(std::nothrow)) {
+            auto shared_edge_it = edge_cluster_indices.find(shared_edge);
+            if (shared_edge_it != edge_cluster_indices.end()) {
+                cluster_idx = shared_edge_it->second;
+                last_shared_edge = shared_edge;
+                break;
+            }
+        }
+
+        // add shared edges to cluster
+        edge_cluster_indices.emplace(edge, cluster_idx);
+
+        if (cluster_idx == edge_clusters.size())
+            edge_clusters.emplace_back(edge_cluster_t { edge });
+        else
+            edge_clusters[cluster_idx].emplace(edge);
+
+        for (auto shared_edge = edge->getSharedEdge(std::nothrow);
+            shared_edge != last_shared_edge;
+            shared_edge = shared_edge->getSharedEdge(std::nothrow)) {
+            edge_cluster_indices.emplace(shared_edge, cluster_idx);
+            edge_clusters[cluster_idx].emplace(shared_edge);
+        }
+    }
+
+    return edge_clusters;
+}
+
 void MKLDNNGraph::AllocateWithReuse() {
-    edge_clusters_t edge_clusters = MemorySolver::findEdgeClusters(graphEdges);
+    edge_clusters_t edge_clusters = findEdgeClusters(graphEdges);
 
     size_t edge_clusters_count = edge_clusters.size();
 

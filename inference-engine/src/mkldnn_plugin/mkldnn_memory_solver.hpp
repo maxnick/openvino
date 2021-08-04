@@ -14,12 +14,8 @@
 
 #include <vector>
 #include <map>
-#include "mkldnn_edge.h"
 
 namespace MKLDNNPlugin {
-
-typedef std::unordered_set<MKLDNNEdgePtr> edge_cluster_t;
-typedef std::vector<edge_cluster_t> edge_clusters_t;
 
 /**
  * @brief Helps to solve issue of optimal memory allocation only for particular
@@ -84,8 +80,6 @@ public:
     int64_t maxDepth();
     /** Additional info. Max num of boxes required for any time stamp. */
     int64_t maxTopDepth();
-
-    static edge_clusters_t findEdgeClusters(const std::vector<MKLDNNEdgePtr> & graphEdges);
 
 private:
     std::vector<Box> _boxes;

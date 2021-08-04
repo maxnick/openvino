@@ -209,7 +209,7 @@ std::map<std::string, InferenceEngine::InferenceEngineProfileInfo> MKLDNNPlugin:
 }
 
 void MKLDNNPlugin::MKLDNNInferRequest::createInputBlob(const std::string &name) {
-    const auto inputNode = graph->GetInputNodeByName(name);
+    MKLDNNNodeConstPtr inputNode = graph->GetInputNodeByName(name);
 
     if (inputNode->isDynamicNode() && !m_realShapes.count(name)) {
         IE_THROW() << "Cannot create blob " << name << " with dynamic shapes";
@@ -256,7 +256,7 @@ InferenceEngine::Blob::Ptr MKLDNNPlugin::MKLDNNInferRequest::GetBlob(const std::
         if (_inputs.find(name) == _inputs.end()) {
             createInputBlob(name);
         }
-        const auto inputNode = graph->GetInputNodeByName(name);
+        MKLDNNNodeConstPtr inputNode = graph->GetInputNodeByName(name);
         if (inputNode->isDynamicNode()) {
             if (!m_realShapes.count(name)) {
                 IE_THROW() << "Cannot get blob " << name << " which contains dynamic shapes";
@@ -382,7 +382,7 @@ void MKLDNNPlugin::MKLDNNInferRequest::SetBlob(const std::string& name, const In
             // pre-processing
             _preProcData[name]->setRoiBlob(data);
         } else {
-            const auto inputNode = graph->GetInputNodeByName(name);
+            auto inputNode = graph->GetInputNodeByName(name);
             if (foundInput->getInputData()->getPartialShape().rank().get_length() != data->getTensorDesc().getDims().size()) {
                 IE_THROW(ParameterMismatch) << "Failed to set input blob. Rank mismatch.";
             }
@@ -585,6 +585,6 @@ void MKLDNNPlugin::MKLDNNInferRequest::SetShape(const std::string& name, const I
 
     m_realShapes[name] = dims;
 
-    const auto inputNode = graph->GetInputNodeByName(name);
+    auto inputNode = graph->GetInputNodeByName(name);
     inputNode->resetOutputShape({dims});
 }

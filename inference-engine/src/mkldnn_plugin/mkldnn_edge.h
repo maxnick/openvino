@@ -17,7 +17,6 @@ namespace MKLDNNPlugin {
 
 class MKLDNNNode;
 class MKLDNNEdge;
-class MemorySolver;
 
 using MKLDNNEdgePtr = std::shared_ptr<MKLDNNEdge>;
 using MKLDNNEdgeWeakPtr = std::weak_ptr<MKLDNNEdge>;
@@ -69,6 +68,10 @@ public:
     MKLDNNEdgePtr getSharedEdge() const;
     MKLDNNEdgePtr getSharedEdge(std::nothrow_t) const;
 
+    bool canProvideMaxSize() {
+        return getDesc().getMaxMemSize() != MemoryDesc::UNDEFINED_SIZE;
+    }
+
 private:
     std::string name() const;
 
@@ -92,7 +95,6 @@ private:
     MKLDNNEdgePtr getBaseEdge(int look = LOOK_BOTH);
     bool inPlace(LOOK look = LOOK_BOTH);
     friend class MKLDNNGraph;
-    friend class MemorySolver;
 };
 
 }  // namespace MKLDNNPlugin

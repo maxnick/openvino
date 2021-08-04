@@ -78,14 +78,14 @@ void MKLDNNReferenceNode::execute(mkldnn::stream strm) {
     for (size_t i = 0; i < inputShapes.size(); i++) {
         void *srcDataPtr = getParentEdgesAtPort(i)[0]->getMemory().GetPtr();
         inputs.push_back(std::make_shared<ngraph::HostTensor>(ngraphOp->get_input_element_type(i),
-                                                              getParentEdgesAtPort(i)[0]->getMemory().GetDesc().getShape().getStaticDims(), srcDataPtr));
+                                                              getParentEdgesAtPort(i)[0]->getMemory().getStaticDims(), srcDataPtr));
     }
 
     ngraph::HostTensorVector outputs;
     for (size_t i = 0; i < outputShapes.size(); i++) {
         void *dstDataPtr = getChildEdgesAtPort(i)[0]->getMemory().GetPtr();
         outputs.push_back(std::make_shared<ngraph::HostTensor>(ngraphOp->get_output_element_type(i),
-                                                               getChildEdgesAtPort(i)[0]->getMemory().GetDesc().getShape().getStaticDims(), dstDataPtr));
+                                                               getChildEdgesAtPort(i)[0]->getMemory().getStaticDims(), dstDataPtr));
     }
 
     if (!ngraphOp->evaluate(outputs, inputs)) {

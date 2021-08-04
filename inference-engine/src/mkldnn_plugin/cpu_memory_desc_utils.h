@@ -85,7 +85,7 @@ public:
     static InferenceEngine::Blob::Ptr createBlob(const MemoryDesc& memDesc);
 
     /**
-     * @brief Creates InferenceEngine::Blob from MKLDNNMemory with reusing edge memory
+     * @brief Creates InferenceEngine::Blob from MKLDNNMemory with the memory reuse
      * @param desc MKLDNNMemory from which will be created InferenceEngine::Blob
      * @return pointer to InferenceEngine::Blob
      */
