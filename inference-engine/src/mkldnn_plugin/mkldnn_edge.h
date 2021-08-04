@@ -17,6 +17,7 @@ namespace MKLDNNPlugin {
 
 class MKLDNNNode;
 class MKLDNNEdge;
+class MemorySolver;
 
 using MKLDNNEdgePtr = std::shared_ptr<MKLDNNEdge>;
 using MKLDNNEdgeWeakPtr = std::weak_ptr<MKLDNNEdge>;
@@ -91,6 +92,7 @@ private:
     MKLDNNEdgePtr getBaseEdge(int look = LOOK_BOTH);
     bool inPlace(LOOK look = LOOK_BOTH);
     friend class MKLDNNGraph;
+    friend class MemorySolver;
 };
 
 }  // namespace MKLDNNPlugin

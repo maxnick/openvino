@@ -517,7 +517,8 @@ public:
         return created();
     }
 
-    virtual void redefineOutputMemory(std::vector<std::vector<size_t>> newShapes = {});
+    virtual void resetOutputShape();
+    virtual void resetOutputShape(const std::vector<std::vector<size_t>> &newShapes);
 
     /**
      * @brief Performs Node initialization based on graph context.
@@ -678,14 +679,14 @@ public:
         return isDynamic;
     }
 
-    Shape getOriginalInputShapeAtPort(size_t port) const {
+    Shape getInputShapeAtPort(size_t port) const {
         if (inputShapes.size() <= port) {
             IE_THROW() << "Incorrect input port number for node " << getName();
         }
         return inputShapes[port];
     }
 
-    Shape getOriginalOutputShapeAtPort(size_t port) const {
+    Shape getOutputShapeAtPort(size_t port) const {
         if (outputShapes.size() <= port) {
             IE_THROW() << "Incorrect output port number for node " << getName();
         }
@@ -694,9 +695,9 @@ public:
 
 protected:
     virtual std::vector<std::vector<size_t>> shapeInfer() const {
-        IE_THROW() << "MKLDNNNode::shapeInfer not defined for node with type: " << getTypeStr();
+        IE_THROW() << "MKLDNNNode::shapeInfer is not defined for node with type: " << getTypeStr();
     }
-    virtual void executeDynamicBody(mkldnn::stream strm);
+    virtual void executeDynamicImpl(mkldnn::stream strm);
 
     bool canFuseSimpleOperation(const MKLDNNNodePtr& node) const;
     // TODO [mandrono]: place outside of the node API
@@ -832,6 +833,8 @@ protected:
     }
 
 private:
+    void redefineOutputMemory(const std::vector<std::vector<size_t>> &newShapes);
+
     bool isDynamic = false;
 
     std::vector<MKLDNNEdgeWeakPtr> parentEdges;

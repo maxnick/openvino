@@ -78,12 +78,18 @@ public:
     static MemoryDescPtr resetOffset(const MemoryDesc* desc);
 
     /**
-     * @brief Creates InferenceEngine::Blob from MKLDNNMemory
-     * @param desc MKLDNNMemory from which will be created InferenceEngine::Blob
-     * @param allocate flag that specify should we use memory from edge or allocate own
+     * @brief Creates InferenceEngine::Blob from MemoryDesc
+     * @param desc MemoryDesc from which will be created InferenceEngine::Blob
      * @return pointer to InferenceEngine::Blob
      */
-    static InferenceEngine::Blob::Ptr createIEBlob(const MKLDNNMemory& mem, const bool &allocate = false);
+    static InferenceEngine::Blob::Ptr createBlob(const MemoryDesc& memDesc);
+
+    /**
+     * @brief Creates InferenceEngine::Blob from MKLDNNMemory with reusing edge memory
+     * @param desc MKLDNNMemory from which will be created InferenceEngine::Blob
+     * @return pointer to InferenceEngine::Blob
+     */
+    static InferenceEngine::Blob::Ptr interpretAsBlob(const MKLDNNMemory& mem);
 };
 
 }  // namespace MKLDNNPlugin

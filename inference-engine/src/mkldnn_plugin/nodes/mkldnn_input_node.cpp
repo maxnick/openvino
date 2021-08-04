@@ -384,17 +384,6 @@ void MKLDNNInputNode::getSupportedDescriptors() {
     }
 }
 
-void MKLDNNInputNode::redefineOutputMemory(std::vector<std::vector<size_t>> newShapes) {
-    if (newShapes.empty()) return;
-
-    if (newShapes.size() != getOriginalOutputsNumber()) {
-        IE_THROW() << "Number shapes mismatch with real outputs number for node with name: " << getName();
-    }
-    for (size_t i = 0; i < getOriginalOutputsNumber(); i++) {
-        getChildEdgesAtPort(i)[0]->getMemoryPtr()->redefineDesc(getOutputMemDescAtPort(i)->cloneWithNewDims(newShapes[i]));
-    }
-}
-
 void MKLDNNInputNode::initSupportedPrimitiveDescriptors() {
     if (!supportedPrimitiveDescriptors.empty())
         return;

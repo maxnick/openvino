@@ -257,8 +257,8 @@ MKLDNNNode::MKLDNNNode(const std::shared_ptr<ngraph::Node>& op, const mkldnn::en
 
     for (size_t i = 0; i < op->get_input_size(); i++) {
         const auto &shape = op->get_input_partial_shape(i);
-        if (!shape.rank().is_static()) {
-            IE_THROW() << "CPU plug-in doesn't support operation with dynamic rank";
+        if (shape.rank().is_dynamic()) {
+            IE_THROW(Unexpected) << "CPU plug-in doesn't support operation with dynamic rank";
         }
 
         bool isScalar = shape.rank().get_length() == 0;
@@ -272,8 +272,8 @@ MKLDNNNode::MKLDNNNode(const std::shared_ptr<ngraph::Node>& op, const mkldnn::en
         }
         for (size_t i = 0; i < op->get_output_size(); i++) {
             const auto &shape = op->get_output_partial_shape(i);
-            if (!shape.rank().is_static()) {
-                IE_THROW() << "CPU plug-in doesn't support operation with dynamic rank";
+            if (shape.rank().is_dynamic()) {
+                IE_THROW(Unexpected) << "CPU plug-in doesn't support operation with dynamic rank";
             }
 
             bool isScalar = shape.rank().get_length() == 0;
@@ -282,8 +282,8 @@ MKLDNNNode::MKLDNNNode(const std::shared_ptr<ngraph::Node>& op, const mkldnn::en
         }
     }
 
-    isDynamic = std::any_of(inputShapes.begin(), inputShapes.end(), [](const Shape shape){ return shape.isDynamic(); }) ||
-                std::any_of(outputShapes.begin(), outputShapes.end(), [](const Shape shape){ return shape.isDynamic(); });
+    isDynamic = std::any_of(inputShapes.begin(), inputShapes.end(), [](const Shape& shape){ return shape.isDynamic(); }) ||
+                std::any_of(outputShapes.begin(), outputShapes.end(), [](const Shape& shape){ return shape.isDynamic(); });
 
     const auto& rtInfo = op->get_rt_info();
     if (rtInfo.count("originalLayersNames")) {
@@ -640,24 +640,30 @@ void MKLDNNNode::execute(mkldnn::stream strm) {
 }
 
 void MKLDNNNode::executeDynamic(mkldnn::stream strm) {
-    redefineOutputMemory();
-    executeDynamicBody(strm);
+    resetOutputShape();
+    executeDynamicImpl(strm);
 }
 
-void MKLDNNNode::executeDynamicBody(mkldnn::stream strm) {
-    IE_THROW() << "[DS] executeDynamicBody not implemented for node with type: " << getTypeStr();
+void MKLDNNNode::executeDynamicImpl(mkldnn::stream strm) {
+    IE_THROW() << "[DS] executeDynamicImpl not implemented for node with type: " << getTypeStr();
 }
 
-void MKLDNNNode::redefineOutputMemory(std::vector<std::vector<size_t>> newShapes) {
-    if (newShapes.empty()) {
-        newShapes = shapeInfer();
-    }
+void MKLDNNNode::redefineOutputMemory(const std::vector<std::vector<size_t>> &newShapes) {
     if (newShapes.size() != getOriginalOutputsNumber()) {
         IE_THROW() << "Number shapes mismatch with real outputs number for node with name: " << getName();
     }
     for (size_t i = 0; i < getOriginalOutputsNumber(); i++) {
         getChildEdgesAtPort(i)[0]->getMemoryPtr()->redefineDesc(getOutputMemDescAtPort(i)->cloneWithNewDims(newShapes[i]));
     }
+}
+
+void MKLDNNNode::resetOutputShape() {
+    const auto newShapes = shapeInfer();
+    redefineOutputMemory(newShapes);
+}
+
+void MKLDNNNode::resetOutputShape(const std::vector<std::vector<size_t>> &newShapes) {
+    redefineOutputMemory(newShapes);
 }
 
 void MKLDNNNode::initSupportedPrimitiveDescriptors() {

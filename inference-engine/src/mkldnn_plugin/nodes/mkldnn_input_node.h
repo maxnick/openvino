@@ -25,11 +25,8 @@ public:
     void withMeanImage();
     MKLDNNMemoryCPtr getMemoryPtr() const;
 
-    void redefineOutputMemory(std::vector<std::vector<size_t>> newShapes = {}) override;
-    void executeDynamicBody(mkldnn::stream strm) override {}
-
-    // TODO [DS]: remove
-    std::vector<std::vector<size_t>> shapeInfer() const override { return {}; }
+    void resetOutputShape() override {}
+    void executeDynamicImpl(mkldnn::stream strm) override {}
 
 private:
     void cloneBlobIfRequired();

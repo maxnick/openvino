@@ -194,6 +194,7 @@ CNNNetworkNGraphImpl::CNNNetworkNGraphImpl(const CNNNetwork& network) {
         info->setInputData(input);
         info->getPreProcess() = inputInfo.second->getPreProcess();
         info->setPrecision(inputInfo.second->getPrecision());
+        // TODO [DS]: can we set layout for dynamic shapes? need to fix TensorDesc::setLayout
         if (!inData->isDynamic())
             info->setLayout(inputInfo.second->getLayout());
         _inputData[name] = info;

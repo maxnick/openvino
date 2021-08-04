@@ -148,7 +148,7 @@ public:
         return !(*this == rhs);
     }
 
-    bool isDefinedUpperBounds() const {
+    bool hasDefinedUpperBounds() const {
         return std::all_of(maxDims.begin(), maxDims.end(), [](size_t dim){ return dim != UNDEFINED_DIM; });
     }
 

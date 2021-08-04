@@ -53,9 +53,6 @@ using namespace MKLDNNPlugin;
 using namespace InferenceEngine;
 using namespace InferenceEngine::details;
 
-typedef std::unordered_set<MKLDNNEdgePtr> edge_cluster_t;
-typedef std::vector<edge_cluster_t> edge_clusters_t;
-
 mkldnn::engine MKLDNNGraph::eng(mkldnn::engine::kind::cpu, 0);
 
 template<typename NET>
@@ -515,57 +512,8 @@ static inline bool isConstOutput(MKLDNNEdgePtr edge) {
     return edge->getParent()->isConstant() && !edge->getChild()->isConstant();
 }
 
-static edge_clusters_t findEdgeClusters(const std::vector<MKLDNNEdgePtr> & graphEdges) {
-    typedef std::unordered_map<MKLDNNEdgePtr, size_t> edge_cluster_idx_map_t;
-
-    edge_clusters_t edge_clusters;
-    edge_cluster_idx_map_t edge_cluster_indices;
-
-    for (auto &edge : graphEdges) {
-        if (!edge->getChild()->getOriginalInputShapeAtPort(edge->getOutputNum()).isDefinedUpperBounds())
-            continue;
-
-        auto edge_it = edge_cluster_indices.find(edge);
-
-        if (edge_it != edge_cluster_indices.end())
-            continue;   // edge is visited
-
-        size_t cluster_idx = edge_clusters.size();
-        MKLDNNEdgePtr last_shared_edge = nullptr;
-
-        // find cluster index
-        for (auto shared_edge = edge->getSharedEdge(std::nothrow);
-            shared_edge;
-            shared_edge = shared_edge->getSharedEdge(std::nothrow)) {
-            auto shared_edge_it = edge_cluster_indices.find(shared_edge);
-            if (shared_edge_it != edge_cluster_indices.end()) {
-                cluster_idx = shared_edge_it->second;
-                last_shared_edge = shared_edge;
-                break;
-            }
-        }
-
-        // add shared edges to cluster
-        edge_cluster_indices.emplace(edge, cluster_idx);
-
-        if (cluster_idx == edge_clusters.size())
-            edge_clusters.emplace_back(edge_cluster_t { edge });
-        else
-            edge_clusters[cluster_idx].emplace(edge);
-
-        for (auto shared_edge = edge->getSharedEdge(std::nothrow);
-            shared_edge != last_shared_edge;
-            shared_edge = shared_edge->getSharedEdge(std::nothrow)) {
-            edge_cluster_indices.emplace(shared_edge, cluster_idx);
-            edge_clusters[cluster_idx].emplace(shared_edge);
-        }
-    }
-
-    return edge_clusters;
-}
-
 void MKLDNNGraph::AllocateWithReuse() {
-    edge_clusters_t edge_clusters = findEdgeClusters(graphEdges);
+    edge_clusters_t edge_clusters = MemorySolver::findEdgeClusters(graphEdges);
 
     size_t edge_clusters_count = edge_clusters.size();
 
@@ -743,7 +691,7 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
 
         // TODO [DS]: phase 2: remove this blob allocation when possible, i.e. when dynamic ie blob representation becomes available
         if (out.find(name) == out.end()) {
-            out[name] = MemoryDescUtils::createIEBlob(intr_blob, true);
+            out[name] = MemoryDescUtils::createBlob(intr_blob.GetDesc());
         }
 
         // TODO [DS]: is it sill true for the new paradigm?
@@ -755,7 +703,7 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
             // TODO [DS]: phase 2: rewrite when dynamic ie blob representation becomes available
 //            IE_THROW() << "Output blob number of elements is not equal network output number of elements ("
 //                       << ext_blob->size() << "!=" << intr_blob.GetElementsCount() << ").";
-            out[name] = MemoryDescUtils::createIEBlob(intr_blob, true);
+            out[name] = MemoryDescUtils::createBlob(intr_blob.GetDesc());
         }
 
         auto ext_blob = out.at(name);
@@ -989,7 +937,7 @@ Config MKLDNNGraph::getProperty() const {
 Blob::Ptr MKLDNNGraph::getInputBlob(const std::string& name) {
     auto itr = inputNodesMap.find(name);
     if (itr != inputNodesMap.end()) {
-        return MemoryDescUtils::createIEBlob(itr->second->getChildEdgeAt(0)->getMemory());
+        return MemoryDescUtils::interpretAsBlob(itr->second->getChildEdgeAt(0)->getMemory());
     }
     return nullptr;
 }
@@ -997,7 +945,7 @@ Blob::Ptr MKLDNNGraph::getInputBlob(const std::string& name) {
 Blob::Ptr MKLDNNGraph::getOutputBlob(const std::string& name) {
     auto itr = outputNodesMap.find(name);
     if (itr != outputNodesMap.end()) {
-        return MemoryDescUtils::createIEBlob(itr->second->getParentEdgeAt(0)->getMemory());
+        return MemoryDescUtils::interpretAsBlob(itr->second->getParentEdgeAt(0)->getMemory());
     }
     return nullptr;
 }

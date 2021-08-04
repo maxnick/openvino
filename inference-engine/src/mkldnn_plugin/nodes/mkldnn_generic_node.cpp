@@ -148,7 +148,7 @@ void MKLDNNGenericNode::execLayer() {
     std::vector<InferenceEngine::TensorDesc> inputDescs;
     std::vector<InferenceEngine::SizeVector> execOutputShapes;
     for (size_t i = 0; i < getParentEdges().size(); i++) {
-        auto inputBlob = MemoryDescUtils::createIEBlob(getParentEdgeAt(i)->getMemory());
+        auto inputBlob = MemoryDescUtils::interpretAsBlob(getParentEdgeAt(i)->getMemory());
         inputs.push_back(inputBlob);
         constInputs.push_back(inputBlob);
         if (isDynBatch && dynBatchLim >= inputs[inputs.size() - 1]->getTensorDesc().getDims()[0]) {
@@ -181,7 +181,7 @@ void MKLDNNGenericNode::execLayer() {
             td.setDims(execOutputShapes[i]);
             outputs.push_back(make_blob_with_precision(td, out_edge->getMemory().GetData()));
         } else {
-            outputs.push_back(MemoryDescUtils::createIEBlob(getChildEdgesAtPort(i)[0]->getMemory()));
+            outputs.push_back(MemoryDescUtils::interpretAsBlob(getChildEdgesAtPort(i)[0]->getMemory()));
         }
     }
     InferenceEngine::ResponseDesc resp;

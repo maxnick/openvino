@@ -139,4 +139,53 @@ void MemorySolver::calcDepth() {
     }
 }
 
+edge_clusters_t MemorySolver::findEdgeClusters(const std::vector<MKLDNNEdgePtr> & graphEdges) {
+    typedef std::unordered_map<MKLDNNEdgePtr, size_t> edge_cluster_idx_map_t;
+
+    edge_clusters_t edge_clusters;
+    edge_cluster_idx_map_t edge_cluster_indices;
+
+    for (auto &edge : graphEdges) {
+        if (edge->getDesc().getMaxMemSize() == MemoryDesc::UNDEFINED_SIZE)
+            continue;
+
+        auto edge_it = edge_cluster_indices.find(edge);
+
+        if (edge_it != edge_cluster_indices.end())
+            continue;   // edge is visited
+
+        size_t cluster_idx = edge_clusters.size();
+        MKLDNNEdgePtr last_shared_edge = nullptr;
+
+        // find cluster index
+        for (auto shared_edge = edge->getSharedEdge(std::nothrow);
+            shared_edge;
+            shared_edge = shared_edge->getSharedEdge(std::nothrow)) {
+            auto shared_edge_it = edge_cluster_indices.find(shared_edge);
+            if (shared_edge_it != edge_cluster_indices.end()) {
+                cluster_idx = shared_edge_it->second;
+                last_shared_edge = shared_edge;
+                break;
+            }
+        }
+
+        // add shared edges to cluster
+        edge_cluster_indices.emplace(edge, cluster_idx);
+
+        if (cluster_idx == edge_clusters.size())
+            edge_clusters.emplace_back(edge_cluster_t { edge });
+        else
+            edge_clusters[cluster_idx].emplace(edge);
+
+        for (auto shared_edge = edge->getSharedEdge(std::nothrow);
+            shared_edge != last_shared_edge;
+            shared_edge = shared_edge->getSharedEdge(std::nothrow)) {
+            edge_cluster_indices.emplace(shared_edge, cluster_idx);
+            edge_clusters[cluster_idx].emplace(shared_edge);
+        }
+    }
+
+    return edge_clusters;
+}
+
 }  // namespace MKLDNNPlugin

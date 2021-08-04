@@ -93,7 +93,7 @@ void MKLDNNReferenceNode::execute(mkldnn::stream strm) {
     }
 }
 
-void MKLDNNReferenceNode::executeDynamicBody(mkldnn::stream strm) {
+void MKLDNNReferenceNode::executeDynamicImpl(mkldnn::stream strm) {
     execute(strm);
 }
 
