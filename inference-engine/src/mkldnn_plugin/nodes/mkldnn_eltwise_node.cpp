@@ -939,12 +939,13 @@ std::map<const ngraph::DiscreteTypeInfo, std::function<void(const std::shared_pt
 
 bool MKLDNNEltwiseNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
-        if (initializers.find(op->get_type_info()) == initializers.end()) {
-            errorMessage = "Doesn't support Eltwise algorithm: " +  std::string(op->get_type_name());
-            return false;
-        }
         if (isDynamicNgraphNode(op)) {
             errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
+
+        if (initializers.find(op->get_type_info()) == initializers.end()) {
+            errorMessage = "Doesn't support Eltwise algorithm: " +  std::string(op->get_type_name());
             return false;
         }
     } catch (...) {
@@ -959,6 +960,7 @@ MKLDNNEltwiseNode::MKLDNNEltwiseNode(const std::shared_ptr<ngraph::Node>& op, co
     if (!isSupportedOperation(op, errorMessage)) {
         IE_THROW(NotImplemented) << errorMessage;
     }
+    initializers[op->get_type_info()](op, *this);
 }
 
 size_t MKLDNNEltwiseNode::getOpInputsNum() const {
@@ -1095,7 +1097,7 @@ void MKLDNNEltwiseNode::initSupportedPrimitiveDescriptors() {
     };
 
     auto initDesc = [&] (LayoutType lt) -> NodeDesc {
-        auto createMemoryDesc = [lt](MKLDNNEdgePtr edge, Precision prc, size_t offset) -> std::unique_ptr<BlockedMemoryDesc> {
+        auto createMemoryDesc = [lt](MKLDNNEdgePtr edge, Precision prc, size_t offset) -> std::unique_ptr<CpuBlockedMemoryDesc> {
             if (lt == ChannelsFirst && edge->getShape().getRank() != 1) {
                 auto dims = edge->getShape().getStaticDims();
                 auto ndims = dims.size();
@@ -1111,7 +1113,7 @@ void MKLDNNEltwiseNode::initSupportedPrimitiveDescriptors() {
                     blocks[i] = dims[order[i]];
                 }
 
-                return MKLDNNPlugin::make_unique<BlockedMemoryDesc>(prc, edge->getShape(), blocks, order, offset);
+                return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(prc, edge->getShape(), blocks, order, offset);
             } else if (lt == Blocked && edge->getShape().getRank() != 1 && edge->getShape().getStaticDims()[1] != 1) {
                 size_t blockSize = mayiuse(x64::avx512_common) ? 16 : 8;
 
@@ -1123,13 +1125,13 @@ void MKLDNNEltwiseNode::initSupportedPrimitiveDescriptors() {
                 blocks.push_back(blockSize);
                 order.push_back(1);
 
-                return MKLDNNPlugin::make_unique<BlockedMemoryDesc>(prc, edge->getShape(), blocks, order, offset);
+                return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(prc, edge->getShape(), blocks, order, offset);
             } else {
                 std::vector<size_t> blocks = edge->getShape().getStaticDims();
                 std::vector<size_t> order(blocks.size());
                 std::iota(order.begin(), order.end(), 0);
 
-                return MKLDNNPlugin::make_unique<BlockedMemoryDesc>(prc, edge->getShape(), blocks, order, offset);
+                return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(prc, edge->getShape(), blocks, order, offset);
             }
         };
 
@@ -1204,7 +1206,7 @@ void MKLDNNEltwiseNode::createPrimitive() {
 
         dims_out.resize(maxInputSize, 1);
 
-        auto outBlockingDesc = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+        auto outBlockingDesc = getChildEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
         std::vector<size_t> order(maxInputSize);
         auto outOrder = outBlockingDesc.getOrder();
         for (size_t i = 0; i < order.size(); i++) {
@@ -1220,7 +1222,7 @@ void MKLDNNEltwiseNode::createPrimitive() {
         }
 
         for (int i = 0; i < inputNum; i++) {
-            auto inBlockingDesc = getParentEdgeAt(i)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+            auto inBlockingDesc = getParentEdgeAt(i)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
             size_t inRank = inBlockingDesc.getBlockDims().size();
 
             // WA to normalize blocked and planar layouts
@@ -1304,7 +1306,7 @@ void MKLDNNEltwiseNode::createPrimitive() {
         }
     };
 
-    auto outBlockingDesc = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    auto outBlockingDesc = getChildEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
     tensorRank = std::max(static_cast<size_t>(optimalTensorRank), outBlockingDesc.getBlockDims().size());
     initDims(tensorRank);
 

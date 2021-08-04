@@ -181,9 +181,9 @@ void MKLDNNPadNode::createPrimitive() {
 
     params.sizeData = this->getSelectedPrimitiveDescriptor()->getConfig().inConfs[0].desc->getPrecision().size();
 
-    const auto inBlkDesc = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    const auto inBlkDesc = getParentEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
     params.srcDims = inBlkDesc.getBlockDims();
-    params.dstDims = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>().getBlockDims();
+    params.dstDims = getChildEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getBlockDims();
 
     size_t nDims = params.srcDims.size();
     params.srcStrides.resize(nDims, 1);

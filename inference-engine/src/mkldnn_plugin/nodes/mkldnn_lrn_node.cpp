@@ -7,6 +7,7 @@
 #include <mkldnn_extension_utils.h>
 #include <ngraph/opsets/opset1.hpp>
 #include <cpu_memory_desc_utils.h>
+#include "onednn_blocked_memory_desc.h"
 
 using namespace MKLDNNPlugin;
 using namespace InferenceEngine;
@@ -98,13 +99,11 @@ void MKLDNNLrnNode::getSupportedDescriptors() {
     }
 }
 
-std::unique_ptr<MKLDNNMemoryDesc> MKLDNNLrnNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
+std::unique_ptr<MemoryDesc> MKLDNNLrnNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
     if (idx > 0) {
-        return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(idx)->getShape().getStaticDims(),
-                                             MKLDNNExtensionUtils::IEPrecisionToDataType(getOriginalInputPrecisions()[idx]),
-                                             MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(idx)->getShape().getRank()));
+        return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(getOriginalInputPrecisionAtPort(idx), getParentEdgeAt(idx)->getShape());
     } else {
-        return MKLDNNNode::getSrcMemDesc(primitive_desc_it, idx);
+        return MemoryDescUtils::makeDescriptor(primitive_desc_it.dst_desc(idx));
     }
 }
 

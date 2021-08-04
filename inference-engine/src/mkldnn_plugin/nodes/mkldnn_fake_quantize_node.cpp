@@ -1221,10 +1221,10 @@ void MKLDNNFakeQuantizeNode::createPrimitive() {
     jqp.wei_prc = Precision::FP32;
     jqp.dst_prc = config.outConfs[0].desc->getPrecision();
 
-    auto srcDesc = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    auto srcDesc = getParentEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
     jqp.s_str = srcDesc.getStrides();
 
-    auto dstDesc = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    auto dstDesc = getChildEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
     jqp.d_str = dstDesc.getStrides();
 
     jqp.is_planar = srcDesc.hasLayoutType(LayoutType::ncsp) && one_of(srcDesc.getShape().getRank(), 3, 4, 5);

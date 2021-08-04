@@ -6,20 +6,23 @@
 
 #include <ie_layouts.h>
 #include <ie_blob.h>
+#include "mkldnn/ie_mkldnn.h"
 
 namespace MKLDNNPlugin {
+
 class MKLDNNMemoryDesc;
 class BlockedMemoryDesc;
+class OnednnBlockedMemoryDesc;
+class CpuBlockedMemoryDesc;
 class MKLDNNMemory;
 
 class MemoryDescUtils {
 public:
-    /**
-     * @brief Converts MemoryDesc to InferenceEngine::TensorDesc
-     * @param desc MemoryDesc to be converted
-     * @return converted InferenceEngine::TensorDesc
-     */
-    static InferenceEngine::TensorDesc convertToTensorDesc(const MemoryDesc& desc);
+
+    // TODO [mandrono]
+    static MemoryDescPtr makeDescriptor(const mkldnn::memory::desc &desc);
+
+    static MemoryDescPtr makeDescriptor(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format);
 
     /**
      * @brief Converts MemoryDesc to MKLDNNMemoryDesc
@@ -43,32 +46,25 @@ public:
     static MKLDNNMemoryDesc convertToMKLDNNMemoryDesc(const InferenceEngine::TensorDesc& desc);
 
     /**
-     * @brief Converts MemoryDesc to BlockedMemoryDesc
+     * @brief Converts MemoryDesc to CpuBlockedMemoryDesc
      * @param desc MemoryDesc to be converted
-     * @return converted BlockedMemoryDesc
+     * @return converted CpuBlockedMemoryDesc
      */
-    static BlockedMemoryDesc convertToBlockedDescriptor(const MemoryDesc& desc);
+    static CpuBlockedMemoryDesc convertToCpuBlockedDescriptor(const MemoryDesc& desc);
 
     /**
-     * @brief Converts MKLDNNMemoryDesc to BlockedMemoryDesc
+     * @brief Converts MKLDNNMemoryDesc to CpuBlockedMemoryDesc
      * @param desc MKLDNNMemoryDesc to be converted
-     * @return converted BlockedMemoryDesc
+     * @return converted CpuBlockedMemoryDesc
      */
-    static BlockedMemoryDesc convertToBlockedDescriptor(const MKLDNNMemoryDesc& inpDesc);
+    static CpuBlockedMemoryDesc convertToCpuBlockedDescriptor(const OnednnBlockedMemoryDesc& inpDesc);
 
     /**
-     * @brief Creates MKLDNNMemoryDesc with offset0 of UNDEFINED_DIM size
-     * @param desc modifiable MKLDNNMemoryDesc
-     * @return pointer to MKLDNNMemoryDesc
-     */
-    static MemoryDescPtr applyUndefinedOffset(const MKLDNNMemoryDesc& desc);
-
-    /**
-     * @brief Creates BlockedMemoryDesc with offsetPadding, strides of UNDEFINED_DIM size and offsetPaddingToData of 0 size
+     * @brief Creates BlockedMemoryDesc with offsetPadding of UNDEFINED_DIM size
      * @param desc modifiable BlockedMemoryDesc
-     * @return pointer to BlockedMemoryDesc
+     * @return pointer to MemoryDesc
      */
-    static MemoryDescPtr applyUndefinedOffset(const BlockedMemoryDesc& desc);
+    static MemoryDescPtr applyUndefinedOffset(const MemoryDesc* desc);
 
     /**
      * @brief Creates MemoryDesc with offsetPadding of 0 size
@@ -90,6 +86,13 @@ public:
      * @return pointer to InferenceEngine::Blob
      */
     static InferenceEngine::Blob::Ptr interpretAsBlob(const MKLDNNMemory& mem);
+
+    /**
+     * @brief Converts MemoryDesc to InferenceEngine::TensorDesc
+     * @param desc MemoryDesc to be converted
+     * @return converted InferenceEngine::TensorDesc
+     */
+    static InferenceEngine::TensorDesc convertToTensorDesc(const MemoryDesc& desc);
 };
 
 }  // namespace MKLDNNPlugin

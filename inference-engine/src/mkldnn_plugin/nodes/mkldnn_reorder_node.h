@@ -26,6 +26,7 @@ public:
     const std::vector<impl_desc_type>& getPrimitivesPriority() override;
 
     void setDescs(const MemoryDesc& input, const MemoryDesc& output) {
+        // std::cout << getName() << " " << input.getType() << " " << output.getType() << std::endl;
         this->input = input.clone();
         inputShapes.clear();
         inputShapes.push_back(this->input->getShape());

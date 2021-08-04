@@ -267,8 +267,8 @@ void MKLDNNStridedSliceNode::createPrimitive() {
     if (getSelectedPrimitiveDescriptor() == nullptr)
         THROW_ERROR << "has unidentified preferable primitive descriptor.";
 
-    auto srcBlockingDesc = getParentEdgeAt(DATA_ID)->getMemory().GetDescWithType<BlockedMemoryDesc>();
-    auto dstBlockingDesc = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    auto srcBlockingDesc = getParentEdgeAt(DATA_ID)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
+    auto dstBlockingDesc = getChildEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
     auto srcOrder = srcBlockingDesc.getOrder();
     params.srcDims = srcBlockingDesc.getBlockDims();
     params.dstDims = dstBlockingDesc.getBlockDims();
@@ -292,7 +292,7 @@ void MKLDNNStridedSliceNode::orderParametersByLayouts() {
     const bool isPerChannelLayout = getParentEdgeAt(DATA_ID)->getMemory().GetDesc().hasLayoutType(LayoutType::nspc);
     const bool isBlockedLayout = getParentEdgeAt(DATA_ID)->getMemory().GetDesc().hasLayoutType(LayoutType::nCsp8c) ||
                                  getParentEdgeAt(DATA_ID)->getMemory().GetDesc().hasLayoutType(LayoutType::nCsp16c);
-    auto srcOrder = getParentEdgeAt(DATA_ID)->getMemory().GetDescWithType<BlockedMemoryDesc>().getOrder();
+    auto srcOrder = getParentEdgeAt(DATA_ID)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getOrder();
 
     if (isBlockedLayout) {
         const size_t blk = params.srcDims.back();

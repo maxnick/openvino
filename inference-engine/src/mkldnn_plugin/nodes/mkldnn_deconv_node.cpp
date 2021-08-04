@@ -17,6 +17,7 @@
 #include <cpu/x64/cpu_isa_traits.hpp>
 #include <nodes/common/cpu_memcpy.h>
 #include <cpu_memory_desc_utils.h>
+#include "onednn_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -400,21 +401,18 @@ void MKLDNNDeconvolutionNode::createDescriptor(const std::vector<const MemoryDes
     }
 }
 
-std::unique_ptr<MKLDNNMemoryDesc> MKLDNNDeconvolutionNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
+std::unique_ptr<MemoryDesc> MKLDNNDeconvolutionNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
     if (idx == 2) {
-        auto dataType = MKLDNNExtensionUtils::IEPrecisionToDataType(getOriginalInputPrecisionAtPort(2));
-        return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(2)->getShape().getStaticDims(), dataType,
-                                             MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(2)->getShape().getRank()));
+        return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(getOriginalInputPrecisionAtPort(2), Shape(getParentEdgeAt(2)->getShape().getStaticDims()));
     }
 
-    MKLDNNMemoryDesc desc = idx > 0 ? MKLDNNMemoryDesc(primitive_desc_it.weights_desc(idx - 1))
-            : isInt8 ? MKLDNNMemoryDesc(primitive_desc_it.src_desc(idx)) : MKLDNNMemoryDesc(primitive_desc_it.diff_dst_desc(idx));
-    return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(std::move(desc));
+    auto desc = idx > 0 ? primitive_desc_it.weights_desc(idx - 1) : isInt8 ? primitive_desc_it.src_desc(idx) : primitive_desc_it.diff_dst_desc(idx);
+    return MemoryDescUtils::makeDescriptor(desc);
 }
 
-std::unique_ptr<MKLDNNMemoryDesc> MKLDNNDeconvolutionNode::getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
-    return isInt8 ? MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(primitive_desc_it.dst_desc(idx)) :
-            MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(primitive_desc_it.diff_src_desc(idx));
+std::unique_ptr<MemoryDesc> MKLDNNDeconvolutionNode::getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
+    auto desc =  isInt8 ? primitive_desc_it.dst_desc(idx) : primitive_desc_it.diff_src_desc(idx);
+    return MemoryDescUtils::makeDescriptor(desc);
 }
 
 InferenceEngine::Precision MKLDNNDeconvolutionNode::getRuntimePrecision() const {

@@ -56,6 +56,7 @@
 #include "utils/cpu_utils.hpp"
 #include "nodes/common/cpu_convert.h"
 #include "cpu_memory_desc_utils.h"
+#include "onednn_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -680,7 +681,8 @@ void MKLDNNNode::initSupportedPrimitiveDescriptors() {
                 PortConfig portConfig;
                 portConfig.inPlace = -1;
                 portConfig.constant = false;
-                portConfig.desc = MemoryDescUtils::applyUndefinedOffset(*getSrcMemDesc(itpd, i));
+                auto desc = getSrcMemDesc(itpd, i);
+                portConfig.desc = MemoryDescUtils::applyUndefinedOffset(desc.get());
                 config.inConfs.push_back(portConfig);
             }
 
@@ -688,7 +690,8 @@ void MKLDNNNode::initSupportedPrimitiveDescriptors() {
                 PortConfig portConfig;
                 portConfig.inPlace = canBeInPlace() ? 0 : -1;
                 portConfig.constant = false;
-                portConfig.desc = MemoryDescUtils::applyUndefinedOffset(*getDstMemDesc(itpd, i));
+                auto desc = getDstMemDesc(itpd, i);
+                portConfig.desc = MemoryDescUtils::applyUndefinedOffset(desc.get());
                 config.outConfs.push_back(portConfig);
             }
             impl_desc_type impl_type = parse_impl_name(itpd.impl_info_str());
@@ -703,11 +706,10 @@ void MKLDNNNode::initSupportedPrimitiveDescriptors() {
 void MKLDNNNode::filterSupportedPrimitiveDescriptors() {
     // Compare by partial layout descriptor (without particular strides values)
     auto areCompatible = [](const MemoryDesc& desc, mkldnn::memory::format_tag fmt) -> bool {
-        MKLDNNMemoryDesc fmt_tdesc = MKLDNNMemoryDesc{desc.getShape().getStaticDims(),
-                                                      MKLDNNExtensionUtils::IEPrecisionToDataType(desc.getPrecision()),
-                                                      fmt};
-
-        return desc.isCompatible(fmt_tdesc);
+        auto fmt_tdesc = MemoryDescUtils::makeDescriptor(desc.getShape(),
+                                                         MKLDNNExtensionUtils::IEPrecisionToDataType(desc.getPrecision()),
+                                                         fmt);
+        return desc.isCompatible(*fmt_tdesc);
     };
 
     if (!inputMemoryFormatsFilter.empty() || !outputMemoryFormatsFilter.empty()) {
@@ -803,12 +805,25 @@ void MKLDNNNode::initDescriptor(const NodeConfig& config) {
 
         for (size_t i = 0; i < selectedConfig.inConfs.size(); i++) {
             if (!selectedConfig.inConfs[i].desc->isCompatible(*config.inConfs[i].desc))
-                IE_THROW() << "Incorrect descriptor for node: " << getName();
+                IE_THROW() << "Incorrect descriptor for node: " << getName() << " on " << i << " intput port";
         }
 
         for (size_t i = 0; i < selectedConfig.outConfs.size(); i++) {
+            // if (getName() == "Parameter_838___Convolution_840" && i == 0) {
+            //     std::cout << "tut: " << selectedConfig.outConfs[i].desc->getType() << " " << config.outConfs[i].desc->getType() << std::endl;
+            //     const BlockedMemoryDesc *a1 = dynamic_cast<const BlockedMemoryDesc *>(selectedConfig.outConfs[i].desc.get());
+            //     const CpuBlockedMemoryDesc *a2 = dynamic_cast<const CpuBlockedMemoryDesc *>(selectedConfig.outConfs[i].desc.get());
+            //     const MKLDNNMemoryDesc *a4 = dynamic_cast<const MKLDNNMemoryDesc *>(selectedConfig.outConfs[i].desc.get());
+            //     const OnednnBlockedMemoryDesc *a3 = dynamic_cast<const OnednnBlockedMemoryDesc *>(selectedConfig.outConfs[i].desc.get());
+            //     std::cout << "SELECT: " << a1 << " " << a2 << " " << a3 << " " << a4 << std::endl;
+            //     const BlockedMemoryDesc *b1 = dynamic_cast<const BlockedMemoryDesc *>(config.outConfs[i].desc.get());
+            //     const CpuBlockedMemoryDesc *b2 = dynamic_cast<const CpuBlockedMemoryDesc *>(config.outConfs[i].desc.get());
+            //     const MKLDNNMemoryDesc *b4 = dynamic_cast<const MKLDNNMemoryDesc *>(config.outConfs[i].desc.get());
+            //     const OnednnBlockedMemoryDesc *b3 = dynamic_cast<const OnednnBlockedMemoryDesc *>(config.outConfs[i].desc.get());
+            //     std::cout << "CONF: " << b1 << " " << b2 << " " << b3 << " " << b4 << std::endl;
+            // }
             if (!selectedConfig.outConfs[i].desc->isCompatible(*config.outConfs[i].desc))
-                IE_THROW() << "Incorrect descriptor for node: " << getName();
+                IE_THROW() << "Incorrect descriptor for node: " << getName() << " on " << i << " output port";
         }
         rightConfig = config;
     }
@@ -1066,12 +1081,12 @@ bool MKLDNNNode::isConfigDefined(const NodeConfig &config) const {
     return true;
 }
 
-std::unique_ptr<MKLDNNMemoryDesc> MKLDNNNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
-    return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(primitive_desc_it.src_desc(idx));
+std::unique_ptr<MemoryDesc> MKLDNNNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
+    return MemoryDescUtils::makeDescriptor(primitive_desc_it.src_desc(idx));
 }
 
-std::unique_ptr<MKLDNNMemoryDesc> MKLDNNNode::getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
-    return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(primitive_desc_it.dst_desc(idx));
+std::unique_ptr<MemoryDesc> MKLDNNNode::getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
+    return MemoryDescUtils::makeDescriptor(primitive_desc_it.dst_desc(idx));
 }
 
 int MKLDNNNode::batchToProcess() {

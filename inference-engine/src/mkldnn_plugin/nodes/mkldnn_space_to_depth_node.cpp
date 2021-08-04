@@ -191,8 +191,8 @@ void MKLDNNSpaceToDepthNode::createPrimitive() {
     };
 
     if (isBlocked) {
-        SizeVector srcBlockedDims = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>().getBlockDims();
-        SizeVector dstBlockedDims = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>().getBlockDims();
+        SizeVector srcBlockedDims = getParentEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getBlockDims();
+        SizeVector dstBlockedDims = getChildEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getBlockDims();
 
         size_t orderShiftForBlocks, orderShiftForDims;
         if (mode == Mode::BLOCKS_FIRST) {

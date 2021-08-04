@@ -143,8 +143,8 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
         for (size_t i = 0; i < getParentEdges().size(); ++i) {
             config.inConfs[i].inPlace = -1;
             config.inConfs[i].constant = false;
-            config.inConfs[i].desc = MemoryDescUtils::applyUndefinedOffset(
-                    itr->second->createDesc(inputPrecision, getParentEdgeAt(i)->getShape().getStaticDims()));
+            auto desc = itr->second->createDesc(inputPrecision, getParentEdgeAt(i)->getShape().getStaticDims());
+            config.inConfs[i].desc = MemoryDescUtils::applyUndefinedOffset(&desc);
         }
         supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::ref);
         if (itr->first != LayoutType::nspc) {
@@ -161,8 +161,8 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
         const auto& refConfig = supportedPrimitiveDescriptors[refPdIndex].getConfig();
         auto config = refConfig;
 
-        const auto &order = refConfig.outConfs[0].desc->as<BlockedMemoryDesc>()->getOrder();
-        const auto &blkDims = refConfig.outConfs[0].desc->as<BlockedMemoryDesc>()->getBlockDims();
+        const auto &order = refConfig.outConfs[0].desc->as<CpuBlockedMemoryDesc>()->getOrder();
+        const auto &blkDims = refConfig.outConfs[0].desc->as<CpuBlockedMemoryDesc>()->getBlockDims();
         auto numOfDim = blkDims.size();
 
         SizeVector offsets(numOfDim, 0lu);
@@ -178,14 +178,14 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
             }
         }
 
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<BlockedMemoryDesc>(outputPrecision, Shape(dstDims), blkDims, order, offset, offsets, strides);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(outputPrecision, Shape(dstDims), blkDims, order, offset, offsets, strides);
 
         for (size_t i = 0; i < getParentEdges().size(); i++) {
-            const auto& srcBlkDims = refConfig.inConfs[i].desc->as<BlockedMemoryDesc>()->getBlockDims();
+            const auto& srcBlkDims = refConfig.inConfs[i].desc->as<CpuBlockedMemoryDesc>()->getBlockDims();
             const auto& shape = refConfig.inConfs[i].desc->getShape();
 
             config.inConfs[i].inPlace = 0;
-            config.inConfs[i].desc = MKLDNNPlugin::make_unique<BlockedMemoryDesc>(inputPrecision, shape, srcBlkDims, order, offset, offsets, strides);
+            config.inConfs[i].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(inputPrecision, shape, srcBlkDims, order, offset, offsets, strides);
         }
         supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::unknown);
     }
@@ -428,31 +428,31 @@ void MKLDNNConcatNode::initOptimalPrimitiveDescriptor() {
         // reset undefined offsets
         config.outConfs[i].desc = MemoryDescUtils::resetOffset(config.outConfs[i].desc.get());
     }
-    auto firstOutBlockingDesc = MemoryDescUtils::convertToBlockedDescriptor(*config.outConfs[0].desc);
+    auto firstOutBlockingDesc = config.outConfs[0].desc->as<BlockedMemoryDesc>();
     size_t offset = 0;
     for (size_t i = 0; i < config.inConfs.size(); i++) {
-        auto inpBlockingDesc = MemoryDescUtils::convertToBlockedDescriptor(*config.inConfs[i].desc);
-        config.inConfs[i].desc = MKLDNNPlugin::make_unique<BlockedMemoryDesc>(inpBlockingDesc.getPrecision(),
-                                                                inpBlockingDesc.getShape(),
-                                                                inpBlockingDesc.getBlockDims(),
-                                                                inpBlockingDesc.getOrder(),
-                                                                firstOutBlockingDesc.getOffsetPadding() + offset,
-                                                                firstOutBlockingDesc.getOffsetPaddingToData(),
-                                                                firstOutBlockingDesc.getStrides());
+        auto inpBlockingDesc = config.inConfs[i].desc->as<BlockedMemoryDesc>();
+        config.inConfs[i].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(inpBlockingDesc->getPrecision(),
+                                                                                 inpBlockingDesc->getShape(),
+                                                                                 inpBlockingDesc->getBlockDims(),
+                                                                                 inpBlockingDesc->getOrder(),
+                                                                                 firstOutBlockingDesc->getOffsetPadding() + offset,
+                                                                                 firstOutBlockingDesc->getOffsetPaddingToData(),
+                                                                                 firstOutBlockingDesc->getStrides());
         size_t axisSize = 1;
 
-        auto firstInpBlockingDesc = MemoryDescUtils::convertToBlockedDescriptor(*config.inConfs[0].desc);
-        if (firstInpBlockingDesc.hasLayoutType(LayoutType::nspc)) {
+        auto firstInpBlockingDesc = config.inConfs[0].desc->as<BlockedMemoryDesc>();
+        if (firstInpBlockingDesc->hasLayoutType(LayoutType::nspc)) {
             // This is more general and works for any "direct" Layout (such as nchw or nhwc), but it doesn't work for blocked
-            size_t realAxis = inverseOrder(firstInpBlockingDesc.getOrder(), axis);
-            for (size_t j = realAxis; j < inpBlockingDesc.getBlockDims().size(); j++) {
-                size_t jj = firstInpBlockingDesc.getOrder()[j];
-                axisSize *= inpBlockingDesc.getBlockDims()[jj];
+            size_t realAxis = inverseOrder(firstInpBlockingDesc->getOrder(), axis);
+            for (size_t j = realAxis; j < inpBlockingDesc->getBlockDims().size(); j++) {
+                size_t jj = firstInpBlockingDesc->getOrder()[j];
+                axisSize *= inpBlockingDesc->getBlockDims()[jj];
             }
         } else {
             // This works for nchw and nchw8c/nchw16c
-            for (size_t j = axis; j < inpBlockingDesc.getBlockDims().size(); j++) {
-                axisSize *= inpBlockingDesc.getBlockDims()[j];
+            for (size_t j = axis; j < inpBlockingDesc->getBlockDims().size(); j++) {
+                axisSize *= inpBlockingDesc->getBlockDims()[j];
             }
         }
         offset += axisSize;

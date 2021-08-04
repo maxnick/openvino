@@ -253,8 +253,8 @@ void MKLDNNPoolingNode::initSupportedPrimitiveDescriptors() {
                 PortConfig dataConfig;
                 dataConfig.inPlace = -1;
                 dataConfig.constant = false;
-                dataConfig.desc = MemoryDescUtils::applyUndefinedOffset(*getSrcMemDesc(itpd, i));
-                dataConfig.desc = getSrcMemDesc(itpd, i);
+                auto desc = getSrcMemDesc(itpd, i);
+                dataConfig.desc = MemoryDescUtils::applyUndefinedOffset(desc.get());
                 config.inConfs.push_back(dataConfig);
             }
 
@@ -262,8 +262,8 @@ void MKLDNNPoolingNode::initSupportedPrimitiveDescriptors() {
                 PortConfig dataConfig;
                 dataConfig.inPlace = canBeInPlace() ? 0 : -1;
                 dataConfig.constant = false;
-                dataConfig.desc = MemoryDescUtils::applyUndefinedOffset(*getDstMemDesc(itpd, i));
-                dataConfig.desc = getDstMemDesc(itpd, i);
+                auto desc = getDstMemDesc(itpd, i);
+                dataConfig.desc = MemoryDescUtils::applyUndefinedOffset(desc.get());
                 config.outConfs.push_back(dataConfig);
             }
             impl_desc_type impl_type = parse_impl_name(itpd.impl_info_str());

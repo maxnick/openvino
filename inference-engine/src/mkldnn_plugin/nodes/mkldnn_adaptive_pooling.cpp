@@ -165,8 +165,8 @@ void MKLDNNAdaptivePoolingNode::execute(mkldnn::stream strm) {
     if (!selectedPrimitiveDescriptor)
         IE_THROW() << errorPrefix << "doesn't have primitive descriptors.";
     auto config = selectedPrimitiveDescriptor->getConfig();
-    auto srcStrides = getParentEdgesAtPort(0)[0]->getMemory().GetDescWithType<BlockedMemoryDesc>().getStrides();
-    auto dstStrides = getChildEdgesAtPort(0)[0]->getMemory().GetDescWithType<BlockedMemoryDesc>().getStrides();
+    auto srcStrides = getParentEdgesAtPort(0)[0]->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
+    auto dstStrides = getChildEdgesAtPort(0)[0]->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
 
     // unified strides array
     const size_t tailDimsOffset = (isTailCFmt ? -1 : 0);

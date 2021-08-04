@@ -7,7 +7,7 @@
 
 using namespace MKLDNNPlugin;
 
-BlockedMemoryDesc::BlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape) : MemoryDesc(shape, Blocked) , precision(prc) {
+CpuBlockedMemoryDesc::CpuBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape) : MemoryDesc(shape, CpuBlocked), precision(prc) {
     auto& dims = shape.getDims();
     order.resize(dims.size());
     std::iota(order.begin(), order.end(), 0);
@@ -21,15 +21,15 @@ BlockedMemoryDesc::BlockedMemoryDesc(InferenceEngine::Precision prc, const Shape
     }
 }
 
-BlockedMemoryDesc::BlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
+CpuBlockedMemoryDesc::CpuBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
                   const std::vector<size_t>& order, size_t offsetPadding, const std::vector<size_t>& offsetPaddingToData,
-                  const std::vector<size_t>& strides) : MemoryDesc(shape, Blocked), precision(prc) {
+                  const std::vector<size_t>& strides) : MemoryDesc(shape, CpuBlocked), precision(prc) {
     if (std::any_of(order.begin(), order.end(), [](size_t val) { return val == Shape::UNDEFINED_DIM; })) {
-        IE_THROW() << "BlockedMemoryDesc do not support undefined order.";
+        IE_THROW() << "CpuBlockedMemoryDesc do not support undefined order.";
     }
 
     if (std::any_of(blockedDims.begin() + shape.getRank(), blockedDims.end(), [](size_t val) { return val == Shape::UNDEFINED_DIM; })) {
-        IE_THROW() << "BlockedMemoryDesc doesn't support undefined blockedDims.";
+        IE_THROW() << "CpuBlockedMemoryDesc doesn't support undefined blockedDims.";
     }
 
     this->order = order;
@@ -65,7 +65,7 @@ BlockedMemoryDesc::BlockedMemoryDesc(InferenceEngine::Precision prc, const Shape
     }
 }
 
-bool BlockedMemoryDesc::isDefinedImp() const {
+bool CpuBlockedMemoryDesc::isDefinedImp() const {
     bool defined = true;
     defined = defined && std::none_of(blockedDims.cbegin(), blockedDims.cend(), [](size_t val) { return val == Shape::UNDEFINED_DIM; });
     defined = defined && std::none_of(strides.cbegin(), strides.cend(), [](size_t val) { return val == Shape::UNDEFINED_DIM; });
@@ -76,48 +76,16 @@ bool BlockedMemoryDesc::isDefinedImp() const {
     return defined;
 }
 
-bool BlockedMemoryDesc::isCompatible(const MemoryDesc& rhs) const {
+bool CpuBlockedMemoryDesc::isCompatible(const MemoryDesc& rhs) const {
     const MemoryDesc* pRhs = &rhs;
     if (auto blockingDesc = dynamic_cast<const BlockedMemoryDesc*>(pRhs)) {
-        return isCompatible(*blockingDesc);
-    } else if (auto mkldnnDesc = dynamic_cast<const MKLDNNMemoryDesc*>(pRhs)) {
-        return mkldnnDesc->isCompatible(*this);
+        return BlockedMemoryDesc::isCompatible(blockingDesc);
     } else {
         return false;
     }
 }
 
-bool BlockedMemoryDesc::isCompatible(const BlockedMemoryDesc& rhs) const {
-    if (this->getShape() != rhs.getShape() || this->getPrecision() != rhs.getPrecision())
-        return false;
-
-    if (!dimsEqualWeak(this->getBlockDims(), rhs.getBlockDims())) {
-        return false;
-    }
-
-    if (!dimsEqualWeak(this->getOffsetPaddingToData(), rhs.getOffsetPaddingToData())) {
-        return false;
-    }
-
-    // this check needed to avoid inserting unnecessary reorders if the memory is used in place and the batch size is equal to 1
-    size_t skipAxis = this->getShape().getRank() > 0 && this->getShape().getDims().front() == 1 ? 0 :
-            Shape::UNDEFINED_DIM; //ignore batch axis if batch size == 1
-    if (!dimsEqualWeak(this->getStrides(), rhs.getStrides(), skipAxis)) {
-        return false;
-    }
-
-    if (!dimsEqualWeak(this->getOrder(), rhs.getOrder())) {
-        return false;
-    }
-
-    return dimsEqualWeak(this->getOffsetPadding(), rhs.getOffsetPadding());
-}
-
-bool BlockedMemoryDesc::isCompatible(const MKLDNNMemoryDesc& rhs) const {
-    return rhs.isCompatible(*this);
-}
-
-size_t BlockedMemoryDesc::getMemSizeImp() const {
+size_t CpuBlockedMemoryDesc::getMemSizeImp() const {
     int64_t e_size = getOffsetPadding() + 1;  // size in bytes (from begin of data to last element)
     for (int j = 0; j < getBlockDims().size(); j++)
         e_size += (getBlockDims()[j] - 1) * getStrides()[j];
@@ -128,7 +96,7 @@ size_t BlockedMemoryDesc::getMemSizeImp() const {
     return e_size;
 }
 
-size_t BlockedMemoryDesc::getMaxMemSize() const {
+size_t CpuBlockedMemoryDesc::getMaxMemSize() const {
     if (shape.isStatic()) {
         return getCurrentSize();
     }
@@ -142,7 +110,7 @@ size_t BlockedMemoryDesc::getMaxMemSize() const {
     return maxDimsDesc->getCurrentSize();
 }
 
-size_t BlockedMemoryDesc::getOffset(const InferenceEngine::SizeVector& v) const {
+size_t CpuBlockedMemoryDesc::getOffset(const InferenceEngine::SizeVector& v) const {
     InferenceEngine::SizeVector off_v = v;
 
     size_t n_blocked_dims = order.size();
@@ -162,7 +130,7 @@ size_t BlockedMemoryDesc::getOffset(const InferenceEngine::SizeVector& v) const 
     return offset;
 }
 
-size_t BlockedMemoryDesc::getElementOffset(size_t elemNumber) const {
+size_t CpuBlockedMemoryDesc::getElementOffset(size_t elemNumber) const {
     // TODO [DS]: rewrite to support dynamic shapes
     auto& dims = shape.getStaticDims();
     size_t n_dims = dims.size();
@@ -176,7 +144,7 @@ size_t BlockedMemoryDesc::getElementOffset(size_t elemNumber) const {
     return getOffset(pos);
 }
 
-bool BlockedMemoryDesc::hasLayoutType(LayoutType layoutType) const {
+bool CpuBlockedMemoryDesc::hasLayoutType(LayoutType layoutType) const {
     switch (layoutType) {
         case LayoutType::ncsp:
             return isPlainFormat();
@@ -191,7 +159,7 @@ bool BlockedMemoryDesc::hasLayoutType(LayoutType layoutType) const {
     }
 }
 
-bool BlockedMemoryDesc::isPlainFormat() const {
+bool CpuBlockedMemoryDesc::isPlainFormat() const {
     if (shape.getRank() != order.size()) {
         return false;
     }
@@ -203,7 +171,7 @@ bool BlockedMemoryDesc::isPlainFormat() const {
     return true;
 }
 
-bool BlockedMemoryDesc::isBlockedCFormat(size_t blk_size) const {
+bool CpuBlockedMemoryDesc::isBlockedCFormat(size_t blk_size) const {
     if ((order.size() - shape.getRank()) != 1) {
         return false;
     }
@@ -221,7 +189,7 @@ bool BlockedMemoryDesc::isBlockedCFormat(size_t blk_size) const {
     return true;
 }
 
-bool BlockedMemoryDesc::isTailCFormat() const {
+bool CpuBlockedMemoryDesc::isTailCFormat() const {
     if (shape.getRank() < 3) {
         return false;
     }
@@ -237,7 +205,7 @@ bool BlockedMemoryDesc::isTailCFormat() const {
     return true;
 }
 
-std::string BlockedMemoryDesc::serializeFormat() const {
+std::string CpuBlockedMemoryDesc::serializeFormat() const {
     std::stringstream result;
     char startLetter = 'a';
     std::unordered_map<size_t, size_t> mapAxisBlockSize;
@@ -260,7 +228,7 @@ std::string BlockedMemoryDesc::serializeFormat() const {
     return result.str();
 }
 
-std::unique_ptr<MemoryDesc> BlockedMemoryDesc::cloneWithNewDimsImp(const std::vector<size_t> &dims) const {
+std::unique_ptr<MemoryDesc> CpuBlockedMemoryDesc::cloneWithNewDimsImp(const std::vector<size_t> &dims) const {
     std::vector<size_t> newBlockedDims(order.size());
 
     for (size_t i = 0; i < dims.size(); ++i) {
@@ -279,5 +247,5 @@ std::unique_ptr<MemoryDesc> BlockedMemoryDesc::cloneWithNewDimsImp(const std::ve
         newOffsetPaddingToData = offsetPaddingToData;
     }
 
-    return MKLDNNPlugin::make_unique<BlockedMemoryDesc>(precision, Shape(dims), newBlockedDims, order, offsetPadding, newOffsetPaddingToData);
+    return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(precision, Shape(dims), newBlockedDims, order, offsetPadding, newOffsetPaddingToData);
 }

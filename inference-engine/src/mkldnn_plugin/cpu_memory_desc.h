@@ -12,7 +12,8 @@
 namespace MKLDNNPlugin {
 
 enum MemoryDescType {
-    Blocked,
+    CpuBlocked,
+    OneDnnBlocked,
     Mkldnn
 };
 

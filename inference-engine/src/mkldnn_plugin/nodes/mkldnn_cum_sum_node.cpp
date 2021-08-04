@@ -133,7 +133,7 @@ template <typename dataType>
 void MKLDNNCumSumNode::exec() {
     const auto *input = reinterpret_cast<const dataType *>(getParentEdgeAt(CUM_SUM_DATA)->getMemoryPtr()->GetPtr());
     auto *output = reinterpret_cast<dataType *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
-    const std::vector<size_t> strides = getParentEdgeAt(CUM_SUM_DATA)->getMemory().GetDescWithType<BlockedMemoryDesc>().getStrides();
+    const std::vector<size_t> strides = getParentEdgeAt(CUM_SUM_DATA)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
 
     if (reverse) {
         if (exclusive) {

@@ -13,6 +13,7 @@
 #include <mkldnn.hpp>
 #include "utils/general_utils.h"
 #include <cpu_memory_desc_utils.h>
+#include "onednn_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -288,23 +289,24 @@ void MKLDNNFullyConnectedNode::createDescriptor(const std::vector<const MemoryDe
     createDescriptorInternal(MemoryDescUtils::convertToMKLDNNMemoryDesc(*inputDesc[0]), MemoryDescUtils::convertToMKLDNNMemoryDesc(*outputDesc[0]));
 }
 
-std::unique_ptr<MKLDNNMemoryDesc> MKLDNNFullyConnectedNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
-    auto desc = idx > 0 ? MKLDNNMemoryDesc(primitive_desc_it.weights_desc(idx - 1)) : MKLDNNMemoryDesc(primitive_desc_it.src_desc(idx));
+std::unique_ptr<MemoryDesc> MKLDNNFullyConnectedNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
+    auto desc = idx > 0 ? primitive_desc_it.weights_desc(idx - 1) : primitive_desc_it.src_desc(idx);
 
     if (getParentEdgeAt(idx)->getShape().getRank() == 3) {
-        desc = MKLDNNMemoryDesc(getParentEdgeAt(idx)->getShape().getStaticDims(), MKLDNNExtensionUtils::IEPrecisionToDataType(desc.getPrecision()),
-                                MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(idx)->getShape().getRank()));
+        return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(MKLDNNExtensionUtils::DataTypeToIEPrecision(
+            static_cast<mkldnn::memory::data_type>(desc.data.data_type)), getParentEdgeAt(idx)->getShape());
     }
-    return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(std::move(desc));
+    return MemoryDescUtils::makeDescriptor(desc);
 }
 
-std::unique_ptr<MKLDNNMemoryDesc> MKLDNNFullyConnectedNode::getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
-    auto desc = MKLDNNMemoryDesc(primitive_desc_it.dst_desc(idx));
+std::unique_ptr<MemoryDesc> MKLDNNFullyConnectedNode::getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
+    auto desc = primitive_desc_it.dst_desc(idx);
+
     if (getChildEdgeAt(idx)->getShape().getRank() == 3) {
-        desc = MKLDNNMemoryDesc(getChildEdgeAt(idx)->getShape().getStaticDims(), MKLDNNExtensionUtils::IEPrecisionToDataType(desc.getPrecision()),
-                                MKLDNNMemory::GetPlainFormatByRank(getChildEdgeAt(idx)->getShape().getRank()));
+        return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(MKLDNNExtensionUtils::DataTypeToIEPrecision(
+            static_cast<mkldnn::memory::data_type>(desc.data.data_type)), getChildEdgeAt(idx)->getShape());
     }
-    return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(std::move(desc));
+    return MemoryDescUtils::makeDescriptor(desc);
 }
 
 InferenceEngine::Precision MKLDNNFullyConnectedNode::getRuntimePrecision() const {

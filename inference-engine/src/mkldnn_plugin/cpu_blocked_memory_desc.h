@@ -4,29 +4,23 @@
 
 #pragma once
 
-#include "cpu_memory_desc.h"
+#include "blocked_memory_desc.h"
 
 namespace MKLDNNPlugin {
 
-class MKLDNNMemoryDesc;
-
-class BlockedMemoryDesc : public MemoryDesc {
+class CpuBlockedMemoryDesc : public BlockedMemoryDesc {
 public:
-    BlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape);
+    CpuBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape);
 
-    BlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
-                      const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
-                      const std::vector<size_t>& strides = {});
+    CpuBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
+                         const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
+                         const std::vector<size_t>& strides = {});
 
     MemoryDescPtr clone() const override {
-        return MKLDNNPlugin::make_unique<BlockedMemoryDesc>(*this);
+        return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(*this);
     }
 
     bool isCompatible(const MemoryDesc& rhs) const override;
-
-    bool isCompatible(const BlockedMemoryDesc& rhs) const;
-
-    bool isCompatible(const MKLDNNMemoryDesc& rhs) const;
 
     InferenceEngine::Precision getPrecision() const override {
         return precision;
@@ -36,7 +30,7 @@ public:
         precision = std::move(prc);
     }
 
-    const std::vector<size_t>& getBlockDims() const {
+    const std::vector<size_t> getBlockDims() const override {
         return blockedDims;
     }
 
@@ -45,7 +39,7 @@ public:
      *
      * @return order
      */
-    const std::vector<size_t>& getOrder() const {
+    const std::vector<size_t> getOrder() const override {
         return order;
     }
 
@@ -54,7 +48,7 @@ public:
      *
      * @return offsets
      */
-    const std::vector<size_t>& getOffsetPaddingToData() const {
+    const std::vector<size_t> getOffsetPaddingToData() const override {
         return offsetPaddingToData;
     }
     /**
@@ -62,7 +56,7 @@ public:
      *
      * @return offset
      */
-    size_t getOffsetPadding() const {
+    size_t getOffsetPadding() const override {
         return offsetPadding;
     }
 
@@ -71,7 +65,7 @@ public:
      *
      * @return strides
      */
-    const std::vector<size_t>& getStrides() const {
+    const std::vector<size_t> getStrides() const override {
         return strides;
     }
 

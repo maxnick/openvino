@@ -129,10 +129,10 @@ void MKLDNNSpaceToBatchNode::SpaceToBatchKernel() {
         blockShape.erase(blockShape.begin() + 1);
     }
 
-    const auto outBlkDims = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>().getBlockDims();
+    const auto outBlkDims = getChildEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getBlockDims();
     const size_t blockSize = blocked ? outBlkDims.back() : 1lu;
     const size_t blockCountInput = outBlkDims[1];
-    const size_t blockCountOutput = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>().getBlockDims()[1];
+    const size_t blockCountOutput = getParentEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getBlockDims()[1];
     const auto blockRemainder = inShape5D[1] % blockSize;
     const auto lastBlock = blockRemainder == 0 ? blockSize : blockRemainder;
 

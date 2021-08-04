@@ -40,7 +40,7 @@ namespace MKLDNNPlugin {
  * Represent internal plugin abstraction of tensor description
  *
  */
-class MKLDNNMemoryDesc : public MemoryDesc {
+class MKLDNNMemoryDesc : public virtual MemoryDesc {
 public:
     /** Construct a tensor desc with plain layout format (like ND C array) */
     MKLDNNMemoryDesc(const std::vector<size_t>& _dims, mkldnn::memory::data_type dataType);
@@ -67,7 +67,6 @@ public:
     MKLDNNDims getDims() const {
         return MKLDNNDims(desc.data.dims, desc.data.ndims);
     }
-
 
     // TODO [DS]: phase 2: move to the blocked desc interface
     bool blocksExtended() const;
@@ -101,7 +100,6 @@ public:
     void setPrecision(InferenceEngine::Precision prc) override;
 
     bool isCompatible(const MemoryDesc& rhs) const override;
-    bool isCompatible(const BlockedMemoryDesc& rhs) const;
     bool isCompatible(const MKLDNNMemoryDesc& rhs) const;
 
     const std::vector<size_t>& getOrder() const {
@@ -109,6 +107,18 @@ public:
     }
 
     size_t getMaxMemSize() const override;
+
+    mkldnn::memory::desc getMklDesc() const {
+        return desc;
+    }
+
+    MKLDNNMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
+        const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
+        const std::vector<size_t>& strides = {});
+
+protected:
+    mkldnn::memory::desc desc;
+    std::vector<size_t> order;
 
 private:
     size_t getElementOffset(size_t elemNumber) const override;
@@ -121,22 +131,13 @@ private:
     bool isDefinedImp() const override;
     std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
 
-    std::vector<size_t> getStrides() const;
-    std::vector<size_t> getBlockDims() const;
-
 private:
-    MKLDNNMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
-        const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
-        const std::vector<size_t>& strides = {});
-
     static constexpr size_t UNREACHABLE_DIM = std::numeric_limits<size_t>::max();
-    mkldnn::memory::desc desc;
-    std::vector<size_t> order;
 
-    friend BlockedMemoryDesc MemoryDescUtils::convertToBlockedDescriptor(const MKLDNNMemoryDesc& inpDesc);
-    friend MKLDNNMemoryDesc MemoryDescUtils::convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc);
-    friend MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const MKLDNNMemoryDesc& desc);
-    friend MemoryDescPtr MemoryDescUtils::resetOffset(const MemoryDesc* desc);
+    // friend CpuBlockedMemoryDesc MemoryDescUtils::convertToBlockedDescriptor(const MKLDNNMemoryDesc& inpDesc);
+    // friend MKLDNNMemoryDesc MemoryDescUtils::convertToMKLDNNMemoryDesc(const CpuBlockedMemoryDesc& desc);
+    // friend MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const MKLDNNMemoryDesc& desc);
+    // friend MemoryDescPtr MemoryDescUtils::resetOffset(const MemoryDesc* desc);
 };
 
 

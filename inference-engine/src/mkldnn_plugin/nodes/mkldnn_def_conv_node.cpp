@@ -1068,20 +1068,20 @@ void MKLDNNDeformableConvolutionNode::execute(mkldnn::stream strm) {
     const auto *weights = reinterpret_cast<const float *>(srcMemory2.GetPtr());
     float *dst = reinterpret_cast<float *>(dstMemory.GetPtr());
 
-    auto src_block_desc = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    auto src_block_desc = getParentEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
     std::vector<size_t> src_strides(src_block_desc.getStrides().size());
     for (int i = 0; i < src_strides.size(); i++) {
         src_strides[src_block_desc.getOrder()[i]] = src_block_desc.getStrides()[i];
     }
 
-    auto dst_block_desc = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    auto dst_block_desc = getChildEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
     std::vector<size_t> dst_strides(dst_block_desc.getStrides().size());
     for (int i = 0; i < dst_strides.size(); i++) {
         dst_strides[dst_block_desc.getOrder()[i]] = dst_block_desc.getStrides()[i];
     }
 
-    auto off_strides =  getParentEdgeAt(1)->getMemory().GetDescWithType<BlockedMemoryDesc>().getStrides();
-    auto wei_strides =  getParentEdgeAt(2)->getMemory().GetDescWithType<BlockedMemoryDesc>().getStrides();
+    auto off_strides =  getParentEdgeAt(1)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
+    auto wei_strides =  getParentEdgeAt(2)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
 
     if (def_conv_kernel) {
         executeOptimized(src, offsets, weights, dst, src_strides, off_strides, dst_strides);
