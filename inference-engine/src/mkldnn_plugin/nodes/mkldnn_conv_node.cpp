@@ -483,8 +483,8 @@ bool MKLDNNConvolutionNode::created() const {
 
 void MKLDNNConvolutionNode::createDescriptor(const std::vector<const MemoryDesc*>& inputDesc,
                                              const std::vector<const MemoryDesc*>& outputDesc) {
-    const auto inDesc = inputDesc[0]->as<const MKLDNNMemoryDesc>()->getMklDesc();
-    const auto outDesc = outputDesc[0]->as<const MKLDNNMemoryDesc>()->getMklDesc();
+    const auto inDesc = MemoryDescUtils::convertToMKLDNNMemoryDesc(*inputDesc[0]).getMklDesc();
+    const auto outDesc = MemoryDescUtils::convertToMKLDNNMemoryDesc(*outputDesc[0]).getMklDesc();
 
     memory::data_type wdt = static_cast<memory::data_type>(inDesc.data.data_type);
     memory::data_type bdt = memory::data_type::f32;
@@ -557,18 +557,8 @@ void MKLDNNConvolutionNode::initDescriptor(const NodeConfig& config) {
     if (canBeExecutedInInt8()) {
         isStridedBlobsSupported = false;
     }
-    // TODO [NM]: fix strided blobs feature support for dynamic weights
-    // if (getOriginalInputsNumber() != 1) {
-    //     isStridedBlobsSupported = false;
-    // }
 
     if (isStridedBlobsSupported) {
-        // std::cout << getName() << std::endl;
-        // const BlockedMemoryDesc *a1 = dynamic_cast<const BlockedMemoryDesc *>(config.inConfs[0].desc.get());
-        // const CpuBlockedMemoryDesc *a2 = dynamic_cast<const CpuBlockedMemoryDesc *>(config.inConfs[0].desc.get());
-        // const OnednnBlockedMemoryDesc *a3 = dynamic_cast<const OnednnBlockedMemoryDesc *>(config.inConfs[0].desc.get());
-        // const MKLDNNMemoryDesc *a4 = dynamic_cast<const MKLDNNMemoryDesc *>(config.inConfs[0].desc.get());
-        // std::cout << a1 << " " << a2 << " " << a3 << " " << a4 << std::endl;
         createDescriptor({config.inConfs[0].desc.get()}, {config.outConfs[0].desc.get()});
     }
 
