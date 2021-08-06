@@ -18,7 +18,6 @@ class MKLDNNMemory;
 
 class MemoryDescUtils {
 public:
-
     /**
      * @brief Creates OnednnBlockedMemoryDesc if desc is blocked and have no extra data , otherwise MKLDNNMemoryDesc
      * @param desc mkldnn::memory::desc from which one of the descriptors will be created

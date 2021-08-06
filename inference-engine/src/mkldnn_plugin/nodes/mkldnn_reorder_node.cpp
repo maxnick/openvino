@@ -52,12 +52,10 @@ void MKLDNNReorderNode::initSupportedPrimitiveDescriptors() {
     }
 
     if (input && output) {
-        // std::cout << "1: " << getName() << std::endl; 
         config.inConfs[0].desc = input->clone();
         config.outConfs[0].desc = output->clone();
     } else if (parent->getSelectedPrimitiveDescriptor() != nullptr &&
                child->getSelectedPrimitiveDescriptor() != nullptr) {
-        // std::cout << "2: " << getName() << std::endl; 
         config.inConfs[0].desc = parent->getSelectedPrimitiveDescriptor()->getConfig().outConfs[0].desc->clone();
         config.outConfs[0].desc = child->getSelectedPrimitiveDescriptor()->getConfig().inConfs[0].desc->clone();
     } else {

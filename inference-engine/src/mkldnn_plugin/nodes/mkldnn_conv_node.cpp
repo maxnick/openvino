@@ -483,19 +483,6 @@ bool MKLDNNConvolutionNode::created() const {
 
 void MKLDNNConvolutionNode::createDescriptor(const std::vector<const MemoryDesc*>& inputDesc,
                                              const std::vector<const MemoryDesc*>& outputDesc) {
-
-    // std::cout << "createDescriptor: " << getName() << std::endl;
-    // const BlockedMemoryDesc *a1 = dynamic_cast<const BlockedMemoryDesc *>(inputDesc[0]);
-    // const CpuBlockedMemoryDesc *a2 = dynamic_cast<const CpuBlockedMemoryDesc *>(inputDesc[0]);
-    // const MKLDNNMemoryDesc *a4 = dynamic_cast<const MKLDNNMemoryDesc *>(inputDesc[0]);
-    // const OnednnBlockedMemoryDesc *a3 = dynamic_cast<const OnednnBlockedMemoryDesc *>(inputDesc[0]);
-    // std::cout << "INPUT: " << a1 << " " << a2 << " " << a3 << " " << a4 << std::endl;
-    // const BlockedMemoryDesc *b1 = dynamic_cast<const BlockedMemoryDesc *>(outputDesc[0]);
-    // const CpuBlockedMemoryDesc *b2 = dynamic_cast<const CpuBlockedMemoryDesc *>(outputDesc[0]);
-    // const MKLDNNMemoryDesc *b4 = dynamic_cast<const MKLDNNMemoryDesc *>(outputDesc[0]);
-    // const OnednnBlockedMemoryDesc *b3 = dynamic_cast<const OnednnBlockedMemoryDesc *>(outputDesc[0]);
-    // std::cout << "OUTPUT: " << b1 << " " << b2 << " " << b3 << " " << b4 << std::endl;
-
     const auto inDesc = inputDesc[0]->as<const MKLDNNMemoryDesc>()->getMklDesc();
     const auto outDesc = outputDesc[0]->as<const MKLDNNMemoryDesc>()->getMklDesc();
 

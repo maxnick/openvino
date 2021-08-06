@@ -97,7 +97,8 @@
 //         auto strides = blockedDesc.getStrides();
 //         std::transform(strides.begin(), strides.begin() + cpuShape.getRank(), strides.begin(), [](size_t x) { return x * 3; });
 
-//         auto stridedBlockedDesc = CpuBlockedMemoryDesc(blockedDesc.getPrecision(), blockedDesc.getShape(), blockedDesc.getBlockDims(), blockedDesc.getOrder(),
+//         auto stridedBlockedDesc = CpuBlockedMemoryDesc(blockedDesc.getPrecision(), blockedDesc.getShape(), blockedDesc.getBlockDims(),
+//                                                        blockedDesc.getOrder(),
 //                                                     100500, blockedDesc.getOffsetPaddingToData(), strides);
 
 //         ASSERT_FALSE(blockedDesc.isCompatible(stridedBlockedDesc));
