@@ -62,7 +62,7 @@ public:
         return descStatus::Defined == status;
     }
 
-    virtual bool hasLayoutType(LayoutType layoutType) const = 0;
+    virtual bool hasLayoutType(LayoutType layoutType) const { return false; }
 
     virtual std::string serializeFormat() const = 0;
 

@@ -42,13 +42,15 @@ namespace MKLDNNPlugin {
  */
 class MKLDNNMemoryDesc : public virtual MemoryDesc {
 public:
-    /** Construct a tensor desc with plain layout format (like ND C array) */
-    MKLDNNMemoryDesc(const std::vector<size_t>& _dims, mkldnn::memory::data_type dataType);
+    // /** Construct a tensor desc with plain layout format (like ND C array) */
+    // MKLDNNMemoryDesc(const std::vector<size_t>& _dims, mkldnn::memory::data_type dataType);
 
     /** Construct a tensor desc with specified layout format tag. Any and Undef is not supported */
-    MKLDNNMemoryDesc(const std::vector<size_t>& _dims, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format);
 
-    MKLDNNMemoryDesc(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format);
+    MKLDNNMemoryDesc(const std::vector<size_t>& _dims, mkldnn::memory::data_type dataType,
+                     mkldnn::memory::format_tag format = mkldnn::memory::format_tag::undef);
+
+    MKLDNNMemoryDesc(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format = mkldnn::memory::format_tag::undef);
 
     explicit MKLDNNMemoryDesc(const mkldnn::memory::desc& desc);
 
@@ -62,7 +64,8 @@ public:
      *
      * @return format tag if was able to define it
      */
-    mkldnn::memory::format_tag getFormat() const; // move to the private section
+    // TODO [DS]: phase 2: move to the private section
+    mkldnn::memory::format_tag getFormat() const;
 
     mkldnn::memory::data_type getDataType() const {
         return static_cast<mkldnn::memory::data_type>(desc.data.data_type);
@@ -96,8 +99,6 @@ public:
         return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(*this);
     }
 
-    bool hasLayoutType(LayoutType layoutType) const override;
-
     std::string serializeFormat() const override;
 
     InferenceEngine::Precision getPrecision() const override;
@@ -105,11 +106,6 @@ public:
     void setPrecision(InferenceEngine::Precision prc) override;
 
     bool isCompatible(const MemoryDesc& rhs) const override;
-    bool isCompatible(const MKLDNNMemoryDesc& rhs) const;
-
-    const std::vector<size_t>& getOrder() const {
-        return order;
-    }
 
     size_t getMaxMemSize() const override;
 
@@ -118,27 +114,18 @@ public:
     }
 
 protected:
-    MKLDNNMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
-        const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
-        const std::vector<size_t>& strides = {});
+    MKLDNNMemoryDesc(const Shape& shape) : MemoryDesc(shape, Mkldnn) {}
+    static constexpr size_t UNREACHABLE_DIM = std::numeric_limits<size_t>::max();
 
     mkldnn::memory::desc desc;
-    std::vector<size_t> order;
 
 private:
     size_t getElementOffset(size_t elemNumber) const override;
-    void InitializePlain(const std::vector<size_t>& _dims, mkldnn::memory::data_type dataType);
+    // void InitializePlain(const std::vector<size_t>& _dims, mkldnn::memory::data_type dataType);
 
     size_t getMemSizeImp() const override;
-    bool isPlainFormat() const;
-    bool isBlockedCFormat(size_t blk_size = UNREACHABLE_DIM) const;
-    bool isTailCFormat() const;
     bool isDefinedImp() const override;
     std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
-
-private:
-    static constexpr size_t UNREACHABLE_DIM = std::numeric_limits<size_t>::max();
-    friend MKLDNNMemoryDesc MemoryDescUtils::convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc);
 };
 
 

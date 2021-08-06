@@ -26,24 +26,6 @@ public:
     static MemoryDescPtr makeDescriptor(const mkldnn::memory::desc &desc);
 
     /**
-     * @brief Creates mkldnn::memory::desc
-     * @param dims dims to create desc
-     * @param dataType data_type to create desc
-     * @param format format_tag to create desc, can't be any or undef
-     * @return mkldnn::memory::desc
-     */
-    static mkldnn::memory::desc makeMkldnnDescriptor(const mkldnn::memory::dims &dims, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format);
-
-    /**
-     * @brief Creates OnednnBlockedMemoryDesc if format is blocked and desc have no extra data , otherwise MKLDNNMemoryDesc
-     * @param dims Shape to create desc
-     * @param dataType data_type to create desc
-     * @param format format_tag to create desc, can't be any or undef
-     * @return mkldnn::memory::desc
-     */
-    static MemoryDescPtr makeDescriptor(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format);
-
-    /**
      * @brief Converts MemoryDesc to MKLDNNMemoryDesc
      * @param desc MemoryDesc to be converted
      * @return converted MKLDNNMemoryDesc

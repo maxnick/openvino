@@ -15,11 +15,14 @@ public:
                             const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
                             const std::vector<size_t>& strides = {});
 
+    OnednnBlockedMemoryDesc(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format);
+
     MemoryDescPtr clone() const override {
         return MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(*this);
     }
 
     bool isCompatible(const MemoryDesc& rhs) const override;
+    bool isCompatible(const OnednnBlockedMemoryDesc& rhs) const;
 
     const std::vector<size_t> getBlockDims() const override;
 
@@ -31,9 +34,18 @@ public:
 
     const std::vector<size_t> getStrides() const override;
 
+    bool hasLayoutType(LayoutType layoutType) const override;
+
 private:
-    OnednnBlockedMemoryDesc(const mkldnn::memory::desc& desc) : MKLDNNMemoryDesc(desc),
-                MemoryDesc(MKLDNNExtensionUtils::convertToSizeVector(desc.dims()), OneDnnBlocked) {}
+    OnednnBlockedMemoryDesc(const mkldnn::memory::desc& _desc);
+
+    std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
+
+    bool isPlainFormat() const;
+    bool isBlockedCFormat(size_t blk_size = UNREACHABLE_DIM) const;
+    bool isTailCFormat() const;
+
+    std::vector<size_t> order;
 
     friend MemoryDescPtr MemoryDescUtils::makeDescriptor(const mkldnn::memory::desc &desc);
 };

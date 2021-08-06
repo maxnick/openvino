@@ -20,23 +20,7 @@ using namespace InferenceEngine;
 
 namespace MKLDNNPlugin {
 
-mkldnn::memory::desc MemoryDescUtils::makeMkldnnDescriptor(const mkldnn::memory::dims &dims, mkldnn::memory::data_type dataType,
-                                                           mkldnn::memory::format_tag format) {
-    if (format == memory::format_tag::any || format == memory::format_tag::undef)
-        IE_THROW(Unexpected) << "Can't create mkldnn::desc with any or undef format";
-
-    mkldnn::memory::desc desc;
-    if (format == memory::format_tag::x && dims.size() == 0) {
-        desc = mkldnn::memory::desc(mkldnn::memory::dims(1, 1), dataType, format);
-    } else {
-        desc = mkldnn::memory::desc(dims, dataType, format);
-    }
-    return desc;
-}
-
-MemoryDescPtr MemoryDescUtils::makeDescriptor(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format) {
-    return MemoryDescUtils::makeDescriptor(makeMkldnnDescriptor(MKLDNNExtensionUtils::convertToDnnlDims(shape.getDims()), dataType, format));
-}
+// TODO [DS]: phase 2: remove extra convert
 
 MemoryDescPtr MemoryDescUtils::makeDescriptor(const mkldnn::memory::desc &desc) {
     if (desc.data.format_kind == dnnl_blocked && desc.data.extra.flags == dnnl_memory_extra_flag_none) {
@@ -57,8 +41,8 @@ MKLDNNMemoryDesc MemoryDescUtils::convertToMKLDNNMemoryDesc(const MemoryDesc& de
 }
 
 MKLDNNMemoryDesc MemoryDescUtils::convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc) {
-    return MKLDNNMemoryDesc(desc.getPrecision(), desc.getShape(), desc.getBlockDims(),
-                            desc.getOrder(), desc.getOffsetPadding(), desc.getOffsetPaddingToData(), desc.getStrides());
+    return MKLDNNMemoryDesc(OnednnBlockedMemoryDesc(desc.getPrecision(), desc.getShape(), desc.getBlockDims(),
+                                                    desc.getOrder(), desc.getOffsetPadding(), desc.getOffsetPaddingToData(), desc.getStrides()).getMklDesc());
 }
 
 OnednnBlockedMemoryDesc MemoryDescUtils::convertToOnednnBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc) {
