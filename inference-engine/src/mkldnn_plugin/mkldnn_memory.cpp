@@ -952,11 +952,7 @@ MKLDNNMemoryDesc::MKLDNNMemoryDesc(const Shape &shape, dnnl::memory::data_type d
     if (format == memory::format_tag::any)
         IE_THROW(Unexpected) << "Memory format any is prohibited!";
     if (format != memory::format_tag::undef) {
-        if (format == memory::format_tag::x && dims.size() == 0) {
-            desc = mkldnn::memory::desc(mkldnn::memory::dims(1, 1), dataType, format);
-        } else {
-            desc = mkldnn::memory::desc(dims, dataType, format);
-        }
+        desc = MemoryDescUtils::makeMkldnnDescriptor(dims, dataType, format);
 
         std::vector<size_t> perm;
         std::vector<size_t> inner_blks;

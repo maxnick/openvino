@@ -50,7 +50,7 @@ void MKLDNNReorderNode::initSupportedPrimitiveDescriptors() {
         config.inConfs[0].inPlace = 0;
         config.outConfs[0].inPlace = 0;
     }
-    // TODO [mandrono]: what if different desc type?
+
     if (input && output) {
         // std::cout << "1: " << getName() << std::endl; 
         config.inConfs[0].desc = input->clone();

@@ -93,4 +93,5 @@ private:
     std::vector<size_t> offsetPaddingToData;
     size_t offsetPadding;
 };
+
 } // namespace MKLDNNPlugin

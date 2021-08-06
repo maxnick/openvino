@@ -19,9 +19,29 @@ class MKLDNNMemory;
 class MemoryDescUtils {
 public:
 
-    // TODO [mandrono]
+    /**
+     * @brief Creates OnednnBlockedMemoryDesc if desc is blocked and have no extra data , otherwise MKLDNNMemoryDesc
+     * @param desc mkldnn::memory::desc from which one of the descriptors will be created
+     * @return pointer to OnednnBlockedMemoryDesc or MKLDNNMemoryDesc
+     */
     static MemoryDescPtr makeDescriptor(const mkldnn::memory::desc &desc);
 
+    /**
+     * @brief Creates mkldnn::memory::desc
+     * @param dims dims to create desc
+     * @param dataType data_type to create desc
+     * @param format format_tag to create desc, can't be any or undef
+     * @return mkldnn::memory::desc
+     */
+    static mkldnn::memory::desc makeMkldnnDescriptor(const mkldnn::memory::dims &dims, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format);
+
+    /**
+     * @brief Creates OnednnBlockedMemoryDesc if format is blocked and desc have no extra data , otherwise MKLDNNMemoryDesc
+     * @param dims Shape to create desc
+     * @param dataType data_type to create desc
+     * @param format format_tag to create desc, can't be any or undef
+     * @return mkldnn::memory::desc
+     */
     static MemoryDescPtr makeDescriptor(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format);
 
     /**
@@ -39,11 +59,11 @@ public:
     static MKLDNNMemoryDesc convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc);
 
     /**
-     * @brief Converts InferenceEngine::TensorDesc to MKLDNNMemoryDesc
+     * @brief Converts InferenceEngine::TensorDesc to OnednnBlockedMemoryDesc
      * @param desc InferenceEngine::TensorDesc to be converted
-     * @return converted MKLDNNMemoryDesc
+     * @return converted OnednnBlockedMemoryDesc
      */
-    static MKLDNNMemoryDesc convertToMKLDNNMemoryDesc(const InferenceEngine::TensorDesc& desc);
+    static OnednnBlockedMemoryDesc convertToOnednnBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc);
 
     /**
      * @brief Converts MemoryDesc to CpuBlockedMemoryDesc

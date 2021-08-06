@@ -52,6 +52,11 @@ public:
 
     explicit MKLDNNMemoryDesc(const mkldnn::memory::desc& desc);
 
+    MKLDNNMemoryDesc(const OnednnBlockedMemoryDesc&) = delete;
+    MKLDNNMemoryDesc(OnednnBlockedMemoryDesc&&) = delete;
+    MKLDNNMemoryDesc& operator= (const OnednnBlockedMemoryDesc&) = delete;
+    MKLDNNMemoryDesc& operator= (OnednnBlockedMemoryDesc&&) = delete;
+
     /**
      * Try to define original format tag use on creation
      *
