@@ -50,7 +50,6 @@ void MKLDNNReorderNode::initSupportedPrimitiveDescriptors() {
         config.inConfs[0].inPlace = 0;
         config.outConfs[0].inPlace = 0;
     }
-
     if (input && output) {
         config.inConfs[0].desc = input->clone();
         config.outConfs[0].desc = output->clone();

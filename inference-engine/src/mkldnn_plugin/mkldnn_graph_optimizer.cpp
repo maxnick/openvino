@@ -1681,7 +1681,7 @@ void MKLDNNGraphOptimizer::MergeTransposeAndReorder(MKLDNNGraph &graph) {
         auto& transposeOrder = transposeNode->getOrder();
         auto layoutOrder = transposeNode->getSelectedPrimitiveDescriptor()->getConfig().outConfs[0].desc->as<BlockedMemoryDesc>()->getOrder();
 
-        auto inBlockedDesc =  reorderNode->getSelectedPrimitiveDescriptor()->getConfig().inConfs[0].desc->as<BlockedMemoryDesc>();
+        auto inBlockedDesc = reorderNode->getSelectedPrimitiveDescriptor()->getConfig().inConfs[0].desc->as<BlockedMemoryDesc>();
         auto outBlockedDesc = reorderNode->getSelectedPrimitiveDescriptor()->getConfig().outConfs[0].desc->as<BlockedMemoryDesc>();
 
         auto& inOrder = inBlockedDesc->getOrder();

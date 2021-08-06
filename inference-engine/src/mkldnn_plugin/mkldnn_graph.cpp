@@ -324,29 +324,6 @@ void MKLDNNGraph::InitGraph() {
     InitDescriptors();
     RemoveDroppedEdges();
 
-    // const auto nodes = GetNodes();
-    // for (size_t i = 0; i < nodes.size(); i++) {
-    //     std::cout << nodes[i]->getName() << std::endl;
-    //     const auto conf = nodes[i]->getSelectedPrimitiveDescriptor()->getConfig();
-    //     std::cout << "INPUT" << std::endl;
-    //     for (size_t j = 0; j < conf.inConfs.size(); j++) {
-    //         const BlockedMemoryDesc *a1 = dynamic_cast<const BlockedMemoryDesc *>(conf.inConfs[j].desc.get());
-    //         const CpuBlockedMemoryDesc *a2 = dynamic_cast<const CpuBlockedMemoryDesc *>(conf.inConfs[j].desc.get());
-    //         const MKLDNNMemoryDesc *a3 = dynamic_cast<const MKLDNNMemoryDesc *>(conf.inConfs[j].desc.get());
-    //         const OnednnBlockedMemoryDesc *a4 = dynamic_cast<const OnednnBlockedMemoryDesc *>(conf.inConfs[j].desc.get());
-    //         std::cout << i << " port "  << a1 << " " << a2 << " " << a3 << " " << a4 << std::endl;
-    //     }
-    //     std::cout << "OUTPUT" << std::endl;
-    //     for (size_t j = 0; j < conf.outConfs.size(); j++) {
-    //         const BlockedMemoryDesc *a1 = dynamic_cast<const BlockedMemoryDesc *>(conf.outConfs[j].desc.get());
-    //         const CpuBlockedMemoryDesc *a2 = dynamic_cast<const CpuBlockedMemoryDesc *>(conf.outConfs[j].desc.get());
-    //         const MKLDNNMemoryDesc *a3 = dynamic_cast<const MKLDNNMemoryDesc *>(conf.outConfs[j].desc.get());
-    //         const OnednnBlockedMemoryDesc *a4 = dynamic_cast<const OnednnBlockedMemoryDesc *>(conf.outConfs[j].desc.get());
-    //         std::cout << i << " port "  << a1 << " " << a2 << " " << a3 << " " << a4 << std::endl;
-    //     }
-    //     std::cout << std::endl;
-    // }
-
     InitOptimalPrimitiveDescriptors();
 
     InitEdges();

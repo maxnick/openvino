@@ -709,13 +709,7 @@ bool MKLDNNConvolutionNode::isPossibleToSkipInitConfig(MKLDNNDescriptor &desc) c
 
 std::unique_ptr<MemoryDesc> MKLDNNConvolutionNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
     auto desc = idx > 0 ? primitive_desc_it.weights_desc(idx - 1) : primitive_desc_it.src_desc(idx);
-    auto a = MemoryDescUtils::makeDescriptor(desc);
-    // const BlockedMemoryDesc *a1 = dynamic_cast<const BlockedMemoryDesc *>(a.get());
-    // const CpuBlockedMemoryDesc *a2 = dynamic_cast<const CpuBlockedMemoryDesc *>(a.get());
-    // const MKLDNNMemoryDesc *a3 = dynamic_cast<const MKLDNNMemoryDesc *>(a.get());
-    // const OnednnBlockedMemoryDesc *a4 = dynamic_cast<const OnednnBlockedMemoryDesc *>(a.get());
-    // std::cout << getName() << " " << idx << " port "  << a1 << " " << a2 << " " << a3 << " " << a4 << std::endl;
-    return a;
+    return MemoryDescUtils::makeDescriptor(desc);
 }
 
 bool MKLDNNConvolutionNode::canFuse(const MKLDNNNodePtr& node) const {

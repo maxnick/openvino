@@ -809,19 +809,6 @@ void MKLDNNNode::initDescriptor(const NodeConfig& config) {
         }
 
         for (size_t i = 0; i < selectedConfig.outConfs.size(); i++) {
-            // if (getName() == "Parameter_838___Convolution_840" && i == 0) {
-            //     std::cout << "tut: " << selectedConfig.outConfs[i].desc->getType() << " " << config.outConfs[i].desc->getType() << std::endl;
-            //     const BlockedMemoryDesc *a1 = dynamic_cast<const BlockedMemoryDesc *>(selectedConfig.outConfs[i].desc.get());
-            //     const CpuBlockedMemoryDesc *a2 = dynamic_cast<const CpuBlockedMemoryDesc *>(selectedConfig.outConfs[i].desc.get());
-            //     const MKLDNNMemoryDesc *a4 = dynamic_cast<const MKLDNNMemoryDesc *>(selectedConfig.outConfs[i].desc.get());
-            //     const OnednnBlockedMemoryDesc *a3 = dynamic_cast<const OnednnBlockedMemoryDesc *>(selectedConfig.outConfs[i].desc.get());
-            //     std::cout << "SELECT: " << a1 << " " << a2 << " " << a3 << " " << a4 << std::endl;
-            //     const BlockedMemoryDesc *b1 = dynamic_cast<const BlockedMemoryDesc *>(config.outConfs[i].desc.get());
-            //     const CpuBlockedMemoryDesc *b2 = dynamic_cast<const CpuBlockedMemoryDesc *>(config.outConfs[i].desc.get());
-            //     const MKLDNNMemoryDesc *b4 = dynamic_cast<const MKLDNNMemoryDesc *>(config.outConfs[i].desc.get());
-            //     const OnednnBlockedMemoryDesc *b3 = dynamic_cast<const OnednnBlockedMemoryDesc *>(config.outConfs[i].desc.get());
-            //     std::cout << "CONF: " << b1 << " " << b2 << " " << b3 << " " << b4 << std::endl;
-            // }
             if (!selectedConfig.outConfs[i].desc->isCompatible(*config.outConfs[i].desc))
                 IE_THROW() << "Incorrect descriptor for node: " << getName() << " on " << i << " output port";
         }

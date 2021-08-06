@@ -117,11 +117,11 @@ public:
         return desc;
     }
 
+protected:
     MKLDNNMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
         const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
         const std::vector<size_t>& strides = {});
 
-protected:
     mkldnn::memory::desc desc;
     std::vector<size_t> order;
 
@@ -138,11 +138,7 @@ private:
 
 private:
     static constexpr size_t UNREACHABLE_DIM = std::numeric_limits<size_t>::max();
-
-    // friend CpuBlockedMemoryDesc MemoryDescUtils::convertToBlockedDescriptor(const MKLDNNMemoryDesc& inpDesc);
-    // friend MKLDNNMemoryDesc MemoryDescUtils::convertToMKLDNNMemoryDesc(const CpuBlockedMemoryDesc& desc);
-    // friend MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const MKLDNNMemoryDesc& desc);
-    // friend MemoryDescPtr MemoryDescUtils::resetOffset(const MemoryDesc* desc);
+    friend MKLDNNMemoryDesc MemoryDescUtils::convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc);
 };
 
 
