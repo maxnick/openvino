@@ -54,11 +54,6 @@ public:
 
     explicit MKLDNNMemoryDesc(const mkldnn::memory::desc& desc);
 
-    MKLDNNMemoryDesc(const OnednnBlockedMemoryDesc&) = delete;
-    MKLDNNMemoryDesc(OnednnBlockedMemoryDesc&&) = delete;
-    MKLDNNMemoryDesc& operator= (const OnednnBlockedMemoryDesc&) = delete;
-    MKLDNNMemoryDesc& operator= (OnednnBlockedMemoryDesc&&) = delete;
-
     /**
      * Try to define original format tag use on creation
      *
@@ -113,6 +108,8 @@ public:
         return desc;
     }
 
+    bool hasLayoutType(LayoutType layoutType) const override { return false; }
+
 protected:
     MKLDNNMemoryDesc(const Shape& shape) : MemoryDesc(shape, Mkldnn) {}
     static constexpr size_t UNREACHABLE_DIM = std::numeric_limits<size_t>::max();
@@ -159,7 +156,7 @@ public:
     template <typename T,
             typename std::enable_if<!std::is_pointer<T>::value && !std::is_reference<T>::value, int>::type = 0,
             typename std::enable_if<std::is_base_of<MemoryDesc, T>::value, int>::type = 0>
-    T GetDescWithType() const;
+    std::unique_ptr<T> GetDescWithType() const;
 
     /**
      * Return handler of buffer. Real data may starts from some other offset
@@ -255,5 +252,7 @@ private:
 
 using MKLDNNMemoryPtr = std::shared_ptr<MKLDNNMemory>;
 using MKLDNNMemoryCPtr = std::shared_ptr<const MKLDNNMemory>;
+
+using MKLDNNMemoryDescPtr = std::unique_ptr<MKLDNNMemoryDesc>;
 
 }  // namespace MKLDNNPlugin

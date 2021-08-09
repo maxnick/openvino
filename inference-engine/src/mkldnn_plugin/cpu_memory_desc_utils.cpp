@@ -23,37 +23,37 @@ namespace MKLDNNPlugin {
 // TODO [DS]: phase 2: remove extra convert
 
 MemoryDescPtr MemoryDescUtils::makeDescriptor(const mkldnn::memory::desc &desc) {
-    if (desc.data.format_kind == dnnl_blocked && desc.data.extra.flags == dnnl_memory_extra_flag_none) {
+    if (desc.data.format_kind == dnnl_blocked) {
         return std::unique_ptr<OnednnBlockedMemoryDesc>(new OnednnBlockedMemoryDesc(desc));
     } else {
         return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(desc);
     }
 }
 
-MKLDNNMemoryDesc MemoryDescUtils::convertToMKLDNNMemoryDesc(const MemoryDesc& desc) {
-    if (MemoryDescType::CpuBlocked == desc.getType() || MemoryDescType::OneDnnBlocked == desc.getType()) {
+std::unique_ptr<MKLDNNMemoryDesc> MemoryDescUtils::convertToMKLDNNMemoryDesc(const MemoryDesc& desc) {
+    if (MemoryDescType::CpuBlocked == desc.getType()) {
         return convertToMKLDNNMemoryDesc(*(desc.as<BlockedMemoryDesc>()));
-    } else if (MemoryDescType::Mkldnn == desc.getType()) {
-        return *(desc.as<MKLDNNMemoryDesc>());
+    } else if (MemoryDescType::Mkldnn & desc.getType()) {
+        return std::unique_ptr<MKLDNNMemoryDesc>(dynamic_cast<MKLDNNMemoryDesc *>(desc.clone().get()));
     } else {
         IE_THROW() << "Cannot convert MemoryDesc to MKLDNNMemoryDesc";
     }
 }
 
-MKLDNNMemoryDesc MemoryDescUtils::convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc) {
-    return MKLDNNMemoryDesc(OnednnBlockedMemoryDesc(desc.getPrecision(), desc.getShape(), desc.getBlockDims(),
-                                                    desc.getOrder(), desc.getOffsetPadding(), desc.getOffsetPaddingToData(), desc.getStrides()).getMklDesc());
+std::unique_ptr<MKLDNNMemoryDesc> MemoryDescUtils::convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc) {
+    return MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(desc.getPrecision(), desc.getShape(), desc.getBlockDims(),
+                                                              desc.getOrder(), desc.getOffsetPadding(), desc.getOffsetPaddingToData(), desc.getStrides());
 }
 
-OnednnBlockedMemoryDesc MemoryDescUtils::convertToOnednnBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc) {
+std::unique_ptr<OnednnBlockedMemoryDesc> MemoryDescUtils::convertToOnednnBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc) {
     const auto &blkDesc = desc.getBlockingDesc();
-    return OnednnBlockedMemoryDesc(desc.getPrecision(), Shape(desc.getDims()), blkDesc.getBlockDims(), blkDesc.getOrder(), blkDesc.getOffsetPadding(),
+    return MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(desc.getPrecision(), Shape(desc.getDims()), blkDesc.getBlockDims(), blkDesc.getOrder(), blkDesc.getOffsetPadding(),
                                    blkDesc.getOffsetPaddingToData(), blkDesc.getStrides());
 }
 
-CpuBlockedMemoryDesc MemoryDescUtils::convertToCpuBlockedDescriptor(const MemoryDesc &desc) {
+std::unique_ptr<CpuBlockedMemoryDesc> MemoryDescUtils::convertToCpuBlockedDescriptor(const MemoryDesc &desc) {
     if (desc.getType() == MemoryDescType::CpuBlocked) {
-        return *(desc.as<CpuBlockedMemoryDesc>());
+        return std::unique_ptr<CpuBlockedMemoryDesc>(dynamic_cast<CpuBlockedMemoryDesc *>(desc.clone().get()));
     } else if (desc.getType() == MemoryDescType::OneDnnBlocked) {
         return MemoryDescUtils::convertToCpuBlockedDescriptor(*(desc.as<OnednnBlockedMemoryDesc>()));
     } else {
@@ -61,14 +61,14 @@ CpuBlockedMemoryDesc MemoryDescUtils::convertToCpuBlockedDescriptor(const Memory
     }
 }
 
-CpuBlockedMemoryDesc MemoryDescUtils::convertToCpuBlockedDescriptor(const OnednnBlockedMemoryDesc& inpDesc) {
-    return CpuBlockedMemoryDesc(inpDesc.getPrecision(), inpDesc.getShape(), inpDesc.getBlockDims(),
+std::unique_ptr<CpuBlockedMemoryDesc> MemoryDescUtils::convertToCpuBlockedDescriptor(const OnednnBlockedMemoryDesc& inpDesc) {
+    return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(inpDesc.getPrecision(), inpDesc.getShape(), inpDesc.getBlockDims(),
                                 inpDesc.getOrder(), inpDesc.getOffsetPadding(), inpDesc.getOffsetPaddingToData(), inpDesc.getStrides());
 }
 
 MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const MemoryDesc* desc) {
     if (desc->getType() == MemoryDescType::Mkldnn) {
-        return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(*dynamic_cast<const MKLDNNMemoryDesc*>(desc));
+        return desc->clone();
     }
 
     const auto blkMemDesc = desc->as<BlockedMemoryDesc>();

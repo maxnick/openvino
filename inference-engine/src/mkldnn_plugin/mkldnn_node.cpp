@@ -841,7 +841,7 @@ void MKLDNNNode::prepareMemory(const NodeDesc *selected_pd, mkldnn::primitive_de
 
         auto create = [&] () {
             // TODO [DS]: internal blobs should be removed or rewritten using Memory object
-            auto newDesc = MemoryDescUtils::convertToOnednnBlockedMemoryDesc(internalBlob->getTensorDesc());
+            auto newDesc = *MemoryDescUtils::convertToOnednnBlockedMemoryDesc(internalBlob->getTensorDesc());
 
             MKLDNNMemory memory{ engine };
             memory.Create(newDesc, internalBlob->buffer());

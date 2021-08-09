@@ -12,9 +12,11 @@
 namespace MKLDNNPlugin {
 
 enum MemoryDescType {
-    CpuBlocked,
-    OneDnnBlocked,
-    Mkldnn
+    Blocked = 1,
+    Mkldnn = 1 << 1,
+
+    CpuBlocked = Blocked,
+    OneDnnBlocked = Blocked | Mkldnn
 };
 
 enum class LayoutType : unsigned {
@@ -62,7 +64,7 @@ public:
         return descStatus::Defined == status;
     }
 
-    virtual bool hasLayoutType(LayoutType layoutType) const { return false; }
+    virtual bool hasLayoutType(LayoutType layoutType) const = 0;
 
     virtual std::string serializeFormat() const = 0;
 

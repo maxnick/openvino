@@ -19,7 +19,7 @@ class MKLDNNMemory;
 class MemoryDescUtils {
 public:
     /**
-     * @brief Creates OnednnBlockedMemoryDesc if desc is blocked and have no extra data , otherwise MKLDNNMemoryDesc
+     * @brief Creates OnednnBlockedMemoryDesc if desc is blocked, otherwise MKLDNNMemoryDesc
      * @param desc mkldnn::memory::desc from which one of the descriptors will be created
      * @return pointer to OnednnBlockedMemoryDesc or MKLDNNMemoryDesc
      */
@@ -30,35 +30,35 @@ public:
      * @param desc MemoryDesc to be converted
      * @return converted MKLDNNMemoryDesc
      */
-    static MKLDNNMemoryDesc convertToMKLDNNMemoryDesc(const MemoryDesc& desc);
+    static std::unique_ptr<MKLDNNMemoryDesc> convertToMKLDNNMemoryDesc(const MemoryDesc& desc);
 
     /**
      * @brief Converts BlockedMemoryDesc to MKLDNNMemoryDesc
      * @param desc BlockedMemoryDesc to be converted
      * @return converted MKLDNNMemoryDesc
      */
-    static MKLDNNMemoryDesc convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc);
+    static std::unique_ptr<MKLDNNMemoryDesc> convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc);
 
     /**
      * @brief Converts InferenceEngine::TensorDesc to OnednnBlockedMemoryDesc
      * @param desc InferenceEngine::TensorDesc to be converted
      * @return converted OnednnBlockedMemoryDesc
      */
-    static OnednnBlockedMemoryDesc convertToOnednnBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc);
+    static std::unique_ptr<OnednnBlockedMemoryDesc> convertToOnednnBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc);
 
     /**
      * @brief Converts MemoryDesc to CpuBlockedMemoryDesc
      * @param desc MemoryDesc to be converted
      * @return converted CpuBlockedMemoryDesc
      */
-    static CpuBlockedMemoryDesc convertToCpuBlockedDescriptor(const MemoryDesc& desc);
+    static std::unique_ptr<CpuBlockedMemoryDesc> convertToCpuBlockedDescriptor(const MemoryDesc& desc);
 
     /**
      * @brief Converts MKLDNNMemoryDesc to CpuBlockedMemoryDesc
      * @param desc MKLDNNMemoryDesc to be converted
      * @return converted CpuBlockedMemoryDesc
      */
-    static CpuBlockedMemoryDesc convertToCpuBlockedDescriptor(const OnednnBlockedMemoryDesc& inpDesc);
+    static std::unique_ptr<CpuBlockedMemoryDesc> convertToCpuBlockedDescriptor(const OnednnBlockedMemoryDesc& inpDesc);
 
     /**
      * @brief Creates BlockedMemoryDesc with offsetPadding of UNDEFINED_DIM size

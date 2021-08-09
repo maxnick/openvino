@@ -292,30 +292,44 @@ void MKLDNNConvolutionNode::getSupportedDescriptors() {
             if (IC == 1 && groupOC == 1) {
                 in_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(inputShape, inputDataType, ncsp);
                 out_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(outputShape, outputDataType, ncsp);
+                // std::cout << "1" << std::endl;
                 createDescriptor({ in_candidate.get() }, { out_candidate.get() });
+                // std::cout << "2" << std::endl;
             } else if (IC < 4) {
                 in_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(inputShape, inputDataType, ncsp);
                 out_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(outputShape, outputDataType, nCsp16c);
+                // std::cout << "3" << std::endl;
                 createDescriptor({ in_candidate.get() }, { out_candidate.get() });
+                // std::cout << "4" << std::endl;
                 out_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(outputShape, outputDataType, nCsp8c);
+                // std::cout << "5" << std::endl;
                 createDescriptor({ in_candidate.get() }, { out_candidate.get() });
+                // std::cout << "6" << std::endl;
             } else {
                 in_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(inputShape, inputDataType, nCsp16c);
                 out_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(outputShape, outputDataType, nCsp16c);
+                // std::cout << "7" << std::endl;
                 createDescriptor({ in_candidate.get() }, { out_candidate.get() });
+                // std::cout << "8" << std::endl;
                 in_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(inputShape, inputDataType, nCsp8c);
                 out_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(outputShape, outputDataType, nCsp8c);
+                // std::cout << "9" << std::endl;
                 createDescriptor({ in_candidate.get() }, { out_candidate.get() });
+                // std::cout << "10" << std::endl;
             }
 
             in_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(inputShape, inputDataType, ncsp);
             out_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(outputShape, outputDataType, ncsp);
+            // std::cout << "11" << std::endl;
             createDescriptor({ in_candidate.get() }, { out_candidate.get() });
+            // std::cout << "12" << std::endl;
 
             if (inputDataType != memory::data_type::bf16 && isNspcAvailable()) {
                 in_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(inputShape, inputDataType, nspc);
                 out_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(outputShape, outputDataType, nspc);
+                // std::cout << "13" << std::endl;
                 createDescriptor({ in_candidate.get() }, { out_candidate.get() });
+                // std::cout << "14" << std::endl;
             }
         }
     }
@@ -483,8 +497,8 @@ bool MKLDNNConvolutionNode::created() const {
 
 void MKLDNNConvolutionNode::createDescriptor(const std::vector<const MemoryDesc*>& inputDesc,
                                              const std::vector<const MemoryDesc*>& outputDesc) {
-    const auto inDesc = MemoryDescUtils::convertToMKLDNNMemoryDesc(*inputDesc[0]).getMklDesc();
-    const auto outDesc = MemoryDescUtils::convertToMKLDNNMemoryDesc(*outputDesc[0]).getMklDesc();
+    const auto inDesc = MemoryDescUtils::convertToMKLDNNMemoryDesc(*inputDesc[0])->getMklDesc();
+    const auto outDesc = MemoryDescUtils::convertToMKLDNNMemoryDesc(*outputDesc[0])->getMklDesc();
 
     memory::data_type wdt = static_cast<memory::data_type>(inDesc.data.data_type);
     memory::data_type bdt = memory::data_type::f32;
@@ -559,7 +573,9 @@ void MKLDNNConvolutionNode::initDescriptor(const NodeConfig& config) {
     }
 
     if (isStridedBlobsSupported) {
+        // std::cout << "15" << std::endl;
         createDescriptor({config.inConfs[0].desc.get()}, {config.outConfs[0].desc.get()});
+        // std::cout << "16" << std::endl;
     }
 
     mkldnn::primitive_attr attr;

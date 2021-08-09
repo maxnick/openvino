@@ -460,11 +460,11 @@ void MKLDNNSplitNode::prepareOptimizedParams() {
     auto selectedPrimitiveDescriptor = getSelectedPrimitiveDescriptor();
     if (!selectedPrimitiveDescriptor)
         IE_THROW() << "CPU Split node with name '" << getName() << "' doesn't have primitive descriptors.";
-    const auto inpTensorDesc = getParentEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
+    const auto inpTensorDesc = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
     const auto outputPortsCount = outputShapes.size();
 
     //find axis order position
-    const auto& order = inpTensorDesc.getOrder();
+    const auto& order = inpTensorDesc->getOrder();
     unsigned axisOrderPos = std::numeric_limits<unsigned>::max();
     for (size_t i = 0; i < order.size(); ++i) {
         if (order[i] == axis) {
@@ -476,8 +476,8 @@ void MKLDNNSplitNode::prepareOptimizedParams() {
         THROW_ERROR << "Can't find the axis in the input tensor order list";
     }
 
-    uint8_t srcDataSize = inpTensorDesc.getPrecision().size();
-    const auto& srcDims = inpTensorDesc.getBlockDims();
+    uint8_t srcDataSize = inpTensorDesc->getPrecision().size();
+    const auto& srcDims = inpTensorDesc->getBlockDims();
     const auto getRank = srcDims.size();
 
     optimizedParams.countStrides = 1;

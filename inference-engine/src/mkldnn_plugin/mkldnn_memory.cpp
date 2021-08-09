@@ -102,7 +102,7 @@ void MKLDNNMemory::Create(MemoryDescPtr desc, const void* data, bool pads_zeroin
     }
 
     if (pMemDesc->isDefined()) {
-        Create(mkldnn::memory::desc(MemoryDescUtils::convertToMKLDNNMemoryDesc(*pMemDesc)), data, pads_zeroing);
+        Create(mkldnn::memory::desc(*MemoryDescUtils::convertToMKLDNNMemoryDesc(*pMemDesc)), data, pads_zeroing);
     } else {
         //delayed dynamic allocation
         size_t maxMemSize = pMemDesc->getMaxMemSize();
@@ -294,10 +294,10 @@ void *MKLDNNMemory::GetPtr() const  {
 }
 
 template<>
-MKLDNNMemoryDesc MKLDNNMemory::GetDescWithType<MKLDNNMemoryDesc, 0, 0>() const {
-    if (pMemDesc->getType() == MemoryDescType::Mkldnn) {
-        return *dynamic_cast<const MKLDNNMemoryDesc*>(pMemDesc.get());
-    } else if (pMemDesc->getType() == MemoryDescType::CpuBlocked || pMemDesc->getType() == MemoryDescType::OneDnnBlocked) {
+MKLDNNMemoryDescPtr MKLDNNMemory::GetDescWithType<MKLDNNMemoryDesc, 0, 0>() const {
+    if (pMemDesc->getType() & MemoryDescType::Mkldnn) {
+        return std::unique_ptr<MKLDNNMemoryDesc>(dynamic_cast<MKLDNNMemoryDesc *>(pMemDesc->clone().get()));
+    } else if (pMemDesc->getType() == MemoryDescType::CpuBlocked) {
         return MemoryDescUtils::convertToMKLDNNMemoryDesc(*(pMemDesc->as<BlockedMemoryDesc>()));
     } else {
         IE_THROW() << "Can not convert unsupported memory descriptor";
@@ -325,20 +325,9 @@ void MKLDNNMemory::redefineDesc(MemoryDescPtr desc) {
 }
 
 template<>
-CpuBlockedMemoryDesc MKLDNNMemory::GetDescWithType<CpuBlockedMemoryDesc, 0, 0>() const {
-    if (auto descPtr = dynamic_cast<const BlockedMemoryDesc*>(pMemDesc.get())) {
-        return CpuBlockedMemoryDesc(descPtr->getPrecision(), descPtr->getShape(), descPtr->getBlockDims(),
-                                    descPtr->getOrder(), descPtr->getOffsetPadding(), descPtr->getOffsetPaddingToData(), descPtr->getStrides());
-    } else {
-        IE_THROW() << "Can not convert unsupported memory descriptor";
-    }
-}
-
-template<>
-OnednnBlockedMemoryDesc MKLDNNMemory::GetDescWithType<OnednnBlockedMemoryDesc, 0, 0>() const {
-    if (auto descPtr = dynamic_cast<const BlockedMemoryDesc*>(pMemDesc.get())) {
-        return OnednnBlockedMemoryDesc(descPtr->getPrecision(), descPtr->getShape(), descPtr->getBlockDims(),
-                                       descPtr->getOrder(), descPtr->getOffsetPadding(), descPtr->getOffsetPaddingToData(), descPtr->getStrides());
+BlockedMemoryDescPtr MKLDNNMemory::GetDescWithType<BlockedMemoryDesc, 0, 0>() const {
+    if (pMemDesc->getType() & MemoryDescType::Blocked) {
+        return std::unique_ptr<BlockedMemoryDesc>(dynamic_cast<BlockedMemoryDesc *>(pMemDesc->clone().get()));
     } else {
         IE_THROW() << "Can not convert unsupported memory descriptor";
     }

@@ -50,4 +50,6 @@ public:
     virtual const std::vector<size_t> getStrides() const = 0;
 };
 
+using BlockedMemoryDescPtr = std::unique_ptr<BlockedMemoryDesc>;
+
 } // namespace MKLDNNPlugin
