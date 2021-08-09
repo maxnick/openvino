@@ -19,8 +19,8 @@
 #include "ie_parallel.hpp"
 
 #include <ngraph/opsets/opset1.hpp>
-#include <cpu_memory_desc_utils.h>
-#include "onednn_blocked_memory_desc.h"
+#include <memory_descs/cpu_memory_desc_utils.h>
+#include "memory_descs/onednn_blocked_memory_desc.h"
 
 // Quantization ranges validation is switched off by default in order to avoid regressions on user side
 // #define VALIDATE_QUANTIZATION_RANGES

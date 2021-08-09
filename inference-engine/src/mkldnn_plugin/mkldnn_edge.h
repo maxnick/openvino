@@ -6,7 +6,7 @@
 
 #include <ie_blob.h>
 #include "cpu_shape.h"
-#include "cpu_memory_desc.h"
+#include "memory_descs/cpu_memory_desc.h"
 #include "mkldnn_weights_cache.hpp"
 
 #include <map>

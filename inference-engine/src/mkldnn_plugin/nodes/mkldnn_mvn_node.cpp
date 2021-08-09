@@ -23,7 +23,7 @@
 #include <cpu/x64/jit_uni_eltwise_injector.hpp>
 
 #include <ngraph/opsets/opset6.hpp>
-#include "onednn_blocked_memory_desc.h"
+#include "memory_descs/onednn_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;

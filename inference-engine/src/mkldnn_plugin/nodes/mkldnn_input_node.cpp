@@ -20,7 +20,7 @@
 #include "common/cpu_convert.h"
 #include "utils/cpu_utils.hpp"
 #include <cpu/x64/jit_generator.hpp>
-#include "onednn_blocked_memory_desc.h"
+#include "memory_descs/onednn_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;

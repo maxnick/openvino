@@ -9,7 +9,7 @@
 #include "ie_common.h"
 #include "utils/blob_dump.h"
 #include "utils/debug_capabilities.h"
-#include "cpu_memory_desc_utils.h"
+#include "memory_descs/cpu_memory_desc_utils.h"
 
 #include <array>
 #include <regex>

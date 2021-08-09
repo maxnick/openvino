@@ -8,7 +8,7 @@
 #include "blob_factory.hpp"
 #include "mkldnn_memory.h"
 #include "nodes/common/cpu_memcpy.h"
-#include "cpu_memory_desc_utils.h"
+#include "memory_descs/cpu_memory_desc_utils.h"
 
 #include <string>
 

@@ -29,7 +29,7 @@
 #include <nodes/common/blocked_desc_creator.h>
 #include "cpu_types.h"
 #include "cpu_shape.h"
-#include "cpu_memory_desc.h"
+#include "memory_descs/cpu_memory_desc.h"
 
 namespace MKLDNNPlugin {
 

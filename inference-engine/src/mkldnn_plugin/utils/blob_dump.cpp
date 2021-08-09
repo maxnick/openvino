@@ -11,7 +11,7 @@
 #include "common/memory_desc_wrapper.hpp"
 
 #include <fstream>
-#include <cpu_memory_desc_utils.h>
+#include <memory_descs/cpu_memory_desc_utils.h>
 
 using namespace InferenceEngine;
 

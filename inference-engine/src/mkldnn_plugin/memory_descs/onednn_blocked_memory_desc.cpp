@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "onednn_blocked_memory_desc.h"
+#include "memory_descs/onednn_blocked_memory_desc.h"
 #include <dnnl_types.h>
 #include <common/memory_desc_wrapper.hpp>
 

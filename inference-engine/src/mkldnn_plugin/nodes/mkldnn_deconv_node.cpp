@@ -16,8 +16,8 @@
 #include <ngraph/opsets/opset1.hpp>
 #include <cpu/x64/cpu_isa_traits.hpp>
 #include <nodes/common/cpu_memcpy.h>
-#include <cpu_memory_desc_utils.h>
-#include "onednn_blocked_memory_desc.h"
+#include <memory_descs/cpu_memory_desc_utils.h>
+#include "memory_descs/onednn_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;

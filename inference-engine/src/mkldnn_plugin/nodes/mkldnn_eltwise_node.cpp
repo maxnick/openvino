@@ -37,7 +37,7 @@
 #include <cmath>
 #include <map>
 #include <functional>
-#include "onednn_blocked_memory_desc.h"
+#include "memory_descs/onednn_blocked_memory_desc.h"
 
 using namespace MKLDNNPlugin;
 using namespace InferenceEngine;

@@ -8,7 +8,7 @@
 #include "mkldnn_memory_node.hpp"
 #include "common/cpu_memcpy.h"
 #include "utils/general_utils.h"
-#include "onednn_blocked_memory_desc.h"
+#include "memory_descs/onednn_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;

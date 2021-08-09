@@ -10,7 +10,7 @@
 #include <mkldnn_extension_utils.h>
 #include <ie_parallel.hpp>
 #include "utils/general_utils.h"
-#include <cpu_memory_desc_utils.h>
+#include <memory_descs/cpu_memory_desc_utils.h>
 
 #define THROW_ERROR IE_THROW() << "Split layer with name '" << getName() <<"' "
 

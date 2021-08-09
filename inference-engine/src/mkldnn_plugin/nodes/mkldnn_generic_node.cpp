@@ -8,8 +8,8 @@
 #include <vector>
 #include <string>
 #include <blob_factory.hpp>
-#include "cpu_memory_desc_utils.h"
-#include "onednn_blocked_memory_desc.h"
+#include "memory_descs/cpu_memory_desc_utils.h"
+#include "memory_descs/onednn_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;

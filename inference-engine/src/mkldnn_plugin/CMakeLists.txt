@@ -106,6 +106,7 @@ file(GLOB SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/emitters/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/ngraph_transformations/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/ngraph_transformations/op/*.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/memory_descs/*.cpp
         ${LAYERS}
         ${OS_SPECIFIC_SRC}
 )

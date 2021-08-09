@@ -22,7 +22,7 @@
 #include <limits>
 #include "common/cpu_memcpy.h"
 #include "common/blocked_desc_creator.h"
-#include <cpu_memory_desc_utils.h>
+#include <memory_descs/cpu_memory_desc_utils.h>
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;

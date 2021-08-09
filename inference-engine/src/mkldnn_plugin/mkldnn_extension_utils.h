@@ -11,7 +11,7 @@
 #include <string>
 
 #include "mkldnn.hpp"
-#include "cpu_memory_desc.h"
+#include "memory_descs/cpu_memory_desc.h"
 
 namespace MKLDNNPlugin {
 

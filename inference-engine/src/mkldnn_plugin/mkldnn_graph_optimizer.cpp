@@ -43,7 +43,7 @@
 #include <algorithm>
 
 #include "mkldnn_itt.h"
-#include "cpu_memory_desc_utils.h"
+#include "memory_descs/cpu_memory_desc_utils.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
