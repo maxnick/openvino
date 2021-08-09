@@ -280,11 +280,17 @@ size_t OnednnBlockedMemoryDesc::getOffsetPadding() const {
 
 bool OnednnBlockedMemoryDesc::isCompatible(const MemoryDesc& rhs) const {
     const MemoryDesc* pRhs = &rhs;
-    if (auto blockingDesc = dynamic_cast<const BlockedMemoryDesc*>(pRhs)) {
-        return BlockedMemoryDesc::isCompatible(blockingDesc);
+    if (auto desc = dynamic_cast<const OnednnBlockedMemoryDesc*>(pRhs)) {
+        return isCompatible(*desc);
+    } else if (auto desc = dynamic_cast<const CpuBlockedMemoryDesc*>(pRhs)) {
+        return isCompatible(*desc);
     } else {
         return false;
     }
+}
+
+bool OnednnBlockedMemoryDesc::isCompatible(const CpuBlockedMemoryDesc& rhs) const {
+    return BlockedMemoryDesc::isCompatible(rhs);
 }
 
 static bool array_cmp_weak(const dnnl_dim_t *a1, const dnnl_dim_t *a2, size_t size) {

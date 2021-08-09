@@ -21,6 +21,7 @@ public:
 
     bool isCompatible(const MemoryDesc& rhs) const override;
     bool isCompatible(const OnednnBlockedMemoryDesc& rhs) const;
+    bool isCompatible(const CpuBlockedMemoryDesc& rhs) const;
 
     const std::vector<size_t> getBlockDims() const override;
 

@@ -12,7 +12,7 @@ class BlockedMemoryDesc : public virtual MemoryDesc {
 public:
     BlockedMemoryDesc() {}
 
-    bool isCompatible(const BlockedMemoryDesc *rhs) const;
+    bool isCompatible(const BlockedMemoryDesc &rhs) const;
 
     /**
      * @brief Returns the blocked dimensions

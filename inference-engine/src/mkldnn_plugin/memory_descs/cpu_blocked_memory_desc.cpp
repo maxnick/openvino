@@ -79,7 +79,7 @@ bool CpuBlockedMemoryDesc::isDefinedImp() const {
 bool CpuBlockedMemoryDesc::isCompatible(const MemoryDesc& rhs) const {
     const MemoryDesc* pRhs = &rhs;
     if (auto blockingDesc = dynamic_cast<const BlockedMemoryDesc*>(pRhs)) {
-        return BlockedMemoryDesc::isCompatible(blockingDesc);
+        return BlockedMemoryDesc::isCompatible(*blockingDesc);
     } else {
         return false;
     }
