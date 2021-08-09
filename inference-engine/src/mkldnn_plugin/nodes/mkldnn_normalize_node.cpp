@@ -21,6 +21,7 @@
 #include <mkldnn_selective_build.h>
 
 #include <ngraph/opsets/opset1.hpp>
+#include "onednn_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -766,10 +767,10 @@ void MKLDNNNormalizeL2Node::initSupportedPrimitiveDescriptors() {
     config.outConfs[0].inPlace = canBeInplace ? 0 : -1;
 
     auto pushDesc = [&](memory::format_tag format) {
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(DATA)->getShape().getStaticDims(), inputDataType, format);
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(AXES)->getShape().getStaticDims(), memory::data_type::s32,
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getParentEdgeAt(DATA)->getShape(), inputDataType, format);
+        config.inConfs[1].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getParentEdgeAt(AXES)->getShape(), memory::data_type::s32,
                                                                memory::format_tag::x);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(DATA)->getShape().getStaticDims(), outputDataType, format);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getParentEdgeAt(DATA)->getShape(), outputDataType, format);
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
     };
 

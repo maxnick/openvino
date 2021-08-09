@@ -8,6 +8,7 @@
 #include "mkldnn_memory_node.hpp"
 #include "common/cpu_memcpy.h"
 #include "utils/general_utils.h"
+#include "onednn_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -59,14 +60,12 @@ void MKLDNNMemoryOutputNode::initSupportedPrimitiveDescriptors() {
         return;
 
     InferenceEngine::Precision precision = getOriginalInputPrecisionAtPort(0);
-    auto inputDataType = MKLDNNExtensionUtils::IEPrecisionToDataType(precision);
     NodeConfig config;
     config.dynBatchSupport = true;
     config.inConfs.resize(1);
     config.inConfs[0].inPlace = -1;
     config.inConfs[0].constant = false;
-    config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType,
-                                                           MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(0)->getShape().getRank()));
+    config.inConfs[0].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(precision, getParentEdgeAt(0)->getShape());
     supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::unknown);
 }
 

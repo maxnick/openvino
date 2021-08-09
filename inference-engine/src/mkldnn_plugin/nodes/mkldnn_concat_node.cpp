@@ -143,8 +143,8 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
         for (size_t i = 0; i < getParentEdges().size(); ++i) {
             config.inConfs[i].inPlace = -1;
             config.inConfs[i].constant = false;
-            auto desc = itr->second->createDesc(inputPrecision, getParentEdgeAt(i)->getShape().getStaticDims());
-            config.inConfs[i].desc = MemoryDescUtils::applyUndefinedOffset(&desc);
+            config.inConfs[i].desc = MemoryDescUtils::applyUndefinedOffset(itr->second->createDesc(
+                                        inputPrecision, getParentEdgeAt(i)->getShape().getStaticDims()));
         }
         supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::ref);
         if (itr->first != LayoutType::nspc) {

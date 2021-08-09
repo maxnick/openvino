@@ -11,9 +11,7 @@ namespace MKLDNNPlugin {
 
 class OnednnBlockedMemoryDesc : public BlockedMemoryDesc, public MKLDNNMemoryDesc {
 public:
-    OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
-                            const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
-                            const std::vector<size_t>& strides = {});
+    OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape);
 
     OnednnBlockedMemoryDesc(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format);
 
@@ -37,9 +35,15 @@ public:
     bool hasLayoutType(LayoutType layoutType) const override;
 
 private:
+    OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
+                            const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
+                            const std::vector<size_t>& strides = {});
+
     OnednnBlockedMemoryDesc(const mkldnn::memory::desc& _desc);
 
     std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
+
+    void InitializePlain(const Shape& shape, mkldnn::memory::data_type dataType);
 
     bool isPlainFormat() const;
     bool isBlockedCFormat(size_t blk_size = UNREACHABLE_DIM) const;
@@ -47,7 +51,7 @@ private:
 
     std::vector<size_t> order;
 
-    friend MemoryDescPtr MemoryDescUtils::makeDescriptor(const mkldnn::memory::desc &desc);
+    friend class MemoryDescUtils;
 };
 
 } // namespace MKLDNNPlugin

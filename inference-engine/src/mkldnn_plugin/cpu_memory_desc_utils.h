@@ -37,7 +37,7 @@ public:
      * @param desc BlockedMemoryDesc to be converted
      * @return converted MKLDNNMemoryDesc
      */
-    static std::unique_ptr<MKLDNNMemoryDesc> convertToMKLDNNMemoryDesc(const BlockedMemoryDesc& desc);
+    static std::unique_ptr<MKLDNNMemoryDesc> convertToMKLDNNMemoryDesc(const CpuBlockedMemoryDesc& desc);
 
     /**
      * @brief Converts InferenceEngine::TensorDesc to OnednnBlockedMemoryDesc
@@ -47,25 +47,11 @@ public:
     static std::unique_ptr<OnednnBlockedMemoryDesc> convertToOnednnBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc);
 
     /**
-     * @brief Converts MemoryDesc to CpuBlockedMemoryDesc
-     * @param desc MemoryDesc to be converted
-     * @return converted CpuBlockedMemoryDesc
-     */
-    static std::unique_ptr<CpuBlockedMemoryDesc> convertToCpuBlockedDescriptor(const MemoryDesc& desc);
-
-    /**
-     * @brief Converts MKLDNNMemoryDesc to CpuBlockedMemoryDesc
-     * @param desc MKLDNNMemoryDesc to be converted
-     * @return converted CpuBlockedMemoryDesc
-     */
-    static std::unique_ptr<CpuBlockedMemoryDesc> convertToCpuBlockedDescriptor(const OnednnBlockedMemoryDesc& inpDesc);
-
-    /**
      * @brief Creates BlockedMemoryDesc with offsetPadding of UNDEFINED_DIM size
      * @param desc modifiable BlockedMemoryDesc
      * @return pointer to MemoryDesc
      */
-    static MemoryDescPtr applyUndefinedOffset(const MemoryDesc* desc);
+    static MemoryDescPtr applyUndefinedOffset(const MemoryDesc& desc);
 
     /**
      * @brief Creates MemoryDesc with offsetPadding of 0 size

@@ -23,6 +23,7 @@
 #include <cpu/x64/jit_uni_eltwise_injector.hpp>
 
 #include <ngraph/opsets/opset6.hpp>
+#include "onednn_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -742,14 +743,14 @@ void MKLDNNMVNNode::initSupportedPrimitiveDescriptors() {
     config.inConfs[0].inPlace = -1;
     config.outConfs[0].inPlace = canBeInplace ? 0 : -1;
     if (inputsNum == 2) {
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(1)->getShape().getStaticDims(), memory::data_type::s32,
+        config.inConfs[1].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getParentEdgeAt(1)->getShape(), memory::data_type::s32,
                                                                MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(1)->getShape().getRank()));
         config.inConfs[1].constant = true;
     }
 
     auto pushDesc = [&](memory::format_tag format, impl_desc_type impl_type) {
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType, format);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), outputDataType, format);
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getParentEdgeAt(0)->getShape(), inputDataType, format);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getParentEdgeAt(0)->getShape(), outputDataType, format);
         supportedPrimitiveDescriptors.push_back({config, impl_type});
     };
 

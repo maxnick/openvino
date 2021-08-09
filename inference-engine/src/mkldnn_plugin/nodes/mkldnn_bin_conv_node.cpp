@@ -1294,22 +1294,22 @@ void MKLDNNBinaryConvolutionNode::execute(mkldnn::stream strm) {
     auto weights = reinterpret_cast<const uint8_t*>(weightsMemory->GetPtr());
     auto dst = reinterpret_cast<uint8_t*>(dstMemory->GetPtr());
 
-    auto srcDesc = getParentEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
-    std::vector<size_t> srcStride(srcDesc.getStrides().size());
+    auto srcDesc = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    std::vector<size_t> srcStride(srcDesc->getStrides().size());
     for (int i = 0; i < srcStride.size(); i++) {
-        srcStride[srcDesc.getOrder()[i]] = srcDesc.getStrides()[i];
+        srcStride[srcDesc->getOrder()[i]] = srcDesc->getStrides()[i];
     }
 
-    auto weiDesc = getParentEdgeAt(1)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
-    std::vector<size_t> weightsStride(weiDesc.getShape().getRank());
+    auto weiDesc = getParentEdgeAt(1)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    std::vector<size_t> weightsStride(weiDesc->getShape().getRank());
     for (int i = 0; i < weightsStride.size(); i++) {
-        weightsStride[weiDesc.getOrder()[i]] = weiDesc.getStrides()[i];
+        weightsStride[weiDesc->getOrder()[i]] = weiDesc->getStrides()[i];
     }
 
-    auto dstDesc = getChildEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
-    std::vector<size_t> dstStride(dstDesc.getStrides().size());
+    auto dstDesc = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    std::vector<size_t> dstStride(dstDesc->getStrides().size());
     for (int i = 0; i < dstStride.size(); i++) {
-        dstStride[dstDesc.getOrder()[i]] = dstDesc.getStrides()[i];
+        dstStride[dstDesc->getOrder()[i]] = dstDesc->getStrides()[i];
     }
 
     auto selectedPrimitiveDescriptor = getSelectedPrimitiveDescriptor();

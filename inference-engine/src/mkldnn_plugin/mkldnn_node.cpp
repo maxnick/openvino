@@ -681,8 +681,7 @@ void MKLDNNNode::initSupportedPrimitiveDescriptors() {
                 PortConfig portConfig;
                 portConfig.inPlace = -1;
                 portConfig.constant = false;
-                auto desc = getSrcMemDesc(itpd, i);
-                portConfig.desc = MemoryDescUtils::applyUndefinedOffset(desc.get());
+                portConfig.desc = MemoryDescUtils::applyUndefinedOffset(*getSrcMemDesc(itpd, i));
                 config.inConfs.push_back(portConfig);
             }
 
@@ -690,8 +689,7 @@ void MKLDNNNode::initSupportedPrimitiveDescriptors() {
                 PortConfig portConfig;
                 portConfig.inPlace = canBeInPlace() ? 0 : -1;
                 portConfig.constant = false;
-                auto desc = getDstMemDesc(itpd, i);
-                portConfig.desc = MemoryDescUtils::applyUndefinedOffset(desc.get());
+                portConfig.desc = MemoryDescUtils::applyUndefinedOffset(*getDstMemDesc(itpd, i));
                 config.outConfs.push_back(portConfig);
             }
             impl_desc_type impl_type = parse_impl_name(itpd.impl_info_str());

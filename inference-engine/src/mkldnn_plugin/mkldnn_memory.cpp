@@ -54,7 +54,7 @@ void MKLDNNMemory::Create(const memory::dims& dims, memory::data_type data_type,
         format = memory::format_tag::any;
     }
 
-    memory::desc desc = MKLDNNMemoryDesc(MKLDNNExtensionUtils::convertToSizeVector(dims), data_type, format);
+    memory::desc desc = OnednnBlockedMemoryDesc(Shape(MKLDNNExtensionUtils::convertToSizeVector(dims)), data_type, format);
 
     Create(desc, data);
 }
@@ -102,12 +102,13 @@ void MKLDNNMemory::Create(MemoryDescPtr desc, const void* data, bool pads_zeroin
     }
 
     if (pMemDesc->isDefined()) {
-        Create(mkldnn::memory::desc(*MemoryDescUtils::convertToMKLDNNMemoryDesc(*pMemDesc)), data, pads_zeroing);
+        const auto a = *MemoryDescUtils::convertToMKLDNNMemoryDesc(*pMemDesc);
+        Create(mkldnn::memory::desc(a), data, pads_zeroing);
     } else {
         //delayed dynamic allocation
         size_t maxMemSize = pMemDesc->getMaxMemSize();
         size_t dummySize = MemoryDesc::UNDEFINED_SIZE == maxMemSize ? 1 : maxMemSize;
-        MKLDNNMemoryDesc dummyDesc({dummySize}, mkldnn::memory::data_type::u8);
+        OnednnBlockedMemoryDesc dummyDesc(InferenceEngine::Precision::U8, Shape(InferenceEngine::SizeVector{dummySize}));
         Create(mkldnn::memory::desc(dummyDesc), data, false);  // no pads zeroing
     }
     size_t newUpperBound = prim->get_desc().get_size();
@@ -296,7 +297,7 @@ void *MKLDNNMemory::GetPtr() const  {
 template<>
 MKLDNNMemoryDescPtr MKLDNNMemory::GetDescWithType<MKLDNNMemoryDesc, 0, 0>() const {
     if (pMemDesc->getType() & MemoryDescType::Mkldnn) {
-        return std::unique_ptr<MKLDNNMemoryDesc>(dynamic_cast<MKLDNNMemoryDesc *>(pMemDesc->clone().get()));
+        return std::unique_ptr<MKLDNNMemoryDesc>(dynamic_cast<MKLDNNMemoryDesc *>(pMemDesc->clone().release()));
     } else if (pMemDesc->getType() == MemoryDescType::CpuBlocked) {
         return MemoryDescUtils::convertToMKLDNNMemoryDesc(*(pMemDesc->as<BlockedMemoryDesc>()));
     } else {
@@ -327,7 +328,7 @@ void MKLDNNMemory::redefineDesc(MemoryDescPtr desc) {
 template<>
 BlockedMemoryDescPtr MKLDNNMemory::GetDescWithType<BlockedMemoryDesc, 0, 0>() const {
     if (pMemDesc->getType() & MemoryDescType::Blocked) {
-        return std::unique_ptr<BlockedMemoryDesc>(dynamic_cast<BlockedMemoryDesc *>(pMemDesc->clone().get()));
+        return std::unique_ptr<BlockedMemoryDesc>(dynamic_cast<BlockedMemoryDesc *>(pMemDesc->clone().release()));
     } else {
         IE_THROW() << "Can not convert unsupported memory descriptor";
     }
@@ -351,30 +352,12 @@ MKLDNNMemoryDesc::MKLDNNMemoryDesc(const mkldnn::memory::desc& desc) :
         IE_THROW(Unexpected) << "Memory format any is prohibited!";
 }
 
-MKLDNNMemoryDesc::MKLDNNMemoryDesc(const std::vector<size_t>& _dims, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format) :
-    MKLDNNMemoryDesc(Shape(_dims), dataType, format) {}
+// MKLDNNMemoryDesc::MKLDNNMemoryDesc(const std::vector<size_t>& _dims, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format) :
+//     MKLDNNMemoryDesc(Shape(_dims), dataType, format) {}
 
 // MKLDNNMemoryDesc::MKLDNNMemoryDesc(const std::vector<size_t>& _dims, mkldnn::memory::data_type dataType)
 //         : MemoryDesc(Shape(_dims), Mkldnn), desc() {
 //     InitializePlain(_dims, dataType);
-// }
-
-// void MKLDNNMemoryDesc::InitializePlain(const std::vector<size_t>& _dims, mkldnn::memory::data_type dataType) {
-//     const auto ndims = _dims.size();
-//     mkldnn::memory::dims plain_strides;
-//     if (std::any_of(_dims.begin(), _dims.end(), [](size_t val) { return val == Shape::UNDEFINED_DIM; })) {
-//         plain_strides.resize(ndims, DNNL_RUNTIME_DIM_VAL);
-//     } else {
-//         plain_strides.resize(ndims, 1);
-//         for (size_t i = 1; i < ndims; i++) {
-//             plain_strides[ndims - i -1] = plain_strides[ndims - i] * _dims[ndims - i];
-//         }
-//     }
-
-//     order.resize(ndims);
-//     std::iota(order.begin(), order.end(), 0);
-
-//     desc = {MKLDNNExtensionUtils::convertToDnnlDims(_dims), dataType, plain_strides};
 // }
 
 static const std::map<int, std::vector<mkldnn::memory::format_tag>> form_tags_by_ndims {
@@ -746,29 +729,6 @@ size_t MKLDNNMemoryDesc::getMaxMemSize() const {
 
     auto maxDimsDesc = cloneWithNewDims(maxDims);
     return maxDimsDesc->getCurrentSize();
-}
-
-MKLDNNMemoryDesc::MKLDNNMemoryDesc(const Shape &shape, dnnl::memory::data_type dataType, dnnl::memory::format_tag format) : MemoryDesc(shape, Mkldnn) {
-    if (format == memory::format_tag::any)
-        IE_THROW(Unexpected) << "Memory format any is prohibited!";
-    const auto dims = shape.getDims();
-    desc = mkldnn::memory::desc(MKLDNNExtensionUtils::convertToDnnlDims(dims), dataType, format);
-
-    // TODO [DS mandrono] : remove after nodes rewrite
-    if (format == memory::format_tag::undef) {
-        const auto ndims = shape.getRank();
-        mkldnn::memory::dims plain_strides;
-        if (std::any_of(dims.begin(), dims.end(), [](size_t val) { return val == Shape::UNDEFINED_DIM; })) {
-            plain_strides.resize(ndims, DNNL_RUNTIME_DIM_VAL);
-        } else {
-            plain_strides.resize(ndims, 1);
-            for (size_t i = 1; i < ndims; i++) {
-                plain_strides[ndims - i -1] = plain_strides[ndims - i] * dims[ndims - i];
-            }
-        }
-
-        desc = {MKLDNNExtensionUtils::convertToDnnlDims(dims), dataType, plain_strides};
-    }
 }
 
 }  // namespace MKLDNNPlugin
