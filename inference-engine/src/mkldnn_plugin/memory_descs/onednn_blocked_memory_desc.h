@@ -40,7 +40,7 @@ private:
                             const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
                             const std::vector<size_t>& strides = {});
 
-    OnednnBlockedMemoryDesc(const mkldnn::memory::desc& _desc);
+    OnednnBlockedMemoryDesc(const mkldnn::memory::desc& mdesc);
 
     std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
 

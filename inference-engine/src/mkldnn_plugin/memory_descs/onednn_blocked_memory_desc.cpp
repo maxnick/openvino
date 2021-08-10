@@ -345,7 +345,7 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(const mkldnn::memory::desc& mde
 
     mkldnn::impl::memory_desc_wrapper descWrapped(desc.data);
     if (!descWrapped.is_blocking_desc())
-        IE_THROW(Unexpected) << "Can't create OnednnBlockedMemoryDesc from OnednnBlockedMemoryDesc";
+        IE_THROW(Unexpected) << "Can't create OnednnBlockedMemoryDesc from not blocking desc";
 
     if (descWrapped.has_runtime_dims_or_strides()) {
         IE_THROW(Unexpected) << "Cannot calculate order from undefined dims or strides";
@@ -467,7 +467,6 @@ bool OnednnBlockedMemoryDesc::isTailCFormat() const {
 }
 
 std::unique_ptr<MemoryDesc> OnednnBlockedMemoryDesc::cloneWithNewDimsImp(const std::vector<size_t> &dims) const {
-    IE_THROW(Unexpected) << "Cannot clone non blocked oneDNN desc with new dims";
     using namespace dnnl::impl::utils;
     auto mklDims = MKLDNNExtensionUtils::convertToDnnlDims(dims);
     mkldnn::memory::desc newMklDesc = desc;
@@ -481,7 +480,7 @@ std::unique_ptr<MemoryDesc> OnednnBlockedMemoryDesc::cloneWithNewDimsImp(const s
     if (retCode != dnnl::impl::status::success) {
         IE_THROW() << "Can not clone OnednnBlockedMemoryDesc with dims: " << dims2str(dims);
     }
-    return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(newMklDesc);
+    return std::unique_ptr<OnednnBlockedMemoryDesc>(new OnednnBlockedMemoryDesc(newMklDesc));
 }
 
 void OnednnBlockedMemoryDesc::InitializePlain(const Shape& shape, mkldnn::memory::data_type dataType) {

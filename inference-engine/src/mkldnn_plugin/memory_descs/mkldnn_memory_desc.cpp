@@ -9,14 +9,6 @@
 
 namespace MKLDNNPlugin {
 
-bool MKLDNNMemoryDesc::operator==(const MKLDNNMemoryDesc &rhs) const {
-    return this->desc == rhs.desc;
-}
-
-bool MKLDNNMemoryDesc::operator!=(const MKLDNNMemoryDesc &rhs) const {
-    return !(*this == rhs);
-}
-
 MKLDNNMemoryDesc::operator mkldnn::memory::desc() const {
     return desc;
 }
@@ -346,8 +338,7 @@ size_t MKLDNNMemoryDesc::getElementOffset(size_t elemNumber) const {
 
 bool MKLDNNMemoryDesc::isCompatible(const MemoryDesc &rhs) const {
     if (MemoryDescType::Mkldnn == rhs.getType()) {
-        return this->getShape() == rhs.getShape() && this->getPrecision() == rhs.getPrecision() &&
-               this->desc == rhs.as<MKLDNNMemoryDesc>()->desc;
+        return this->desc == rhs.as<MKLDNNMemoryDesc>()->desc;
     } else {
         return false;
     }

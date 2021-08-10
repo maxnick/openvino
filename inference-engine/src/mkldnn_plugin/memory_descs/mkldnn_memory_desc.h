@@ -51,9 +51,6 @@ public:
         return getFormat() != mkldnn::memory::format_tag::any && getFormat() != mkldnn::memory::format_tag::undef;
     }
 
-    bool operator == (const MKLDNNMemoryDesc& rhs) const;
-    bool operator != (const MKLDNNMemoryDesc& rhs) const;
-
     operator mkldnn::memory::desc() const;
 
     bool isSame(mkldnn::memory::format_tag fmt) const;
