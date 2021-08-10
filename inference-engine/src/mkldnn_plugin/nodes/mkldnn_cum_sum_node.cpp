@@ -16,8 +16,12 @@
 using namespace MKLDNNPlugin;
 using namespace InferenceEngine;
 
-bool MKLDNNCumSumNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
+bool MKLDNNCumSumNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
         const auto cumsum = std::dynamic_pointer_cast<const ngraph::opset3::CumSum>(op);
         if (!cumsum) {
             errorMessage = "Only opset3 CumSum operation is supported";
@@ -133,7 +137,7 @@ template <typename dataType>
 void MKLDNNCumSumNode::exec() {
     const auto *input = reinterpret_cast<const dataType *>(getParentEdgeAt(CUM_SUM_DATA)->getMemoryPtr()->GetPtr());
     auto *output = reinterpret_cast<dataType *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
-    const std::vector<size_t> strides = getParentEdgeAt(CUM_SUM_DATA)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
+    const std::vector<size_t> strides = getParentEdgeAt(CUM_SUM_DATA)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getStrides();
 
     if (reverse) {
         if (exclusive) {
@@ -249,7 +253,7 @@ inline size_t MKLDNNCumSumNode::getStartOffset(const std::vector<size_t> &forSta
 
 size_t MKLDNNCumSumNode::getAxis(const MKLDNNMemory& _axis, const MKLDNNMemory& _data) const {
     const auto& axisPrecision = _axis.getDesc().getPrecision();
-    const int64_t dataShapeSize = static_cast<int64_t>(_data.getDesc().getShape().getRank());
+    const int64_t dataShapeSize = static_cast<int64_t>(_data.GetShape().getRank());
     int64_t axisValueFromBlob;
     switch (axisPrecision) {
         case Precision::I32 : {

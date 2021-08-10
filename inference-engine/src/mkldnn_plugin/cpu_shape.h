@@ -9,7 +9,6 @@
 #include <utility>
 #include <ie_common.h>
 #include <ngraph/partial_shape.hpp>
-#include "mkldnn_dims.h"
 
 namespace MKLDNNPlugin {
 

@@ -194,56 +194,56 @@ void MKLDNNEdge::changeStatus(MKLDNNEdge::Status state) {
     status = state;
 }
 
-// TODO [DS]: remove while DynamicShapes migration
-// TODO [DS]: How should we validate shape compatibility?
-// TODO [DS]: Why do we allow uninitialized shape?
-const Shape& MKLDNNEdge::getShape() {
-    if (!shape.getRank()) {
-        Shape inShape;
-        Shape outShape;
-        auto childPtr = getChild();
-        auto parentPtr = getParent();
+// // TODO [DS]: remove while DynamicShapes migration
+// // TODO [DS]: How should we validate shape compatibility?
+// // TODO [DS]: Why do we allow uninitialized shape?
+// const Shape& MKLDNNEdge::getShape() {
+//     if (!shape.getRank()) {
+//         Shape inShape;
+//         Shape outShape;
+//         auto childPtr = getChild();
+//         auto parentPtr = getParent();
 
-        int inNum = getOutputNum();
-        if (inNum < 0) {
-            IE_THROW() << "Error cannot find input data for " << child.lock()->getName()
-                               << " from " << parent.lock()->getName();
-        }
-        if (inNum < childPtr->inputShapes.size()) {
-            outShape = childPtr->inputShapes[inNum];
-        }
+//         int inNum = getOutputNum();
+//         if (inNum < 0) {
+//             IE_THROW() << "Error cannot find input data for " << child.lock()->getName()
+//                                << " from " << parent.lock()->getName();
+//         }
+//         if (inNum < childPtr->inputShapes.size()) {
+//             outShape = childPtr->inputShapes[inNum];
+//         }
 
-        int outNum = getInputNum();
-        if (outNum < 0) {
-            IE_THROW() << "Error cannot find output data for " << parent.lock()->getName()
-                               << " to " << child.lock()->getName();
-        }
-        if (outNum >= parentPtr->outputShapes.size())
-            outNum = 0;
-        if (outNum < parentPtr->outputShapes.size()) {
-            inShape = parentPtr->outputShapes[outNum];
-        }
+//         int outNum = getInputNum();
+//         if (outNum < 0) {
+//             IE_THROW() << "Error cannot find output data for " << parent.lock()->getName()
+//                                << " to " << child.lock()->getName();
+//         }
+//         if (outNum >= parentPtr->outputShapes.size())
+//             outNum = 0;
+//         if (outNum < parentPtr->outputShapes.size()) {
+//             inShape = parentPtr->outputShapes[outNum];
+//         }
 
-        if (inShape.getRank() && outShape.getRank() && inShape.getRank() != outShape.getRank() && inShape.getElementsCount() != outShape.getElementsCount())
-            IE_THROW() << "Nodes " << getParent()->getName() << " and " << getChild()->getName()
-                               << " have incompatible dimensions!";
+//         if (inShape.getRank() && outShape.getRank() && inShape.getRank() != outShape.getRank() && inShape.getElementsCount() != outShape.getElementsCount())
+//             IE_THROW() << "Nodes " << getParent()->getName() << " and " << getChild()->getName()
+//                                << " have incompatible dimensions!";
 
-        if (outShape.getRank() != 0) {
-            shape = outShape;
-        } else if (inShape.getRank() != 0) {
-            shape = inShape;
-        } else {
-            shape = Shape(InferenceEngine::SizeVector({1}));
-        }
+//         if (outShape.getRank() != 0) {
+//             shape = outShape;
+//         } else if (inShape.getRank() != 0) {
+//             shape = inShape;
+//         } else {
+//             shape = Shape(InferenceEngine::SizeVector({1}));
+//         }
 
 
-        if (!(outShape.getRank() == 0 && inShape.getRank() == 0) && !shape.getRank())
-            IE_THROW() << "Cannot detect right dims for nodes " << getParent()->getName()
-                               << " and " << getChild()->getName();
-    }
+//         if (!(outShape.getRank() == 0 && inShape.getRank() == 0) && !shape.getRank())
+//             IE_THROW() << "Cannot detect right dims for nodes " << getParent()->getName()
+//                                << " and " << getChild()->getName();
+//     }
 
-    return shape;
-}
+//     return shape;
+// }
 
 const MemoryDesc& MKLDNNEdge::getInputDesc() const {
     auto parentPtr = getParent();
@@ -318,7 +318,8 @@ void MKLDNNEdge::validate() {
     getMemory();
     getParent();
     getChild();
-    getShape();
+    // TODO phase 2 verify
+    // getShape();
 
     if (status != Status::Allocated) {
         IE_THROW() << "Error memory is not allocated!";

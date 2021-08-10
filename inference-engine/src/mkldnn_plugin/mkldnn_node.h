@@ -11,7 +11,6 @@
 #include <cassert>
 #include <algorithm>
 #include <caseless.hpp>
-#include "mkldnn_dims.h"
 #include "mkldnn_memory.h"
 #include "mkldnn_edge.h"
 #include "mkldnn_descriptor.h"
@@ -493,7 +492,7 @@ public:
     void resolveInPlaceEdges();
 
     virtual void execute(mkldnn::stream strm);
-    void executeDynamic(mkldnn::stream strm);
+    virtual void executeDynamic(mkldnn::stream strm);
 
     virtual void initSupportedPrimitiveDescriptors();
 
@@ -518,7 +517,7 @@ public:
         return created();
     }
 
-    void redefineOutputMemory(const std::vector<std::vector<size_t>> &newShapes);
+    void redefineOutputMemory(const std::vector<VectorDims> &newShapes);
 
     /**
      * @brief Performs Node initialization based on graph context.
@@ -679,14 +678,14 @@ public:
         return isDynamic;
     }
 
-    Shape getInputShapeAtPort(size_t port) const {
+    const Shape& getInputShapeAtPort(size_t port) const {
         if (inputShapes.size() <= port) {
             IE_THROW() << "Incorrect input port number for node " << getName();
         }
         return inputShapes[port];
     }
 
-    Shape getOutputShapeAtPort(size_t port) const {
+    const Shape& getOutputShapeAtPort(size_t port) const {
         if (outputShapes.size() <= port) {
             IE_THROW() << "Incorrect output port number for node " << getName();
         }
@@ -815,14 +814,14 @@ protected:
 
         NodeConfig config;
         for (size_t i = 0; i < inPortConfigs.size(); i++) {
-            auto shape = inPortConfigs[i].shape.getRank() == 0 ? getParentEdgesAtPort(i)[0]->getShape() : inPortConfigs[i].shape;
+            auto shape = inPortConfigs[i].shape.getRank() == 0 ? getInputShapeAtPort(i) : inPortConfigs[i].shape;
             auto prc = inPortConfigs[i].prc == InferenceEngine::Precision::UNSPECIFIED ? getOriginalInputPrecisionAtPort(i) : inPortConfigs[i].prc;
             if (!fill_port(inPortConfigs[i], shape, prc, config.inConfs))
                 return;
         }
 
         for (size_t i = 0; i < outPortConfigs.size(); i++) {
-            auto dims = outPortConfigs[i].shape.getRank() == 0 ? getChildEdgesAtPort(i)[0]->getShape() : outPortConfigs[i].shape;
+            auto dims = outPortConfigs[i].shape.getRank() == 0 ? getOutputShapeAtPort(i) : outPortConfigs[i].shape;
             auto prc = outPortConfigs[i].prc == InferenceEngine::Precision::UNSPECIFIED ? getOriginalOutputPrecisionAtPort(i) : outPortConfigs[i].prc;
             if (!fill_port(outPortConfigs[i], dims, prc, config.outConfs))
                 return;

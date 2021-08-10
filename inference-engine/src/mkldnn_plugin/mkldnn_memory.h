@@ -5,7 +5,6 @@
 #pragma once
 
 #include "ie_layouts.h"
-#include "mkldnn_dims.h"
 #include "memory_desc/cpu_memory_desc.h"
 #include "mkldnn_extension_utils.h"
 #include "memory_desc/cpu_memory_desc_utils.h"

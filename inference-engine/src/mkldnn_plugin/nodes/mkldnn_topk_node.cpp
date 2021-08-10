@@ -16,8 +16,12 @@
 using namespace MKLDNNPlugin;
 using namespace InferenceEngine;
 
-bool MKLDNNTopKNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
+bool MKLDNNTopKNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
         const auto topKOp = ngraph::as_type_ptr<const ngraph::op::v1::TopK>(op);
         if (!topKOp) {
             errorMessage = "Node is not an instance of the TopK from the operations set v1 or v3";
@@ -108,7 +112,7 @@ void MKLDNNTopKNode::execute(mkldnn::stream strm) {
         } else {
             dst_idx = reinterpret_cast<int *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
         }
-        SizeVector dstDims = getChildEdgesAtPort(0)[0]->getShape().getStaticDims();
+        SizeVector dstDims = getChildEdgesAtPort(0)[0]->getMemory().getStaticDims();
 
         if (dstDims[axis] != static_cast<size_t>(src_k)) {
             std::string errorMsg = "Output tensor dimension mismatch";
@@ -116,10 +120,10 @@ void MKLDNNTopKNode::execute(mkldnn::stream strm) {
         }
     } else if (outputShapes.size() == 2) {
         dst_data = reinterpret_cast<float *>(getChildEdgesAtPort(TOPK_VALUE)[0]->getMemoryPtr()->GetPtr());
-        SizeVector dst_data_dims = getChildEdgesAtPort(TOPK_VALUE)[0]->getShape().getStaticDims();
+        SizeVector dst_data_dims = getChildEdgesAtPort(TOPK_VALUE)[0]->getMemory().getStaticDims();
 
         dst_idx = reinterpret_cast<int *>(getChildEdgesAtPort(TOPK_INDEX)[0]->getMemoryPtr()->GetPtr());
-        SizeVector dst_idx_dims = getChildEdgesAtPort(TOPK_INDEX)[0]->getShape().getStaticDims();
+        SizeVector dst_idx_dims = getChildEdgesAtPort(TOPK_INDEX)[0]->getMemory().getStaticDims();
 
         if (dst_idx_dims[axis] != static_cast<size_t>(src_k) || dst_data_dims[axis] != static_cast<size_t>(src_k)) {
             std::string errorMsg = "Output tensors dimension mismatch";
@@ -133,7 +137,7 @@ void MKLDNNTopKNode::execute(mkldnn::stream strm) {
     if (src_dims[axis] < static_cast<size_t>(src_k))
         src_k = src_dims[axis];
 
-    SizeVector in_dims = getParentEdgeAt(TOPK_DATA)->getShape().getStaticDims();
+    SizeVector in_dims = getParentEdgeAt(TOPK_DATA)->getMemory().getStaticDims();
 
     if (src_k == 1) {
         if (is_last_dim) {

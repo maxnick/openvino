@@ -480,14 +480,6 @@ std::unique_ptr<MemoryDesc> DnnlBlockedMemoryDesc::cloneWithNewDimsImp(const Vec
     return std::unique_ptr<DnnlBlockedMemoryDesc>(new DnnlBlockedMemoryDesc(newMklDesc));
 }
 
-bool DnnlBlockedMemoryDesc::blocksExtended() const {
-    for (int i = 0; i < desc.data.ndims; i++) {
-        if (desc.data.dims[i] != desc.data.padded_dims[i])
-            return true;
-    }
-    return false;
-}
-
 static const std::map<int, std::vector<mkldnn::memory::format_tag>> form_tags_by_ndims {
     {0, {
         mkldnn::memory::format_tag::a   // TODO :: really 1d layout for scalar??
@@ -802,4 +794,12 @@ size_t DnnlBlockedMemoryDesc::getMaxMemSize() const {
 size_t DnnlBlockedMemoryDesc::getPaddedElementsCount() const {
     return std::accumulate(std::begin(desc.data.padded_dims), std::begin(desc.data.padded_dims) + desc.data.ndims, size_t{1},
                            std::multiplies<int64_t>());
+}
+
+bool DnnlBlockedMemoryDesc::blocksExtended() const {
+    for (int i = 0; i < desc.data.ndims; i++) {
+        if (desc.data.dims[i] != desc.data.padded_dims[i])
+            return true;
+    }
+    return false;
 }

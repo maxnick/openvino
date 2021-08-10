@@ -466,9 +466,9 @@ bool MKLDNNNode::canBeInPlace() const {
             return false;
     }
 
-    auto inShape = getParentEdgeAt(0)->getShape();
-    for (size_t cIdx = 0; cIdx < getChildEdges().size(); cIdx++) {
-        if (getChildEdgeAt(cIdx)->getShape() != inShape) {
+    auto inShape = getInputShapeAtPort(0);
+    for (size_t cIdx = 0; cIdx < getOriginalOutputsNumber(); cIdx++) {
+        if (getOutputShapeAtPort(cIdx) != inShape) {
             return false;
         }
     }
@@ -692,7 +692,7 @@ void MKLDNNNode::executeDynamicImpl(mkldnn::stream strm) {
     IE_THROW() << "[DS] executeDynamicImpl not implemented for node with type: " << getTypeStr();
 }
 
-void MKLDNNNode::redefineOutputMemory(const std::vector<std::vector<size_t>> &newShapes) {
+void MKLDNNNode::redefineOutputMemory(const std::vector<VectorDims> &newShapes) {
     if (newShapes.size() != getOriginalOutputsNumber()) {
         IE_THROW() << "Number shapes mismatch with real outputs number for node with name: " << getName();
     }
@@ -1308,7 +1308,7 @@ MKLDNNNode* MKLDNNNode::NodesFactory::create(const std::shared_ptr<ngraph::Node>
 bool MKLDNNNode::canBePerformedAsScaleShift(const MKLDNNNode *parentNode) const {
     size_t fusingPort = 0;
     for (size_t i = (parentNode == nullptr ? 1 : 0); i < getParentEdges().size(); i++) {
-        MKLDNNNode *node = getParentEdgeAt(i)->getParent().get();
+        MKLDNNNode *node = getParentEdgesAtPort(i)[0]->getParent().get();
         if (node == nullptr) {
             IE_THROW() << "Cannot get parent node for " << getName() << " on " << i << " port";
         }
@@ -1322,11 +1322,11 @@ bool MKLDNNNode::canBePerformedAsScaleShift(const MKLDNNNode *parentNode) const 
     }
 
     const auto isBroadcastableToDataInput = [&]() {
-        auto& dataShape = getParentEdgeAt(fusingPort)->getShape().getDims();
+        auto& dataShape = getInputShapeAtPort(fusingPort).getDims();
         for (size_t i = 0; i < getParentEdges().size(); i++) {
             if (i == fusingPort)
                 continue;
-            auto& weightShape = getParentEdgeAt(i)->getShape().getDims();
+            auto& weightShape = getInputShapeAtPort(i).getDims();
             if (getParentEdgesAtPort(i)[0]->getParent()->getChildEdges().size() != 1 || !isPerTensorOrPerChannelBroadcastable(dataShape, weightShape))
                 return false;
         }

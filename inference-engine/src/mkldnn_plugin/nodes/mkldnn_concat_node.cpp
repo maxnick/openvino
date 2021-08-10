@@ -11,7 +11,6 @@
 
 #include "mkldnn.hpp"
 #include "mkldnn/iml_type_mapper.h"
-#include "mkldnn_dims.h"
 #include "mkldnn_edge.h"
 #include "mkldnn_memory.h"
 #include "ie_parallel.hpp"
@@ -34,6 +33,11 @@ namespace {
 
 bool MKLDNNConcatNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
+
         const auto concatOp = ngraph::as_type_ptr<const ngraph::op::v0::Concat>(op);
         if (!concatOp) {
             errorMessage = "Node is not an instance of the Concat operation.";
@@ -62,9 +66,9 @@ MKLDNNConcatNode::MKLDNNConcatNode(const std::shared_ptr<ngraph::Node>& op, cons
 }
 
 void MKLDNNConcatNode::getSupportedDescriptors() {
-    auto& firstParentDims = getParentEdgeAt(0)->getShape().getStaticDims();
+    auto& firstParentDims = getInputShapeAtPort(0).getStaticDims();
     for (size_t i = 1; i < getParentEdges().size(); i++) {
-        auto& dims = getParentEdgeAt(i)->getShape().getStaticDims();
+        auto& dims = getInputShapeAtPort(i).getStaticDims();
         bool incorrectDims = false;
         for (size_t j = 0; j < firstParentDims.size(); j++) {
             if (j == axis)
@@ -101,7 +105,7 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
     // Concat supports only equal precisions for inputs and output
     outputPrecision = inputPrecision;
 
-    auto& dstDims = getChildEdgeAt(0)->getShape().getStaticDims();
+    const auto& dstDims = getOutputShapeAtPort(0).getStaticDims();
     std::vector<LayoutType> tdCreatorTypes = {LayoutType::ncsp, LayoutType::nspc};
 
     // check if blocked layouts are available the channels size should be evenly divided by the block size to avoid slow oneDNN ref implementation
@@ -113,7 +117,7 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
 
             bool blocked = true;
             for (size_t i = 0; i < getParentEdges().size(); i++) {
-                auto& srcDims = getParentEdgeAt(i)->getShape().getStaticDims();
+                auto& srcDims = getInputShapeAtPort(i).getStaticDims();
                 if (srcDims[channelAxis] % item.first) {
                     blocked = false;
                     break;
@@ -128,6 +132,7 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
     std::vector<size_t> pdIndexesToReuse;
 
     auto& creatorsMap = BlockedDescCreator::getCommonCreators();
+
     auto itrRange = BlockedDescCreator::makeFilteredRange(creatorsMap, static_cast<unsigned>(dstDims.size()), tdCreatorTypes);
     for (auto itr = itrRange.first; itr != itrRange.second; ++itr) {
         NodeConfig config;
@@ -143,8 +148,7 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
         for (size_t i = 0; i < getParentEdges().size(); ++i) {
             config.inConfs[i].inPlace = -1;
             config.inConfs[i].constant = false;
-            config.inConfs[i].desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(itr->second->createDesc(
-                                        inputPrecision, getParentEdgeAt(i)->getShape().getStaticDims()));
+            config.inConfs[i].desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(itr->second->createDesc(inputPrecision, getInputShapeAtPort(i)));
         }
         supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::ref);
         if (itr->first != LayoutType::nspc) {
@@ -251,7 +255,7 @@ void MKLDNNConcatNode::selectOptimalPrimitiveDescriptor() {
     }
 
     size_t maxCount = 0;
-    auto outDims = getChildEdgeAt(0)->getShape().getStaticDims();
+    auto outDims = getOutputShapeAtPort(0).getStaticDims();
     LayoutType convertTo = LayoutType::ncsp;
     for (auto &it : formatFrequency) {
         if (it.second > maxCount) {
@@ -273,7 +277,7 @@ void MKLDNNConcatNode::selectOptimalPrimitiveDescriptor() {
                 break;
             }
             for (size_t i = 0; i < getParentEdges().size(); i++) {
-                auto& inpDims = getParentEdgeAt(i)->getShape().getStaticDims();
+                auto& inpDims = getInputShapeAtPort(i).getStaticDims();
                 if (inpDims[1] % item.first != 0) {
                     convertTo = LayoutType::ncsp;
                     break;
@@ -347,9 +351,9 @@ void MKLDNNConcatNode::createPrimitive() {
             IE_THROW() << "Source memory from " << parent->getName() << " didn't allocate for node "
                                << getName() << ".";
         }
-
+// DnnlBlockedMemoryDesc
         auto desc = srcMemPtr->GetDescWithType<DnnlMemoryDesc>()->getDnnlDesc();
-        auto& dims = getParentEdgeAt(i)->getShape().getStaticDims();
+        auto& dims = getInputShapeAtPort(i).getStaticDims();
         for (size_t j = 0; j < dims.size(); j++) {
             desc.data.dims[j] = dims[j];
         }
@@ -358,7 +362,7 @@ void MKLDNNConcatNode::createPrimitive() {
     }
 
     auto desc = getChildEdgeAt(0)->getMemory().GetDescWithType<DnnlMemoryDesc>()->getDnnlDesc();
-    auto& dims = getChildEdgeAt(0)->getShape().getStaticDims();
+    auto& dims = getOutputShapeAtPort(0).getStaticDims();
     for (size_t i = 0; i < dims.size(); i++) {
         desc.data.dims[i] = dims[i];
         desc.data.padded_dims[i] = dims[i];
@@ -431,7 +435,9 @@ void MKLDNNConcatNode::initOptimalPrimitiveDescriptor() {
     auto firstOutBlockingDesc = config.outConfs[0].desc->as<BlockedMemoryDesc>();
     size_t offset = 0;
     for (size_t i = 0; i < config.inConfs.size(); i++) {
-        auto inpBlockingDesc = config.inConfs[i].desc->as<BlockedMemoryDesc>();
+        auto oldDesc = config.inConfs[i].desc->clone();
+        auto inpBlockingDesc = oldDesc->as<BlockedMemoryDesc>();
+
         config.inConfs[i].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(inpBlockingDesc->getPrecision(),
                                                                                  inpBlockingDesc->getShape(),
                                                                                  inpBlockingDesc->getBlockDims(),

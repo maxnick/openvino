@@ -721,7 +721,7 @@ void MKLDNNGraph::PushInputData(const std::string& name, const InferenceEngine::
         // todo: make sure 'name' exists in this map...
         if (_normalizePreprocMap.find(name) != _normalizePreprocMap.end()) {
             if (in->getTensorDesc().getPrecision() == InferenceEngine::Precision::FP32) {
-                _normalizePreprocMap[name].NormalizeImage(input->second->getChildEdgeAt(0)->getShape(),
+                _normalizePreprocMap[name].NormalizeImage(input->second->getOutputShapeAtPort(0),
                                                           reinterpret_cast<float *>(inter_data_ptr),
                                                           in->getTensorDesc().getLayout());
             } else {
@@ -1103,6 +1103,7 @@ void MKLDNNGraph::DropDWConvNode(const MKLDNNNodePtr &node) {
         if (!parent) continue;
 
         MKLDNNEdgePtr &remEdge = p_edge;
+        const auto portCandidate = remEdge->getOutputNum();
         int inNum = 0;
         if (remEdge) {
             inNum = remEdge->getInputNum();
@@ -1114,7 +1115,8 @@ void MKLDNNGraph::DropDWConvNode(const MKLDNNNodePtr &node) {
         MKLDNNEdgePtr newEdge(new MKLDNNEdge(parent, parentConv, inNum, outNum));
         graphEdges.push_back(newEdge);
         parent->addEdge(newEdge);
-        parentConv->inputShapes.push_back(Shape(newEdge->getShape()));
+        // TODO: phase 2 validate
+        parentConv->inputShapes.push_back(node->getInputShapeAtPort(portCandidate));
     }
 }
 

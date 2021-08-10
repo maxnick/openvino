@@ -25,7 +25,7 @@ public:
     void withMeanImage();
     MKLDNNMemoryCPtr getMemoryPtr() const;
 
-    void executeDynamicImpl(mkldnn::stream strm) override {}
+    void executeDynamic(mkldnn::stream strm) override {}
 
 private:
     void cloneBlobIfRequired();

@@ -37,13 +37,13 @@ public:
 
     bool hasLayoutType(LayoutType layoutType) const override;
 
-    bool blocksExtended() const override;
-
     bool isSame(mkldnn::memory::format_tag fmt) const override;
 
     std::string serializeFormat() const override;
 
     size_t getMaxMemSize() const override;
+
+    bool blocksExtended() const override;
 
     size_t getPaddedElementsCount() const override;
 
@@ -70,5 +70,8 @@ private:
     friend DnnlMemoryDescPtr MKLDNNExtensionUtils::makeDescriptor(const mkldnn::memory::desc &desc);
     friend class MemoryDescUtils;
 };
+
+using DnnlBlockedMemoryDescPtr = std::unique_ptr<DnnlBlockedMemoryDesc>;
+using DnnlBlockedMemoryDescCPtr = std::unique_ptr<const DnnlBlockedMemoryDesc>;
 
 } // namespace MKLDNNPlugin
