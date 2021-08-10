@@ -19,21 +19,21 @@ public:
      *
      * @return blocked dimensions
      */
-    virtual const std::vector<size_t> getBlockDims() const = 0;
+    virtual const std::vector<size_t>& getBlockDims() const = 0;
 
     /**
      * @brief Returns the vector of order
      *
      * @return order
      */
-    virtual const std::vector<size_t> getOrder() const = 0;
+    virtual const std::vector<size_t>& getOrder() const = 0;
 
     /**
      * @brief Returns the per-dimension offset vector
      *
      * @return offsets
      */
-    virtual const std::vector<size_t> getOffsetPaddingToData() const = 0;
+    virtual const std::vector<size_t>& getOffsetPaddingToData() const = 0;
 
     /**
      * @brief Returns the offset to the current memory block
@@ -47,7 +47,13 @@ public:
      *
      * @return strides
      */
-    virtual const std::vector<size_t> getStrides() const = 0;
+    virtual const std::vector<size_t>& getStrides() const = 0;
+
+protected:
+    mutable std::vector<size_t> blockedDims;
+    mutable std::vector<size_t> strides;
+    mutable std::vector<size_t> order;
+    mutable std::vector<size_t> offsetPaddingToData;
 };
 
 using BlockedMemoryDescPtr = std::unique_ptr<BlockedMemoryDesc>;

@@ -30,7 +30,7 @@ public:
         precision = std::move(prc);
     }
 
-    const std::vector<size_t> getBlockDims() const override {
+    const std::vector<size_t>& getBlockDims() const override {
         return blockedDims;
     }
 
@@ -39,7 +39,7 @@ public:
      *
      * @return order
      */
-    const std::vector<size_t> getOrder() const override {
+    const std::vector<size_t>& getOrder() const override {
         return order;
     }
 
@@ -48,7 +48,7 @@ public:
      *
      * @return offsets
      */
-    const std::vector<size_t> getOffsetPaddingToData() const override {
+    const std::vector<size_t>& getOffsetPaddingToData() const override {
         return offsetPaddingToData;
     }
     /**
@@ -65,7 +65,7 @@ public:
      *
      * @return strides
      */
-    const std::vector<size_t> getStrides() const override {
+    const std::vector<size_t>& getStrides() const override {
         return strides;
     }
 
@@ -87,10 +87,6 @@ private:
 
 private:
     InferenceEngine::Precision precision;
-    std::vector<size_t> blockedDims;
-    std::vector<size_t> strides;
-    std::vector<size_t> order;
-    std::vector<size_t> offsetPaddingToData;
     size_t offsetPadding;
 };
 

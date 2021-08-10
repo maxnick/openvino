@@ -23,15 +23,15 @@ public:
     bool isCompatible(const OnednnBlockedMemoryDesc& rhs) const;
     bool isCompatible(const CpuBlockedMemoryDesc& rhs) const;
 
-    const std::vector<size_t> getBlockDims() const override;
+    const std::vector<size_t>& getBlockDims() const override;
 
-    const std::vector<size_t> getOrder() const override;
+    const std::vector<size_t>& getOrder() const override;
 
-    const std::vector<size_t> getOffsetPaddingToData() const override;
+    const std::vector<size_t>& getOffsetPaddingToData() const override;
 
     size_t getOffsetPadding() const override;
 
-    const std::vector<size_t> getStrides() const override;
+    const std::vector<size_t>& getStrides() const override;
 
     bool hasLayoutType(LayoutType layoutType) const override;
 
@@ -49,8 +49,6 @@ private:
     bool isPlainFormat() const;
     bool isBlockedCFormat(size_t blk_size = UNREACHABLE_DIM) const;
     bool isTailCFormat() const;
-
-    std::vector<size_t> order;
 
     friend class MemoryDescUtils;
 };
