@@ -98,7 +98,7 @@ void MKLDNNGatherElementsNode::directExecution() {
     const auto *indices = reinterpret_cast<const int *>(getParentEdgeAt(indicesIndex_)->getMemoryPtr()->GetPtr());
     auto *dstData = reinterpret_cast<dataType *>(getChildEdgeAt(0)->getMemoryPtr()->GetPtr());
 
-    const int outSize = getChildEdgeAt(0)->getShape().GetShape().getElementsCount();
+    const int outSize = getChildEdgeAt(0)->getShape().getElementsCount();
     auto threadBody = [&](const int ithr, const int nthr) {
         int start(0lu), end(0lu);
         splitter(outSize, nthr, ithr, start, end);

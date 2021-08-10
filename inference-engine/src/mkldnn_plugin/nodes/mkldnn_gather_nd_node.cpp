@@ -104,7 +104,7 @@ void MKLDNNGatherNDNode::gatherElementwise() {
     auto strides = getParentEdgeAt(_dataIndex)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
     const size_t* srcMultipliers = strides.data() + _batchDims;
 
-    const size_t cycles = getChildEdgeAt(0)->getShape().GetShape().getElementsCount() *
+    const size_t cycles = getChildEdgeAt(0)->getShape().getElementsCount() *
                           getChildEdgeAt(0)->getMemory().GetDesc().getPrecision().size() / (sizeof(dataType) * _batchNum);
     const size_t CS = cycles * _sliceRank;
     const size_t CB = cycles * _blockSize;

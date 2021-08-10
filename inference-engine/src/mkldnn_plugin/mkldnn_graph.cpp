@@ -785,7 +785,7 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
             MB_to_process = node->batchToProcess();
         }
 
-        size_t size_to_copy = intr_blob.GetShape().getElementsCount() * MB_to_process / MB;
+        size_t size_to_copy = intr_blob.GetDesc().getPaddedElementsCount() * MB_to_process / MB;
 
         const auto actualDesc = MemoryDescUtils::convertToTensorDesc(node->getParentEdgeAt(0)->getMemory().GetDesc());
         const auto expectedDesc = ext_blob->getTensorDesc();

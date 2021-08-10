@@ -827,7 +827,7 @@ InferenceEngine::Blob::Ptr MKLDNNConvolutionNode::createInternalBlob(InferenceEn
     if (blb == nullptr)
         IE_THROW() << "Cannot get const blob for node " << getName() << ".";
 
-    auto const elementsCount = blb->GetShape().getElementsCount();
+    auto const elementsCount = blb->GetDesc().getPaddedElementsCount();
 
     InferenceEngine::TensorDesc desc(InferenceEngine::Precision::FP32, dims, getWeightsLayoutByDims(dims, isGrouped));
 

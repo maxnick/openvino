@@ -121,7 +121,7 @@ inline void reorderData(const MKLDNNMemory &input, const MKLDNNMemory &output, s
 
                 const auto outPrc = MKLDNNExtensionUtils::DataTypeToIEPrecision(output.GetDataType());
                 cpu_convert(data, tmpBuff.data(), MKLDNNExtensionUtils::DataTypeToIEPrecision(input.GetDataType()),
-                            outPrc, input.GetShape().getElementsCount());
+                            outPrc, input.GetDesc().getPaddedElementsCount());
 
                 MKLDNNMemory tmpMem(output.eng);
                 auto tmpDesc = input.GetDesc().clone();

@@ -56,6 +56,11 @@ public:
 
     bool hasLayoutType(LayoutType layoutType) const override { return false; }
 
+    size_t getPaddedElementsCount() const override {
+        return std::accumulate(std::begin(desc.data.padded_dims), std::begin(desc.data.padded_dims) + desc.data.ndims, size_t{1},
+                               std::multiplies<int64_t>());
+    }
+
 protected:
     MKLDNNMemoryDesc(const Shape& shape) : MemoryDesc(shape, Mkldnn) {}
     static constexpr size_t UNREACHABLE_DIM = std::numeric_limits<size_t>::max();

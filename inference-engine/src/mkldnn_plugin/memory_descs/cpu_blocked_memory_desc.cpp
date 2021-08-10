@@ -250,7 +250,7 @@ std::unique_ptr<MemoryDesc> CpuBlockedMemoryDesc::cloneWithNewDimsImp(const std:
     return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(precision, Shape(dims), newBlockedDims, order, offsetPadding, newOffsetPaddingToData);
 }
 
-bool CpuBlockedMemoryDesc::blocksExtended() const {
+void CpuBlockedMemoryDesc::initializePaddedDims() const {
     if (paddedDims.empty()) {
         paddedDims.resize(getShape().getRank(), 1);
         for (size_t i = 0; i < order.size(); i++) {
@@ -261,6 +261,19 @@ bool CpuBlockedMemoryDesc::blocksExtended() const {
                 paddedDims[idx] = Shape::UNDEFINED_DIM;
             }
         }
+    }
+}
+
+size_t CpuBlockedMemoryDesc::getPaddedElementsCount() const {
+    if (paddedDims.empty()) {
+        initializePaddedDims();
+    }
+    return std::accumulate(paddedDims.begin(), paddedDims.end(), size_t{1}, std::multiplies<size_t>());
+}
+
+bool CpuBlockedMemoryDesc::blocksExtended() const {
+    if (paddedDims.empty()) {
+        initializePaddedDims();
     }
     return shape.getDims() != paddedDims;
 }

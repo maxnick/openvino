@@ -60,7 +60,7 @@ void MKLDNNMathNode::initSupportedPrimitiveDescriptors() {
 }
 
 void MKLDNNMathNode::execute(mkldnn::stream strm) {
-    size_t dataSize = getChildEdgeAt(0)->getShape().GetShape().getElementsCount();
+    size_t dataSize = getChildEdgeAt(0)->getShape().getElementsCount();
     const float *src_data = reinterpret_cast<const float *>(getParentEdgeAt(0)->getMemoryPtr()->GetPtr());
     float* dst_data = reinterpret_cast<float *>(getChildEdgeAt(0)->getMemoryPtr()->GetPtr());
 

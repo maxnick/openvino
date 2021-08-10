@@ -77,6 +77,8 @@ public:
 
     size_t getMaxMemSize() const override;
 
+    size_t getPaddedElementsCount() const override;
+
 private:
     size_t getElementOffset(size_t elemNumber) const override;
     size_t getMemSizeImp() const override;
@@ -86,6 +88,7 @@ private:
     bool isTailCFormat() const;
     bool isDefinedImp() const override;
     std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
+    void initializePaddedDims() const;
 
 private:
     InferenceEngine::Precision precision;

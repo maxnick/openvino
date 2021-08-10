@@ -71,6 +71,8 @@ public:
     // Get memory upper bound if possible. Can be undefined
     virtual size_t getMaxMemSize() const = 0;
 
+    virtual size_t getPaddedElementsCount() const = 0;
+
     /**
      * @brief Get minimal required memory size in bytes.
      * @return return minimal required memory size in bytes or UNDEFINED_SIZE in case undefined descriptor
