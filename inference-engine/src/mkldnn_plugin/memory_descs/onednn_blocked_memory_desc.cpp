@@ -17,7 +17,8 @@ extern status_t fill_blocked(memory_desc_t &md, std::vector<int> &perm,
 using namespace MKLDNNPlugin;
 using namespace InferenceEngine;
 
-OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape) : MKLDNNMemoryDesc(shape), MemoryDesc(shape, OneDnnBlocked) {
+OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape) : MKLDNNMemoryDesc(shape),
+        MemoryDesc(shape, OneDnnBlocked) {
     InitializePlain(shape, MKLDNNExtensionUtils::IEPrecisionToDataType(prc));
 }
 
@@ -415,7 +416,6 @@ bool OnednnBlockedMemoryDesc::hasLayoutType(LayoutType layoutType) const {
     }
 }
 
-// TODO [DS]: move to BlockedMemoryDesc after caching
 bool OnednnBlockedMemoryDesc::isPlainFormat() const {
     if (desc.data.format_kind != dnnl_blocked)
         return false;

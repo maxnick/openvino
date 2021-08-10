@@ -1308,7 +1308,6 @@ void MKLDNNEltwiseNode::createPrimitive() {
     };
 
     auto outBlockingDesc = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
-    // std::cout << dynamic_cast<OnednnBlockedMemoryDesc *>(outBlockingDesc.get()) << " " << dynamic_cast<CpuBlockedMemoryDesc *>(outBlockingDesc.get()) << std::endl;
     tensorRank = std::max(static_cast<size_t>(optimalTensorRank), outBlockingDesc->getBlockDims().size());
     initDims(tensorRank);
 
