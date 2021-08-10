@@ -26,34 +26,11 @@ class MKLDNNMemoryDesc : public virtual MemoryDesc {
 public:
     explicit MKLDNNMemoryDesc(const mkldnn::memory::desc& desc);
 
-    /**
-     * Try to define original format tag use on creation
-     *
-     * @return format tag if was able to define it
-     */
-    // TODO [DS]: phase 2: move to the private section
-    mkldnn::memory::format_tag getFormat() const;
-
     mkldnn::memory::data_type getDataType() const {
         return static_cast<mkldnn::memory::data_type>(desc.data.data_type);
     }
 
-    // TODO [DS]: phase 2: remove!!!
-    MKLDNNDims getDims() const {
-        return MKLDNNDims(desc.data.dims, desc.data.ndims);
-    }
-
-    // TODO [DS]: phase 2: move to the blocked desc interface
-    bool blocksExtended() const;
-
-    // TODO [DS]: phase 2: remove
-    operator bool() const {
-        return getFormat() != mkldnn::memory::format_tag::any && getFormat() != mkldnn::memory::format_tag::undef;
-    }
-
     operator mkldnn::memory::desc() const;
-
-    bool isSame(mkldnn::memory::format_tag fmt) const;
 
     dnnl_format_kind_t getFormatKind() const {
         return desc.data.format_kind;
@@ -87,7 +64,6 @@ protected:
 
 private:
     size_t getElementOffset(size_t elemNumber) const override;
-    // void InitializePlain(const std::vector<size_t>& _dims, mkldnn::memory::data_type dataType);
 
     size_t getMemSizeImp() const override;
     bool isDefinedImp() const override;

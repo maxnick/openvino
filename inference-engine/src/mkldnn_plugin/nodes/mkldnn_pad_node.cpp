@@ -149,7 +149,7 @@ void MKLDNNPadNode::initSupportedPrimitiveDescriptors() {
     else if (numOfDims == 5)
         pushSupportedPrimitiveDescriptor(mkldnn::memory::format_tag::ndhwc);
 
-    pushSupportedPrimitiveDescriptor(MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(0)->getShape().getRank()));
+    pushSupportedPrimitiveDescriptor(MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(0)->getShape().getRank()));
 
     auto canUseBlocked = [=](const size_t blockSize) {
         return (padMode == CONSTANT && padsBegin[1] % blockSize == 0 && padsEnd[1] % blockSize == 0) ||

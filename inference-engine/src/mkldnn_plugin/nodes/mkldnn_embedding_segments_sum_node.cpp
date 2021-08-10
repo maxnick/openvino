@@ -76,7 +76,7 @@ void MKLDNNEmbeddingSegmentsSumNode::initSupportedPrimitiveDescriptors() {
 
 void MKLDNNEmbeddingSegmentsSumNode::initFromInputs() {
     indices_ = reinterpret_cast<const int *>(getParentEdgeAt(INDICES_IDX)->getMemoryPtr()->GetPtr());
-    indicesSize_ = getParentEdgeAt(INDICES_IDX)->getShape().getElementsCount();
+    indicesSize_ = getParentEdgeAt(INDICES_IDX)->getShape().GetShape().getElementsCount();
 
     segmentIds_ = reinterpret_cast<const int *>(getParentEdgeAt(SEGMENT_ID_IDX)->getMemoryPtr()->GetPtr());
 

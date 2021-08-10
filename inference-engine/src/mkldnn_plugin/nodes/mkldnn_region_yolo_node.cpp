@@ -388,8 +388,8 @@ void MKLDNNRegionYoloNode::execute(mkldnn::stream strm) {
         output_size = B * IH * IW * mask_size * (classes + coords + 1);
     }
 
-    if (output_size != getChildEdgeAt(0)->getMemoryPtr()->GetElementsCount())
-        IE_THROW() << "Incorrect layer configuration or output dimensions. " << output_size << " != " << getChildEdgeAt(0)->getMemoryPtr()->GetElementsCount();
+    if (output_size != getChildEdgeAt(0)->getMemoryPtr()->GetShape().getElementsCount())
+        IE_THROW() << "Incorrect layer configuration or output dimensions. " << output_size << " != " << getChildEdgeAt(0)->getMemoryPtr()->GetShape().getElementsCount();
 
     size_t inputs_size = IH * IW * num_ * (classes + coords + 1);
     size_t total_size = 2 * IH * IW;

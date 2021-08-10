@@ -744,7 +744,7 @@ void MKLDNNMVNNode::initSupportedPrimitiveDescriptors() {
     config.outConfs[0].inPlace = canBeInplace ? 0 : -1;
     if (inputsNum == 2) {
         config.inConfs[1].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getParentEdgeAt(1)->getShape(), memory::data_type::s32,
-                                                               MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(1)->getShape().getRank()));
+                                                               MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(1)->getShape().getRank()));
         config.inConfs[1].constant = true;
     }
 
@@ -791,7 +791,7 @@ void MKLDNNMVNNode::initSupportedPrimitiveDescriptors() {
     // planar
     if (canBeInplace)
         config.inConfs[0].inPlace = 0;
-    pushDesc(MKLDNNMemory::GetPlainFormatByRank(getChildEdgeAt(0)->getShape().getRank()), impl_type);
+    pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getChildEdgeAt(0)->getShape().getRank()), impl_type);
 }
 
 void MKLDNNMVNNode::createPrimitive() {

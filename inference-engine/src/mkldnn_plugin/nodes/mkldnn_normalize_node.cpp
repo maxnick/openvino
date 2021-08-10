@@ -787,7 +787,7 @@ void MKLDNNNormalizeL2Node::initSupportedPrimitiveDescriptors() {
     }
     if (canBeInplace)
         config.inConfs[0].inPlace = 0;
-    pushDesc(MKLDNNMemory::GetPlainFormatByRank(getChildEdgeAt(DATA)->getShape().getRank()));
+    pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getChildEdgeAt(DATA)->getShape().getRank()));
 }
 
 bool MKLDNNNormalizeL2Node::canFuse(const MKLDNNNodePtr& node) const {

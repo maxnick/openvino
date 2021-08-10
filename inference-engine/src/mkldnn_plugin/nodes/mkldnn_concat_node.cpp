@@ -348,7 +348,7 @@ void MKLDNNConcatNode::createPrimitive() {
                                << getName() << ".";
         }
 
-        auto desc = srcMemPtr->GetDescriptor();
+        auto desc = srcMemPtr->GetDescWithType<MKLDNNMemoryDesc>()->getMklDesc();
         auto& dims = getParentEdgeAt(i)->getShape().getStaticDims();
         for (size_t j = 0; j < dims.size(); j++) {
             desc.data.dims[j] = dims[j];
@@ -357,7 +357,7 @@ void MKLDNNConcatNode::createPrimitive() {
         srcs_d.emplace_back(desc);
     }
 
-    auto desc = getChildEdgeAt(0)->getMemory().GetDescriptor();
+    auto desc = getChildEdgeAt(0)->getMemory().GetDescWithType<MKLDNNMemoryDesc>()->getMklDesc();
     auto& dims = getChildEdgeAt(0)->getShape().getStaticDims();
     for (size_t i = 0; i < dims.size(); i++) {
         desc.data.dims[i] = dims[i];
@@ -496,7 +496,7 @@ void MKLDNNConcatNode::execNspcSpecCase() {
 
     for (size_t i = 0; i < num_src; i++) {
         const MKLDNNMemory& src_mem = getParentEdgeAt(i)->getMemory();
-        const size_t num_channels = src_mem.GetDims()[channelAxis];
+        const size_t num_channels = src_mem.getStaticDims()[channelAxis];
 
         channelsDataSize.push_back(num_channels * dataSize);
         src_ptrs.push_back(reinterpret_cast<const uint8_t*>(src_mem.GetData()));

@@ -213,10 +213,10 @@ void MKLDNNScatterUpdateNode::initSupportedPrimitiveDescriptors() {
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
     };
 
-    pushDesc(MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(DATA_ID)->getShape().getRank()),
-             MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(INDICES_ID)->getShape().getRank()),
-             MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(UPDATE_ID)->getShape().getRank()),
-             MKLDNNMemory::GetPlainFormatByRank(getChildEdgeAt(0)->getShape().getRank()));
+    pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(DATA_ID)->getShape().getRank()),
+             MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(INDICES_ID)->getShape().getRank()),
+             MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(UPDATE_ID)->getShape().getRank()),
+             MKLDNNExtensionUtils::GetPlainFormatByRank(getChildEdgeAt(0)->getShape().getRank()));
 }
 
 void MKLDNNScatterUpdateNode::createPrimitive() {

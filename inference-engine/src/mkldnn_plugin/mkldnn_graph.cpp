@@ -752,10 +752,10 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
 //            IE_THROW(Unexpected) << "The network outputs do not contain mkldnn graph output node name: \"" << name << "\"";
 //        }
 
-        if (out.at(name)->size() != intr_blob.GetElementsCount()) {
+        if (out.at(name)->size() != intr_blob.GetShape().getElementsCount()) {
             // TODO [DS]: phase 2: rewrite when dynamic ie blob representation becomes available
 //            IE_THROW() << "Output blob number of elements is not equal network output number of elements ("
-//                       << ext_blob->size() << "!=" << intr_blob.GetElementsCount() << ").";
+//                       << ext_blob->size() << "!=" << intr_blob.GetShape().getElementsCount() << ").";
             out[name] = MemoryDescUtils::createBlob(intr_blob.GetDesc());
         }
 
@@ -774,7 +774,7 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
         // That is the same memory. No need to copy
         if (ext_blob_ptr == intr_blob_ptr) continue;
 
-        int MB = intr_blob.GetDims()[0];
+        int MB = intr_blob.getStaticDims()[0];
         int MB_to_process = MB;
         // TODO: Should we support InferenceEngine::PluginConfigParams::KEY_DYN_BATCH_LIMIT???
         // TODO [DS]: phase 2: should we support this behaviour? Looks obsolete in the dynamic shapes paradigm
@@ -785,7 +785,7 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
             MB_to_process = node->batchToProcess();
         }
 
-        size_t size_to_copy = intr_blob.GetElementsCount() * MB_to_process / MB;
+        size_t size_to_copy = intr_blob.GetShape().getElementsCount() * MB_to_process / MB;
 
         const auto actualDesc = MemoryDescUtils::convertToTensorDesc(node->getParentEdgeAt(0)->getMemory().GetDesc());
         const auto expectedDesc = ext_blob->getTensorDesc();

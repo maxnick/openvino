@@ -22,6 +22,7 @@ public:
     static InferenceEngine::Precision DataTypeToIEPrecision(mkldnn::memory::data_type dataType);
     static InferenceEngine::SizeVector convertToSizeVector(const mkldnn::memory::dims& dims);
     static std::vector<dnnl::memory::dim> convertToDnnlDims(const InferenceEngine::SizeVector& dims);
+    static mkldnn::memory::format_tag GetPlainFormatByRank(size_t rank);
 };
 
 }  // namespace MKLDNNPlugin

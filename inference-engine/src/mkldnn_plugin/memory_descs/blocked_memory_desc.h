@@ -49,6 +49,13 @@ public:
      */
     virtual const std::vector<size_t>& getStrides() const = 0;
 
+    /**
+     * @brief Check that desc has padded dims
+     *
+     * @return true if exist padded dims, otherwise false
+     */
+    virtual bool blocksExtended() const = 0;
+
 protected:
     mutable std::vector<size_t> blockedDims;
     mutable std::vector<size_t> strides;

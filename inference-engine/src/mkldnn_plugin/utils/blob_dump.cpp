@@ -149,8 +149,8 @@ void BlobDumper::dumpAsTxt(std::ostream &stream) const {
     if (memory == nullptr)
         IE_THROW() << "Dumper cannot dump. Memory is not allocated.";
 
-    const auto dims = memory->GetDims();
     const auto &desc = memory->GetDesc();
+    const auto dims = desc.getShape().getStaticDims();
     size_t data_size = desc.getShape().getElementsCount();
 
     // Header like "U8 4D shape: 2 3 224 224 ()

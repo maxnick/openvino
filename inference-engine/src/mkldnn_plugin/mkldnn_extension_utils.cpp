@@ -94,3 +94,23 @@ memory::dims MKLDNNExtensionUtils::convertToDnnlDims(const InferenceEngine::Size
     });
     return vecResult;
 }
+
+memory::format_tag MKLDNNExtensionUtils::GetPlainFormatByRank(size_t rank) {
+    switch (rank) {
+        case 0:
+        case 1:
+            return memory::format_tag::a;
+        case 2:
+            return memory::format_tag::ab;
+        case 3:
+            return memory::format_tag::abc;
+        case 4:
+            return memory::format_tag::abcd;
+        case 5:
+            return memory::format_tag::abcde;
+        case 6:
+            return memory::format_tag::abcdef;
+        default:
+            return memory::format_tag::undef;
+    }
+}

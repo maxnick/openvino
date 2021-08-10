@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include "nodes/common/cpu_memcpy.h"
+#include "nodes/common/cpu_convert.h"
+#include "mkldnn_memory.h"
 
 namespace MKLDNNPlugin {
 
@@ -90,4 +93,56 @@ inline InferenceEngine::Precision normalizeToSupportedPrecision(InferenceEngine:
     }
     return precision;
 }
+
+inline void reorderData(const MKLDNNMemory &input, const MKLDNNMemory &output, size_t size = 0) {
+    if (size != 0)
+        IE_ASSERT(size <= output.GetSize());
+    if (input.GetDesc().isCompatible(output.GetDesc())) {
+        auto srcPtr = static_cast<uint8_t*>(input.GetPtr());
+        auto dstPtr = static_cast<uint8_t*>(output.GetPtr());
+
+        auto copySize = size == 0 ? output.GetSize() : size;
+        cpu_memcpy(dstPtr, srcPtr, copySize);
+    } else {
+        std::unique_ptr<mkldnn::reorder> pReorder;
+        std::shared_ptr<mkldnn::memory> srcMemoryPtr;
+        std::vector<uint8_t> tmpBuff;
+
+        try {
+            pReorder = std::unique_ptr<mkldnn::reorder>(new mkldnn::reorder(input.GetPrimitive(), output.GetPrimitive()));
+            srcMemoryPtr = input.prim;
+        }
+        catch (const mkldnn::error& err) {
+            if (mkldnn_unimplemented == err.status && output.GetDataType() != input.GetDataType()) {
+                //we probably could not make the reorder because there is no one supporting this precision conversion
+                //lets try to convert data first using cpu_convert
+                auto data = static_cast<const uint8_t *>(input.GetPtr());
+                tmpBuff.resize(input.GetSize());
+
+                const auto outPrc = MKLDNNExtensionUtils::DataTypeToIEPrecision(output.GetDataType());
+                cpu_convert(data, tmpBuff.data(), MKLDNNExtensionUtils::DataTypeToIEPrecision(input.GetDataType()),
+                            outPrc, input.GetShape().getElementsCount());
+
+                MKLDNNMemory tmpMem(output.eng);
+                auto tmpDesc = input.GetDesc().clone();
+                tmpDesc->setPrecision(outPrc);
+                tmpMem.Create(std::move(tmpDesc), tmpBuff.data());
+
+                pReorder = std::unique_ptr<mkldnn::reorder>(new mkldnn::reorder(tmpMem.GetPrimitive(), output.GetPrimitive()));
+                srcMemoryPtr = tmpMem.prim;
+            } else {
+                throw;
+            }
+        }
+        if (pReorder) {
+            mkldnn::stream loc_stream(output.eng, mkldnn::stream::flags::default_order);
+            pReorder->execute(loc_stream, *srcMemoryPtr, *output.prim);
+        } else {
+            IE_THROW() << "Could not make mkldnn reorder.";
+        }
+    }
+}
+
+
+
 }  // namespace MKLDNNPlugin

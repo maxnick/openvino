@@ -141,8 +141,8 @@ void MKLDNNAdaptivePoolingNode::execute(mkldnn::stream strm) {
     const auto *srcPooledSpatialShapes = reinterpret_cast<const int *>(getParentEdgeAt(1)->getMemoryPtr()->GetPtr());
     auto *dst = reinterpret_cast<float *>(getChildEdgeAt(0)->getMemoryPtr()->GetPtr());
 
-    if (srcMemory1.GetElementsCount() != spatialDimsCount)
-        IE_THROW() << errorPrefix << "has input spatial dimension (" << srcMemory1.GetElementsCount()
+    if (srcMemory1.GetShape().getElementsCount() != spatialDimsCount)
+        IE_THROW() << errorPrefix << "has input spatial dimension (" << srcMemory1.GetShape().getElementsCount()
                    << ") inconsistent with pooling vector size (" << spatialDimsCount << ")";
 
     auto inputDimVector = srcMemory0.GetDims();

@@ -1932,7 +1932,7 @@ void MKLDNNInterpolateNode::initSupportedPrimitiveDescriptors() {
     auto channels = getParentEdgeAt(DATA_ID)->getShape().getRank() > 1 ? getParentEdgeAt(DATA_ID)->getShape().getStaticDims()[1] : 1;
 
     if (!mayiuse(cpu::x64::sse41) || mode == InterpolateMode::linear) {
-        pushDesc(MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(DATA_ID)->getShape().getRank()), ref);
+        pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(DATA_ID)->getShape().getRank()), ref);
     } else {
         // blk and by_channel JIT kernel on sse41 or above machine
         if (getParentEdgeAt(DATA_ID)->getShape().getRank() == 4) {
@@ -1967,7 +1967,7 @@ void MKLDNNInterpolateNode::initSupportedPrimitiveDescriptors() {
 
         // planar for 1.ref on machine without sse41(if no sse41, canFuse() is false). 2.JIT kernel for f32 && avx2(gather).(with fuse)
         if (mayiuse(cpu::x64::avx2) && inputPrec == Precision::FP32) {
-            pushDesc(MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(DATA_ID)->getShape().getRank()), jit_avx2);
+            pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(DATA_ID)->getShape().getRank()), jit_avx2);
         }
     }
 }

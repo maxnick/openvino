@@ -293,20 +293,32 @@ void MKLDNNDeconvolutionNode::filterSupportedDescriptors() {
             bool isSuitableDesc = true;
             if (!inputMemoryFormatsFilter.empty()) {
                 if (isInt8) {
-                    auto src_tdesc = MKLDNNMemoryDesc(std::shared_ptr<dnnl::deconvolution_forward::desc>(*itd)->data.src_desc);
-                    isSuitableDesc &= src_tdesc.isSame(inputMemoryFormatsFilter[0]);
+                    auto src_tdesc = MemoryDescUtils::makeDescriptor(std::shared_ptr<dnnl::deconvolution_forward::desc>(*itd)->data.src_desc);
+                    const auto oneDnnDesc = dynamic_cast<OnednnBlockedMemoryDesc *>(src_tdesc.get());
+                    if (!oneDnnDesc)
+                        isSuitableDesc = false;
+                    isSuitableDesc &= oneDnnDesc->isSame(inputMemoryFormatsFilter[0]);
                 } else {
-                    auto src_tdesc = MKLDNNMemoryDesc(std::shared_ptr<mkldnn::convolution_backward_data::desc>(*itd)->data.diff_src_desc);
-                    isSuitableDesc &= src_tdesc.isSame(inputMemoryFormatsFilter[0]);
+                    auto src_tdesc = MemoryDescUtils::makeDescriptor(std::shared_ptr<mkldnn::convolution_backward_data::desc>(*itd)->data.diff_src_desc);
+                    const auto oneDnnDesc = dynamic_cast<OnednnBlockedMemoryDesc *>(src_tdesc.get());
+                    if (!oneDnnDesc)
+                        isSuitableDesc = false;
+                    isSuitableDesc &= oneDnnDesc->isSame(inputMemoryFormatsFilter[0]);
                 }
             }
             if (!outputMemoryFormatsFilter.empty()) {
                 if (isInt8) {
-                    auto dst_tdesc = MKLDNNMemoryDesc(std::shared_ptr<mkldnn::deconvolution_forward::desc>(*itd)->data.dst_desc);
-                    isSuitableDesc &= dst_tdesc.isSame(outputMemoryFormatsFilter[0]);
+                    auto dst_tdesc = MemoryDescUtils::makeDescriptor(std::shared_ptr<mkldnn::deconvolution_forward::desc>(*itd)->data.dst_desc);
+                    const auto oneDnnDesc = dynamic_cast<OnednnBlockedMemoryDesc *>(src_tdesc.get());
+                    if (!oneDnnDesc)
+                        isSuitableDesc = false;
+                    isSuitableDesc &= oneDnnDesc->isSame(outputMemoryFormatsFilter[0]);
                 } else {
-                    auto dst_tdesc = MKLDNNMemoryDesc(std::shared_ptr<mkldnn::convolution_backward_data::desc>(*itd)->data.diff_dst_desc);
-                    isSuitableDesc &= dst_tdesc.isSame(outputMemoryFormatsFilter[0]);
+                    auto dst_tdesc = MemoryDescUtils::makeDescriptor(std::shared_ptr<mkldnn::convolution_backward_data::desc>(*itd)->data.diff_dst_desc);
+                    const auto oneDnnDesc = dynamic_cast<OnednnBlockedMemoryDesc *>(src_tdesc.get());
+                    if (!oneDnnDesc)
+                        isSuitableDesc = false;
+                    isSuitableDesc &= oneDnnDesc->isSame(outputMemoryFormatsFilter[0]);
                 }
             }
             if (!isSuitableDesc) {

@@ -69,6 +69,8 @@ public:
         return strides;
     }
 
+    bool blocksExtended() const override;
+
     bool hasLayoutType(LayoutType layoutType) const override;
 
     std::string serializeFormat() const override;
@@ -88,6 +90,7 @@ private:
 private:
     InferenceEngine::Precision precision;
     size_t offsetPadding;
+    mutable std::vector<size_t> paddedDims;
 };
 
 } // namespace MKLDNNPlugin

@@ -19,6 +19,7 @@
 #include "mkldnn/ie_mkldnn.h"
 #include "cpu_shape.h"
 #include "memory_descs/onednn_blocked_memory_desc.h"
+#include "utils/cpu_utils.hpp"
 
 using namespace InferenceEngine;
 using namespace mkldnn;
@@ -38,15 +39,10 @@ namespace {
 MKLDNNMemory::MKLDNNMemory(const mkldnn::engine& eng) : eng(eng) {}
 
 size_t MKLDNNMemory::GetSize() const {
-    uint8_t itemSize = MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(GetDataType()));
-    return GetElementsCount() * itemSize;
-}
-
-size_t MKLDNNMemory::GetElementsCount() const {
-    auto desc = GetDescriptor();
-    std::vector<int> dims(desc.data.padded_dims,
-                          desc.data.padded_dims + desc.data.ndims);
-    return std::accumulate(std::begin(dims), std::end(dims), (size_t) 1, std::multiplies<size_t>());
+    if (pMemDesc->getShape().isDynamic()) {
+        IE_THROW() << "Can't get memory size for undefined shape";
+    }
+    return GetDesc().getCurrentSize();
 }
 
 void MKLDNNMemory::Create(const memory::dims& dims, memory::data_type data_type, memory::format_tag format, const void* data) {
@@ -101,6 +97,7 @@ void MKLDNNMemory::Create(MemoryDescPtr desc, const void* data, bool pads_zeroin
         useExternalStorage = false;
     }
 
+    // TODO [DS] : getMkldnnDesc!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if (pMemDesc->isDefined()) {
         const auto a = *MemoryDescUtils::convertToMKLDNNMemoryDesc(*pMemDesc);
         Create(mkldnn::memory::desc(a), data, pads_zeroing);
@@ -114,88 +111,6 @@ void MKLDNNMemory::Create(MemoryDescPtr desc, const void* data, bool pads_zeroin
     size_t newUpperBound = prim->get_desc().get_size();
     if (newUpperBound > memUpperBound) {
         memUpperBound = newUpperBound;
-    }
-}
-
-
-void MKLDNNMemory::reorderData(const MKLDNNMemory &input, const MKLDNNMemory &output, size_t size) {
-    if (size != 0)
-        IE_ASSERT(size <= output.GetDescriptor().get_size());
-    if (input.GetDescriptor() == output.GetDescriptor()) {
-        auto srcPtr = static_cast<uint8_t*>(input.GetPtr());
-        auto dstPtr = static_cast<uint8_t*>(output.GetPtr());
-
-        auto copySize = size == 0 ? output.GetSize() : size;
-        cpu_memcpy(dstPtr, srcPtr, copySize);
-    } else {
-        std::unique_ptr<mkldnn::reorder> pReorder;
-        std::shared_ptr<memory> srcMemoryPtr;
-        std::vector<uint8_t> tmpBuff;
-
-        try {
-            pReorder = std::unique_ptr<mkldnn::reorder>(new mkldnn::reorder(input.GetPrimitive(), output.GetPrimitive()));
-            srcMemoryPtr = input.prim;
-        }
-        catch (const mkldnn::error& err) {
-            if (mkldnn_unimplemented == err.status && output.GetDataType() != input.GetDataType()) {
-                //we probably could not make the reorder because there is no one supporting this precision conversion
-                //lets try to convert data first using cpu_convert
-                auto data = static_cast<const uint8_t *>(input.GetPtr());
-                tmpBuff.resize(input.GetSize());
-
-                cpu_convert(data, tmpBuff.data(), MKLDNNExtensionUtils::DataTypeToIEPrecision(input.GetDataType()),
-                            MKLDNNExtensionUtils::DataTypeToIEPrecision(output.GetDataType()), input.GetElementsCount());
-
-                MKLDNNMemory tmpMem(output.eng);
-                tmpMem.Create(input.GetDims(), output.GetDataType(), input.GetMKLDNNDesc().getFormat(), tmpBuff.data());
-
-                pReorder = std::unique_ptr<mkldnn::reorder>(new mkldnn::reorder(tmpMem.GetPrimitive(), output.GetPrimitive()));
-                srcMemoryPtr = tmpMem.prim;
-            } else {
-                throw;
-            }
-        }
-        if (pReorder) {
-            mkldnn::stream loc_stream(output.eng, stream::flags::default_order);
-            pReorder->execute(loc_stream, *srcMemoryPtr, *output.prim);
-        } else {
-            IE_THROW() << "Could not make mkldnn reorder.";
-        }
-    }
-}
-
-// TODO: It should be done via wrap into Memory;
-void MKLDNNMemory::SetData(memory::data_type dataType, memory::format_tag format, const void* data, size_t size, bool ftz) const {
-    IE_ASSERT(!one_of(format, memory::format_tag::undef, memory::format_tag::any));
-
-    auto dst_desc = GetDescriptor();
-    memory::desc src_desc{dst_desc.dims(), dataType, format};
-
-    IE_ASSERT(size <= dst_desc.get_size());
-
-    if (dst_desc == src_desc) {
-        uint8_t itemSize = MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(dataType));
-        uint8_t* dataPtr = static_cast<uint8_t*>(GetData());
-        // We cannot support strides for i/o blobs because it affects performance.
-        dataPtr += itemSize * prim->get_desc().data.offset0;
-        cpu_memcpy(dataPtr, data, size);
-    } else {
-        auto memData = this->GetDescriptor().data;
-        memory::dims dims(memData.dims, memData.dims + memData.ndims);
-
-        MKLDNNMemory src(this->eng);
-        src.Create(dims, dataType, format, data);
-
-        reorderData(src, *this);
-    }
-    if (ftz
-        && dataType == memory::data_type::f32
-        && prim->get_desc().data.format_kind != dnnl_format_kind_wino
-        && GetDataType() != memory::data_type::bf16) {
-        // Internal blobs haven't strides yet.
-        auto *memData = static_cast<float *>(GetData());
-        memData += prim->get_desc().data.offset0;
-        setSubnormalsToZero(memData, GetSize() / sizeof(float));
     }
 }
 
@@ -218,77 +133,9 @@ void MKLDNNMemory::FillZero() {
     memset(dataPtr, 0, GetSize());
 }
 
-memory::format_tag MKLDNNMemory::GetPlainFormatByRank(size_t rank) {
-    switch (rank) {
-        case 0:
-        case 1:
-            return memory::format_tag::a;
-        case 2:
-            return memory::format_tag::ab;
-        case 3:
-            return memory::format_tag::abc;
-        case 4:
-            return memory::format_tag::abcd;
-        case 5:
-            return memory::format_tag::abcde;
-        case 6:
-            return memory::format_tag::abcdef;
-        default:
-            return memory::format_tag::undef;
-    }
-}
-
-InferenceEngine::Layout MKLDNNMemory::GetPlainLayout(const memory::dims& dims) {
-    switch (dims.size()) {
-        case 0: return Layout::SCALAR;
-        case 1: return Layout::C;
-        case 2: return Layout::NC;
-        case 3: return Layout::CHW;
-        case 4: return Layout::NCHW;
-        case 5: return Layout::NCDHW;
-        default:
-            return Layout::BLOCKED;
-    }
-}
-
-Precision MKLDNNMemory::convertToIePrec(memory::data_type dataType) {
-    return MKLDNNExtensionUtils::DataTypeToIEPrecision(dataType);
-}
-
-memory::data_type MKLDNNMemory::convertToDataType(const InferenceEngine::Precision &precision) {
-    return MKLDNNExtensionUtils::IEPrecisionToDataType(precision);
-}
-
-memory::format_tag MKLDNNMemory::Convert(const InferenceEngine::Layout layout) {
-    switch (layout) {
-        case NCHW:
-            return memory::format_tag::nchw;
-        case NHWC:
-            return memory::format_tag::nhwc;
-        case NCDHW:
-            return memory::format_tag::ncdhw;
-        case NDHWC:
-            return memory::format_tag::ndhwc;
-        case CHW:
-            return memory::format_tag::tnc;
-        case NC:
-            return memory::format_tag::nc;
-        case C:
-            return memory::format_tag::x;
-        case SCALAR:
-            return memory::format_tag::x;
-        default:
-            return memory::format_tag::undef;
-    }
-}
-
-std::string MKLDNNMemory::formatToString(memory::format_tag fmt) {
-    return mkldnn::utils::fmt2str(fmt);
-}
-
 void *MKLDNNMemory::GetPtr() const  {
     auto ptr = static_cast<uint8_t*>(GetData());
-    auto md = GetDescriptor().data;
+    auto md = prim->get_desc().data;
     mkldnn::impl::memory_desc_wrapper wrapper(md);
     ptr += wrapper.offset0() * wrapper.data_type_size();
     return ptr;

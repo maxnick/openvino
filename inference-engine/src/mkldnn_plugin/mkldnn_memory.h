@@ -50,11 +50,6 @@ public:
         return prim;
     }
 
-    // TODO [DS]: phase 2: remove
-    mkldnn::memory::desc GetDescriptor() const {
-        return prim->get_desc();
-    }
-
     const MemoryDesc& GetDesc() const {
         return *pMemDesc;
     }
@@ -82,22 +77,14 @@ public:
      */
     void* GetPtr() const;
 
-    //TODO [DS]: phase 2: change to get precision
     mkldnn::memory::data_type GetDataType() const {
-        return static_cast<mkldnn::memory::data_type>(GetDescriptor().data.data_type);
+        return MKLDNNExtensionUtils::IEPrecisionToDataType(GetDesc().getPrecision());
     }
 
-    //TODO [DS]: phase 2: align with descriptors size methods (reuse them under the hood)
     size_t GetSize() const;
 
-    //TODO [DS]: phase 2: remove
-    size_t GetElementsCount() const;
-
-
-    //TODO [DS]: phase 2: change to getShape
-    mkldnn::memory::dims GetDims() const {
-        auto data = GetDescriptor().data;
-        return {std::begin(data.dims), std::begin(data.dims) + data.ndims};
+    Shape GetShape() const {
+        return GetDesc().getShape();
     }
 
     void Create(const MemoryDesc& desc, const void* data = nullptr, bool pads_zeroing = true);
@@ -109,29 +96,12 @@ public:
     void redefineDesc(const MemoryDesc& desc);
     void redefineDesc(MemoryDescPtr desc);
 
-    // Like a plain format
-    //TODO [DS]: phase 2: remove
-    void SetData(mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format, const void* data, size_t size, bool ftz = true) const;
     void SetData(const MKLDNNMemory& memory, size_t size = 0, bool ftz = true) const;
     void FillZero();
 
     bool hasExternalStorage() const {
         return useExternalStorage;
     }
-
-    //TODO [DS]: phase 2: move to oneDNN utils
-    static mkldnn::memory::format_tag GetPlainFormatByRank(size_t rank);
-    //TODO [DS]: phase 2: remove
-    static InferenceEngine::Layout GetPlainLayout(const mkldnn::memory::dims& dims);
-    static mkldnn::memory::format_tag Convert(const InferenceEngine::Layout layout);
-    static InferenceEngine::Precision convertToIePrec(mkldnn::memory::data_type dataType);
-    static mkldnn::memory::data_type convertToDataType(const InferenceEngine::Precision &precision);
-
-    static std::string formatToString(mkldnn::memory::format_tag fmt);
-    //TODO [DS]: end remove section
-
-    //TODO [DS]: phase 2: move to reorder
-    static void reorderData(const MKLDNNMemory& input, const MKLDNNMemory& output, size_t size = 0);
 
     const std::vector<size_t>& getStaticDims() const {
         return GetDesc().getShape().getStaticDims();
@@ -143,17 +113,14 @@ private:
 
     void Create(const mkldnn::memory::desc& desc, const void* data = nullptr, bool pads_zeroing = true);
 
-    //TODO [DS]: phase 2: remove
-    const MKLDNNMemoryDesc GetMKLDNNDesc() const {
-        return MKLDNNMemoryDesc(prim->get_desc());
-    }
-
 private:
     MemoryDescPtr pMemDesc;
     std::shared_ptr<mkldnn::memory> prim;
     mkldnn::engine eng;
     bool useExternalStorage = false;
     size_t memUpperBound = 0ul;
+
+    friend void reorderData(const MKLDNNMemory &input, const MKLDNNMemory &output, size_t size);
 };
 
 using MKLDNNMemoryPtr = std::shared_ptr<MKLDNNMemory>;

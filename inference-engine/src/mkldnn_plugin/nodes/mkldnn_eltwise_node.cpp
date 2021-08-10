@@ -1269,11 +1269,11 @@ void MKLDNNEltwiseNode::createPrimitive() {
 
         start_offset_in.resize(inputNum);
         for (size_t i = 0; i < inputNum; i++) {
-            start_offset_in[i] = getParentEdgeAt(i)->getMemory().GetDescriptor().data.offset0 *
-                               MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(getParentEdgeAt(i)->getMemory().GetDescriptor().data.data_type));
+            const auto desc = getParentEdgeAt(i)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+            start_offset_in[i] = desc->getOffsetPadding() * desc->getPrecision().size();
         }
-        start_offset_out = getChildEdgeAt(0)->getMemory().GetDescriptor().data.offset0 *
-                         MKLDNNExtensionUtils::sizeOfDataType(mkldnn::memory::data_type(getChildEdgeAt(0)->getMemory().GetDescriptor().data.data_type));
+        const auto desc = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+        start_offset_out = desc->getOffsetPadding() * desc->getPrecision().size();
     };
 
     auto collapseLastDims = [](std::vector<size_t>& dims, int dimsToCollapse) {

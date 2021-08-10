@@ -465,8 +465,8 @@ void MKLDNNRNN::fillWeights(const int *gate_map, const size_t wIdx, const size_t
     w_state_mem->Create(*w_state_d);
     internalBlobMemory.push_back(w_state_mem);
 
-    const size_t ie_w_vec_size = getParentEdgesAtPort(wIdx)[0]->getShape().getElementsCount();
-    const size_t ie_r_vec_size = getParentEdgesAtPort(rIdx)[0]->getShape().getElementsCount();
+    const size_t ie_w_vec_size = getParentEdgesAtPort(wIdx)[0]->getShape().GetShape().getElementsCount();
+    const size_t ie_r_vec_size = getParentEdgesAtPort(rIdx)[0]->getShape().GetShape().getElementsCount();
 
     auto *wInputNode = dynamic_cast<MKLDNNInputNode *>(getParentEdgesAtPort(wIdx)[0]->getParent().get());
     auto wConstBlob = wInputNode->getMemoryPtr();
@@ -521,7 +521,7 @@ void MKLDNNRNN::fillBiases(const int *gate_map) {
 
     auto *constInputNode = dynamic_cast<MKLDNNInputNode *>(getParentEdgesAtPort(bIdx)[0]->getParent().get());
     auto constBlob = constInputNode->getMemoryPtr();
-    auto const elementsCount = constBlob->GetElementsCount();
+    auto const elementsCount = constBlob->GetShape().getElementsCount();
 
     std::vector<dataType> ie_b_vec(elementsCount);
     cpu_convert(constBlob->GetPtr(),

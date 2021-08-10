@@ -262,9 +262,9 @@ void MKLDNNFullyConnectedNode::createDescriptorInternal(const mkldnn::memory::de
         auto normalizedInDims = {inDims[0] * inDims[1], inDims[2]};
         auto normalizedOutDims = {outDims[0] * outDims[1], outDims[2]};
         in_candidate = mkldnn::memory::desc(normalizedInDims, in_candidate.data_type(),
-                                         MKLDNNMemory::GetPlainFormatByRank(normalizedInDims.size()));
+                                         MKLDNNExtensionUtils::GetPlainFormatByRank(normalizedInDims.size()));
         out_candidate = mkldnn::memory::desc(normalizedOutDims, out_candidate.data_type(),
-                                             MKLDNNMemory::GetPlainFormatByRank(normalizedOutDims.size()));
+                                             MKLDNNExtensionUtils::GetPlainFormatByRank(normalizedOutDims.size()));
     }
 
     mkldnn::memory::desc wgh_candidate(MKLDNNDims(weightsDims), wdt, mkldnn::memory::format_tag::any);

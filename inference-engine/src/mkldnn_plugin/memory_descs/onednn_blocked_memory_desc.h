@@ -35,6 +35,12 @@ public:
 
     bool hasLayoutType(LayoutType layoutType) const override;
 
+    bool blocksExtended() const override;
+
+    bool isSame(mkldnn::memory::format_tag fmt) const;
+
+    std::string serializeFormat() const override;
+
 private:
     OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
                             const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
@@ -49,6 +55,13 @@ private:
     bool isPlainFormat() const;
     bool isBlockedCFormat(size_t blk_size = UNREACHABLE_DIM) const;
     bool isTailCFormat() const;
+
+    /**
+     * Try to define original format tag use on creation
+     *
+     * @return format tag if was able to define it
+     */
+    mkldnn::memory::format_tag getFormat() const;
 
     friend class MemoryDescUtils;
 };

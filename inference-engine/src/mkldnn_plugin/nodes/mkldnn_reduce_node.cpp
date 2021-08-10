@@ -1490,8 +1490,8 @@ void MKLDNNReduceNode::initSupportedPrimitiveDescriptors() {
             impl_type = impl_desc_type::jit_avx2;
         }
 
-        pushDesc(MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(REDUCE_DATA)->getShape().getRank()),
-                 MKLDNNMemory::GetPlainFormatByRank(getChildEdgeAt(0)->getShape().getRank()), inputDataType, outputDataType, impl_type);
+        pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(REDUCE_DATA)->getShape().getRank()),
+                 MKLDNNExtensionUtils::GetPlainFormatByRank(getChildEdgeAt(0)->getShape().getRank()), inputDataType, outputDataType, impl_type);
         if (keep_dims) {
             if (getParentEdgeAt(REDUCE_DATA)->getShape().getRank() == 4 && getParentEdgeAt(REDUCE_DATA)->getShape().getStaticDims()[1] > 1) {
                 if (mayiuse(cpu::x64::avx512_common)) {
@@ -1508,8 +1508,8 @@ void MKLDNNReduceNode::initSupportedPrimitiveDescriptors() {
             }
         }
     } else {
-        pushDesc(MKLDNNMemory::GetPlainFormatByRank(getParentEdgeAt(REDUCE_DATA)->getShape().getRank()),
-                 MKLDNNMemory::GetPlainFormatByRank(getChildEdgeAt(0)->getShape().getRank()),
+        pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(REDUCE_DATA)->getShape().getRank()),
+                 MKLDNNExtensionUtils::GetPlainFormatByRank(getChildEdgeAt(0)->getShape().getRank()),
                  memory::data_type::f32, memory::data_type::f32, impl_desc_type::ref);
     }
 }

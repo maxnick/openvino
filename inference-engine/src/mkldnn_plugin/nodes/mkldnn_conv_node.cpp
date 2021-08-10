@@ -654,12 +654,18 @@ void MKLDNNConvolutionNode::filterSupportedDescriptors() {
         while (itd != descs.end()) {
             bool isSuitableDesc = true;
             if (!inputMemoryFormatsFilter.empty()) {
-                MKLDNNMemoryDesc src_tdesc(std::shared_ptr<mkldnn::convolution_forward::desc>(*itd)->data.src_desc);
-                isSuitableDesc &= src_tdesc.isSame(inputMemoryFormatsFilter[0]);
+                auto src_tdesc = MemoryDescUtils::makeDescriptor(std::shared_ptr<mkldnn::convolution_forward::desc>(*itd)->data.src_desc);
+                const auto oneDnnDesc = dynamic_cast<OnednnBlockedMemoryDesc *>(src_tdesc.get());
+                if (!oneDnnDesc)
+                    isSuitableDesc = false;
+                isSuitableDesc &= oneDnnDesc->isSame(inputMemoryFormatsFilter[0]);
             }
             if (!outputMemoryFormatsFilter.empty()) {
-                MKLDNNMemoryDesc dst_tdesc(std::shared_ptr<mkldnn::convolution_forward::desc>(*itd)->data.dst_desc);
-                isSuitableDesc &= dst_tdesc.isSame(outputMemoryFormatsFilter[0]);
+                auto dst_tdesc = MemoryDescUtils::makeDescriptor(std::shared_ptr<mkldnn::convolution_forward::desc>(*itd)->data.dst_desc);
+                const auto oneDnnDesc = dynamic_cast<OnednnBlockedMemoryDesc *>(dst_tdesc.get());
+                if (!oneDnnDesc)
+                    isSuitableDesc = false;
+                isSuitableDesc &= oneDnnDesc->isSame(outputMemoryFormatsFilter[0]);
             }
             if (!isSuitableDesc) {
                 itd = descs.erase(itd);
@@ -821,7 +827,7 @@ InferenceEngine::Blob::Ptr MKLDNNConvolutionNode::createInternalBlob(InferenceEn
     if (blb == nullptr)
         IE_THROW() << "Cannot get const blob for node " << getName() << ".";
 
-    auto const elementsCount = blb->GetElementsCount();
+    auto const elementsCount = blb->GetShape().getElementsCount();
 
     InferenceEngine::TensorDesc desc(InferenceEngine::Precision::FP32, dims, getWeightsLayoutByDims(dims, isGrouped));
 
