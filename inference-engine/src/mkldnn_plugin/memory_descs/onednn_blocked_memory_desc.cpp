@@ -323,6 +323,7 @@ bool OnednnBlockedMemoryDesc::isCompatible(const OnednnBlockedMemoryDesc& rhs) c
     // Here is a slightly modified version of mkldnn::impl::memory_desc_wrapper::similar_to() call able to skip specific strides check
     // and use weak comparison
     return wrappedThis.ndims() == wrappedRhs.ndims()
+           && this->getOrder() == rhs.getOrder()
            && wrappedThis.format_kind() == wrappedRhs.format_kind()
            && wrappedThis.data_type() == wrappedRhs.data_type()
            && array_cmp_weak(wrappedThis.dims(), wrappedRhs.dims(), wrappedThis.ndims())

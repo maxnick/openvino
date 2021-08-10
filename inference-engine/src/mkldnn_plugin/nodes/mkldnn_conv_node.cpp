@@ -656,10 +656,12 @@ void MKLDNNConvolutionNode::filterSupportedDescriptors() {
             if (!inputMemoryFormatsFilter.empty()) {
                 MKLDNNMemoryDesc src_tdesc(std::shared_ptr<mkldnn::convolution_forward::desc>(*itd)->data.src_desc);
                 isSuitableDesc &= src_tdesc.isSame(inputMemoryFormatsFilter[0]);
+                // std::cout << "CIN: " << getName() << " " << mkldnn::utils::fmt2str(inputMemoryFormatsFilter[0]) << " " << isSuitableDesc << std::endl;
             }
             if (!outputMemoryFormatsFilter.empty()) {
                 MKLDNNMemoryDesc dst_tdesc(std::shared_ptr<mkldnn::convolution_forward::desc>(*itd)->data.dst_desc);
                 isSuitableDesc &= dst_tdesc.isSame(outputMemoryFormatsFilter[0]);
+                // std::cout << "COUT: " << getName() << " " << mkldnn::utils::fmt2str(inputMemoryFormatsFilter[0]) << " " << isSuitableDesc << std::endl;
             }
             if (!isSuitableDesc) {
                 itd = descs.erase(itd);

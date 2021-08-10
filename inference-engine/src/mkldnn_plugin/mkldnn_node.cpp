@@ -408,6 +408,8 @@ void MKLDNNNode::selectPreferPrimitiveDescriptor(const std::vector<impl_desc_typ
         for (size_t i = 0; i < getSupportedPrimitiveDescriptors().size(); i++) {
             impl_desc_type supportedType = getSupportedPrimitiveDescriptors()[i].getImplementationType();
             if (type == supportedType) {
+                // if (getType() == Convolution)
+                //     std::cout << getName() << " AAA" << std::endl;
                 int equalsLocalFormatCount = 0;
                 if (getSupportedPrimitiveDescriptors()[i].getConfig().inConfs.size() > getParentEdges().size())
                     continue;
@@ -430,7 +432,11 @@ void MKLDNNNode::selectPreferPrimitiveDescriptor(const std::vector<impl_desc_typ
                         }
                         auto& curDesc = getSupportedPrimitiveDescriptors()[i].getConfig().inConfs[j].desc;
                         auto& parentDesc = parent_spd->getConfig().outConfs[inNum].desc;
-
+                        // if (getType() == Convolution) {
+                        //     const auto a = MemoryDescUtils::convertToTensorDesc(*curDesc);
+                        //     const auto b = MemoryDescUtils::convertToTensorDesc(*parentDesc);
+                        //     std::cout << "DA: " << i << " " << j << std::endl;
+                        // }
                         if (curDesc->isCompatible(*parentDesc)) {
                             equalsLocalFormatCount++;
                         }
@@ -451,6 +457,9 @@ void MKLDNNNode::selectPreferPrimitiveDescriptor(const std::vector<impl_desc_typ
     if (getSupportedPrimitiveDescriptors().empty())
         IE_THROW() << "Supported primitive descriptors list is empty for node: " << getName();
     // fallback. If there are no primitives from priority list just select a first
+    if (getType() == Convolution) {
+        std::cout << "DEFAULT" << std::endl;
+    }
     selectPrimitiveDescriptorByIndex(0);
 }
 
@@ -719,10 +728,12 @@ void MKLDNNNode::filterSupportedPrimitiveDescriptors() {
 
             bool isSuitableDesc = true;
             for (int i = 0; i < inputMemoryFormatsFilter.size(); i++) {
+                // std::cout << "IN: " << i << " " << k << " " << getName() << std::endl;
                 const bool matched = areCompatible(*config.inConfs[i].desc, inputMemoryFormatsFilter[i]);
                 isSuitableDesc &= matched;
             }
             for (int i = 0; i < outputMemoryFormatsFilter.size(); i++) {
+                // std::cout << "OUT: " << i << " " << k << " " << getName() << std::endl;
                 const bool matched = areCompatible(*config.outConfs[i].desc, outputMemoryFormatsFilter[i]);
                 isSuitableDesc &= matched;
             }
