@@ -743,14 +743,19 @@ void MKLDNNMVNNode::initSupportedPrimitiveDescriptors() {
     config.inConfs[0].inPlace = -1;
     config.outConfs[0].inPlace = canBeInplace ? 0 : -1;
     if (inputsNum == 2) {
+<<<<<<< HEAD
         config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getParentEdgeAt(1)->getShape(), memory::data_type::s32,
                                                                MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(1)->getShape().getRank()));
+=======
+        config.inConfs[1].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getInputShapeAtPort(1), memory::data_type::s32,
+                                                               MKLDNNExtensionUtils::GetPlainFormatByRank(getInputShapeAtPort(1).getRank()));
+>>>>>>> getShape() removing started
         config.inConfs[1].constant = true;
     }
 
     auto pushDesc = [&](memory::format_tag format, impl_desc_type impl_type) {
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getParentEdgeAt(0)->getShape(), inputDataType, format);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getParentEdgeAt(0)->getShape(), outputDataType, format);
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getInputShapeAtPort(0), inputDataType, format);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getInputShapeAtPort(0), outputDataType, format);
         supportedPrimitiveDescriptors.push_back({config, impl_type});
     };
 
@@ -767,22 +772,22 @@ void MKLDNNMVNNode::initSupportedPrimitiveDescriptors() {
 
     if (mayiuse(cpu::x64::sse41)) {
         // nspc
-        if (getParentEdgeAt(0)->getShape().getRank() == 4) {
+        if (getInputShapeAtPort(0).getRank() == 4) {
             pushDesc(memory::format_tag::nhwc, impl_type);
-        } else if (getParentEdgeAt(0)->getShape().getRank() == 5) {
+        } else if (getInputShapeAtPort(0).getRank() == 5) {
             pushDesc(memory::format_tag::ndhwc, impl_type);
         }
         // blk
         if (impl_desc_type::jit_avx512 == impl_type) {
-            if (getParentEdgeAt(0)->getShape().getRank() == 4) {
+            if (getInputShapeAtPort(0).getRank() == 4) {
                 pushDesc(memory::format_tag::nChw16c, impl_type);
-            } else if (getParentEdgeAt(0)->getShape().getRank() == 5) {
+            } else if (getInputShapeAtPort(0).getRank() == 5) {
                 pushDesc(memory::format_tag::nCdhw16c, impl_type);
             }
         } else if (impl_desc_type::jit_avx2 ==  impl_type || impl_desc_type::jit_sse42 == impl_type) {
-            if (getParentEdgeAt(0)->getShape().getRank() == 4) {
+            if (getInputShapeAtPort(0).getRank() == 4) {
                 pushDesc(memory::format_tag::nChw8c, impl_type);
-            } else if (getParentEdgeAt(0)->getShape().getRank() == 5) {
+            } else if (getInputShapeAtPort(0).getRank() == 5) {
                 pushDesc(memory::format_tag::nCdhw8c, impl_type);
             }
         }
@@ -791,7 +796,7 @@ void MKLDNNMVNNode::initSupportedPrimitiveDescriptors() {
     // planar
     if (canBeInplace)
         config.inConfs[0].inPlace = 0;
-    pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getChildEdgeAt(0)->getShape().getRank()), impl_type);
+    pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getOutputShapeAtPort(0).getRank()), impl_type);
 }
 
 void MKLDNNMVNNode::createPrimitive() {
@@ -804,7 +809,7 @@ void MKLDNNMVNNode::createPrimitive() {
     if (getSelectedPrimitiveDescriptor() == nullptr)
         IE_THROW() << "Preferable primitive descriptor is not set.";
 
-    const SizeVector in_dims = getParentEdgeAt(0)->getShape().getStaticDims();
+    const SizeVector in_dims = getInputShapeAtPort(0).getStaticDims();
     transformTo5DCase(in_dims);
     auto selectedPD = getSelectedPrimitiveDescriptor();
     auto jcp = jit_mvn_config_params();
@@ -912,7 +917,7 @@ void MKLDNNMVNNode::execute(mkldnn::stream strm) {
     uint8_t *dst_data = reinterpret_cast<uint8_t*>(dstMemPtr->GetPtr());
     uint8_t *src_data = reinterpret_cast<uint8_t*>(srcMemPtr->GetPtr());
 
-    auto dim = getParentEdgeAt(0)->getShape().getStaticDims();
+    auto dim = getInputShapeAtPort(0).getStaticDims();
     if (mayiuse(cpu::x64::sse41)) {
         if (!mvn_mean_kernel || (normalizeVariance_ && !mvn_variance_kernel) || !mvn_kernel) {
             IE_THROW() << "MVN layer with name '" << getName() << "' doesn't create kernel to execute on sse41 above platform.";
@@ -1402,7 +1407,7 @@ bool MKLDNNMVNNode::canFuse(const MKLDNNNodePtr& node) const {
     }
     // limit post ops to unary when shape transformed on channel
     // 1D only fused with unary
-    int inputRank = getParentEdgeAt(0)->getShape().getRank();
+    int inputRank = getInputShapeAtPort(0).getRank();
     bool unaryEltwise = one_of(node->getAlgorithm(), EltwiseRelu, EltwiseGelu, EltwiseElu, EltwiseSigmoid, EltwiseClamp, EltwiseTanh,
                                             EltwiseSwish, EltwiseHswish, EltwiseMish, EltwiseHsigmoid, EltwiseRoundHalfToEven,
                                             EltwiseRoundHalfAwayFromZero, EltwiseAbs, EltwiseSqrt, EltwiseSoftRelu);

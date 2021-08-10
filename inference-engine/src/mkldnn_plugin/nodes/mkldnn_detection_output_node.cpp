@@ -285,8 +285,8 @@ void MKLDNNDetectionOutputNode::execute(mkldnn::stream strm) {
         }
     }
 
-    const int num_results = getChildEdgesAtPort(0)[0]->getShape().getStaticDims()[2];
-    const int DETECTION_SIZE = getChildEdgesAtPort(0)[0]->getShape().getStaticDims()[3];
+    const int num_results = getOutputShapeAtPort(0).getStaticDims()[2];
+    const int DETECTION_SIZE = getOutputShapeAtPort(0).getStaticDims()[3];
     if (DETECTION_SIZE != 7) {
         IE_THROW() << NOT_IMPLEMENTED;
     }

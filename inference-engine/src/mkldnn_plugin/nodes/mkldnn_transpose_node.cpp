@@ -74,66 +74,66 @@ void MKLDNNTransposeNode::initSupportedPrimitiveDescriptors() {
     config.inConfs[0].constant = false;
     config.outConfs[0].inPlace = -1;
     config.outConfs[0].constant = false;
-    config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(1)->getShape().getStaticDims(), inputOrderDataType,
+    config.inConfs[1].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(1).getStaticDims(), inputOrderDataType,
                                                                          memory::format_tag::x);
-    if (getParentEdgeAt(0)->getShape().getRank() == 4) {
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType,
+    if (getInputShapeAtPort(0).getRank() == 4) {
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType,
                                                                              memory::format_tag::nchw);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType,
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outputDataType,
                                                                               memory::format_tag::nchw);
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
 
-        auto srcDims = getParentEdgeAt(0)->getShape().getStaticDims();
+        auto srcDims = getInputShapeAtPort(0).getStaticDims();
         if (srcDims[1] % 8 == 0) {
-            config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType,
+            config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType,
                                                                    memory::format_tag::nChw8c);
             supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
         }
 
         if (srcDims[1] % 16 == 0) {
-            config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType,
+            config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType,
                                                                    memory::format_tag::nChw16c);
             supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
         }
 
         if (prec == Precision::FP32 || prec == Precision::I8 || prec == Precision::U8) {
-            config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType,
+            config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType,
                                                                    memory::format_tag::nhwc);
-            config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType,
+            config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outputDataType,
                                                                     memory::format_tag::nhwc);
             supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
         }
-    } else if (getParentEdgeAt(0)->getShape().getRank() == 5) {
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType,
+    } else if (getInputShapeAtPort(0).getRank() == 5) {
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType,
                                                                memory::format_tag::ncdhw);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType,
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outputDataType,
                                                                 memory::format_tag::ncdhw);
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
 
-        auto srcDims = getParentEdgeAt(0)->getShape().getStaticDims();
+        auto srcDims = getInputShapeAtPort(0).getStaticDims();
         if (srcDims[1] % 8 == 0) {
-            config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType,
+            config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType,
                                                                    memory::format_tag::nCdhw8c);
             supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
         }
 
         if (srcDims[1] % 16 == 0) {
-            config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType,
+            config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType,
                                                                    memory::format_tag::nCdhw16c);
             supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
         }
 
         if (prec == Precision::FP32 || prec == Precision::I8 || prec == Precision::U8) {
-            config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType,
+            config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType,
                                                                    memory::format_tag::ndhwc);
-            config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType,
+            config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outputDataType,
                                                                     memory::format_tag::ndhwc);
             supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
         }
     } else {
         // general plain case
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType);
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outputDataType);
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
     }
 }

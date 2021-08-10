@@ -233,7 +233,7 @@ void MKLDNNDFTNode::execute(mkldnn::stream strm) {
     }
     std::sort(axes.begin(), axes.end());
 
-    outputShape = getChildEdgeAt(0)->getShape().getStaticDims();
+    outputShape = getOutputShapeAtPort(0).getStaticDims();
     for (size_t axis : axes) {
         size_t nComplex = outputShape[axis];
         // FFT uses different twiddle factors

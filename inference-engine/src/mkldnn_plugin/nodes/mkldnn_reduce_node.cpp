@@ -1410,13 +1410,13 @@ void MKLDNNReduceNode::getSupportedDescriptors() {
     }
 
     if (keep_dims) {
-        if (getParentEdgeAt(REDUCE_DATA)->getShape().getRank() != getChildEdgeAt(0)->getShape().getRank())
+        if (getParentEdgeAt(REDUCE_DATA)->getShape().getRank() != getOutputShapeAtPort(0).getRank())
             IE_THROW() << errorPrefix << " gets incorrect number of input/output dimensions!";
     } else {
         // In fact, after the Reduce operation, the shape must be a scalar if the previous one was 1d.
         // But for now, 0d tensor (scalar) is emulated as 1d tensor. Skip checking in such cases.
-        bool is_emulated_0d_as_1d = getParentEdgeAt(REDUCE_DATA)->getShape().getRank() == 1 && getChildEdgeAt(0)->getShape().getRank() == 1;
-        if (getParentEdgeAt(REDUCE_DATA)->getShape().getRank() <= getChildEdgeAt(0)->getShape().getRank() && !is_emulated_0d_as_1d)
+        bool is_emulated_0d_as_1d = getParentEdgeAt(REDUCE_DATA)->getShape().getRank() == 1 && getOutputShapeAtPort(0).getRank() == 1;
+        if (getParentEdgeAt(REDUCE_DATA)->getShape().getRank() <= getOutputShapeAtPort(0).getRank() && !is_emulated_0d_as_1d)
             IE_THROW() << errorPrefix << "gets incorrect number of input/output dimensions!";
     }
 }
@@ -1478,7 +1478,7 @@ void MKLDNNReduceNode::initSupportedPrimitiveDescriptors() {
                                                                                        inDataType, inFormat);
         config.inConfs[REDUCE_INDEXES].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(REDUCE_INDEXES)->getShape().getStaticDims(),
                                                                             memory::data_type::s32, memory::format_tag::x);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), outDataType, outFormat);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outDataType, outFormat);
         supportedPrimitiveDescriptors.push_back({config, impl_type});
     };
 
@@ -1491,7 +1491,7 @@ void MKLDNNReduceNode::initSupportedPrimitiveDescriptors() {
         }
 
         pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(REDUCE_DATA)->getShape().getRank()),
-                 MKLDNNExtensionUtils::GetPlainFormatByRank(getChildEdgeAt(0)->getShape().getRank()), inputDataType, outputDataType, impl_type);
+                 MKLDNNExtensionUtils::GetPlainFormatByRank(getOutputShapeAtPort(0).getRank()), inputDataType, outputDataType, impl_type);
         if (keep_dims) {
             if (getParentEdgeAt(REDUCE_DATA)->getShape().getRank() == 4 && getParentEdgeAt(REDUCE_DATA)->getShape().getStaticDims()[1] > 1) {
                 if (mayiuse(cpu::x64::avx512_common)) {
@@ -1509,7 +1509,7 @@ void MKLDNNReduceNode::initSupportedPrimitiveDescriptors() {
         }
     } else {
         pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(REDUCE_DATA)->getShape().getRank()),
-                 MKLDNNExtensionUtils::GetPlainFormatByRank(getChildEdgeAt(0)->getShape().getRank()),
+                 MKLDNNExtensionUtils::GetPlainFormatByRank(getOutputShapeAtPort(0).getRank()),
                  memory::data_type::f32, memory::data_type::f32, impl_desc_type::ref);
     }
 }
@@ -1932,7 +1932,7 @@ inline void MKLDNNReduceNode::init_dst_data(uint8_t *out_ptr, size_t dst_size) {
 
 inline void MKLDNNReduceNode::calc_process_dst_dims(const int32_t *idx_data) {
     SizeVector out_dims;
-    SizeVector dst_dims = getChildEdgeAt(0)->getShape().getStaticDims();
+    SizeVector dst_dims = getOutputShapeAtPort(0).getStaticDims();
     std::set<size_t> axes;
     for (size_t i = 0; i < getParentEdgeAt(REDUCE_INDEXES)->getShape().getStaticDims()[0]; i++) {
         int32_t axis = idx_data[i];

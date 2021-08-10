@@ -207,7 +207,7 @@ void MKLDNNStridedSliceNode::initSupportedPrimitiveDescriptors() {
         stridePrecision = getOriginalInputPrecisionAtPort(STRIDE_ID);
 
     auto srcDims = getParentEdgeAt(DATA_ID)->getShape().getStaticDims();
-    auto dstDims = getChildEdgeAt(0)->getShape().getStaticDims();
+    auto dstDims = getOutputShapeAtPort(0).getStaticDims();
     size_t nDims = srcDims.size();
 
     NodeConfig config;
@@ -557,7 +557,7 @@ void MKLDNNStridedSliceNode::indicesCalculation() {
 void MKLDNNStridedSliceNode::execute(mkldnn::stream strm) {
     if (!params.parametersAreConstant) {
         auto srcDims = getParentEdgeAt(DATA_ID)->getShape().getStaticDims();
-        auto dstDims = getChildEdgeAt(0)->getShape().getStaticDims();
+        auto dstDims = getOutputShapeAtPort(0).getStaticDims();
         const size_t nDims = std::max(srcDims.size(), dstDims.size());
         const size_t ellipsisMaskCounter = std::accumulate(ellipsisMask.begin(), ellipsisMask.end(), 0);
 

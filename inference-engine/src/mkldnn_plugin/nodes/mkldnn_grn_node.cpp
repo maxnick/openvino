@@ -53,7 +53,7 @@ void MKLDNNGRNNode::execute(mkldnn::stream strm) {
     const float* src_data = reinterpret_cast<const float *>(getParentEdgeAt(0)->getMemoryPtr()->GetPtr());
     float* dst_data = reinterpret_cast<float *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
 
-    SizeVector dims = getParentEdgeAt(0)->getShape().getStaticDims();
+    SizeVector dims = getInputShapeAtPort(0).getStaticDims();
 
     int N = static_cast<int>((dims.size() > 0) ? dims[0] : 1);
     int C = static_cast<int>((dims.size() > 1) ? dims[1] : 1);

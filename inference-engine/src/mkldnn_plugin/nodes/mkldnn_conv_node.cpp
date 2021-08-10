@@ -195,7 +195,7 @@ void MKLDNNConvolutionNode::getSupportedDescriptors() {
     if (getChildEdges().empty())
         IE_THROW() << "Incorrect number of output edges for layer " << getName();
 
-    int ndims = getParentEdgesAtPort(0)[0]->getShape().getRank();
+    int ndims = getInputShapeAtPort(0).getRank();
     MKLDNNDims weightsDims = MKLDNNDims(weightDims);
 
     withDWConv = isFusedWith(Convolution);
@@ -228,8 +228,8 @@ void MKLDNNConvolutionNode::getSupportedDescriptors() {
             for (int j = 0; j < paddingR.size(); j++) {
                 int with_group = isGrouped ? 1 : 0;
                 int krn = weightsDims[with_group + 2 + j];
-                int src = getParentEdgeAt(0)->getShape().getStaticDims()[2 + j];
-                int dst = getChildEdgeAt(0)->getShape().getStaticDims()[2 + j];
+                int src = getInputShapeAtPort(0).getStaticDims()[2 + j];
+                int dst = getOutputShapeAtPort(0).getStaticDims()[2 + j];
 
                 krn = (krn - 1)*(dilation[j] + 1) + 1;
                 int calc_dst = (src - krn + paddingL[j]) / stride[j] + 1;
@@ -245,9 +245,9 @@ void MKLDNNConvolutionNode::getSupportedDescriptors() {
             outputDataType = memory::data_type::f32;
         if (eltwisePrecision == Precision::BF16)
             eltwisePrecision = Precision::FP32;
-        in_candidate = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getParentEdgeAt(0)->getShape(),
+        in_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getInputShapeAtPort(0),
                                                      inputDataType, ndims == 5 ? memory::format_tag::ndhwc : memory::format_tag::nhwc);
-        out_candidate = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getChildEdgeAt(0)->getShape(),
+        out_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getOutputShapeAtPort(0),
                                                       outputDataType, ndims == 5 ? memory::format_tag::ndhwc : memory::format_tag::nhwc);
         createDescriptor({ in_candidate.get() }, { out_candidate.get() });
     } else {
@@ -286,8 +286,8 @@ void MKLDNNConvolutionNode::getSupportedDescriptors() {
             memory::format_tag nCsp16c = ndims == 4 ? memory::format_tag::nChw16c : memory::format_tag::nCdhw16c;
             memory::format_tag nCsp8c = ndims == 4 ? memory::format_tag::nChw8c : memory::format_tag::nCdhw8c;
 
-            auto inputShape = getParentEdgeAt(0)->getShape();
-            auto outputShape = getChildEdgeAt(0)->getShape();
+            auto inputShape = getInputShapeAtPort(0);
+            auto outputShape = getOutputShapeAtPort(0);
 
             if (IC == 1 && groupOC == 1) {
                 in_candidate = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(inputShape, inputDataType, ncsp);
@@ -753,8 +753,8 @@ bool MKLDNNConvolutionNode::isNspcAvailable() const {
     }
 
     // A bunch of heuristics are designed to cut off not optimal nspc convolution applications
-    auto inpDims = getParentEdgeAt(0)->getShape().getStaticDims();
-    auto outDims = getChildEdgeAt(0)->getShape().getStaticDims();
+    auto inpDims = getInputShapeAtPort(0).getStaticDims();
+    auto outDims = getOutputShapeAtPort(0).getStaticDims();
     auto ndims = inpDims.size();
 
     if (isDepthWise()) {

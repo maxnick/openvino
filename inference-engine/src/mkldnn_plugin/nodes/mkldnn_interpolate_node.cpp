@@ -1868,7 +1868,7 @@ void MKLDNNInterpolateNode::getSupportedDescriptors() {
     } else {
         srcDimPad = srcDim;
     }
-    dstDim = getChildEdgeAt(0)->getShape().getStaticDims();
+    dstDim = getOutputShapeAtPort(0).getStaticDims();
 }
 
 void MKLDNNInterpolateNode::initSupportedPrimitiveDescriptors() {
@@ -1925,7 +1925,7 @@ void MKLDNNInterpolateNode::initSupportedPrimitiveDescriptors() {
         if (isAxesSpecified)
             config.inConfs[AXES_ID].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(AXES_ID)->getShape().getStaticDims(), axesType,
                                                                          memory::format_tag::x);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType, dataFormat);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outputDataType, dataFormat);
         supportedPrimitiveDescriptors.push_back({config, implDetail});
     };
 

@@ -90,7 +90,7 @@ void MKLDNNLrnNode::getSupportedDescriptors() {
         precision = InferenceEngine::Precision::FP32;
     auto inputDataType = MKLDNNExtensionUtils::IEPrecisionToDataType(precision);
 
-    const auto &parentShape = getParentEdgeAt(0)->getShape();
+    const auto &parentShape = getInputShapeAtPort(0);
     const auto parentStaticDims = parentShape.getStaticDims();
 
     for (auto format : getAvailableFormatsForDims(parentShape)) {

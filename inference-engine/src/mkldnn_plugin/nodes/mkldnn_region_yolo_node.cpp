@@ -367,10 +367,10 @@ inline void MKLDNNRegionYoloNode::calculate_logistic(size_t start_index, int cou
 }
 
 void MKLDNNRegionYoloNode::execute(mkldnn::stream strm) {
-    size_t B =  (getParentEdgeAt(0)->getShape().getRank() > 0) ? getParentEdgeAt(0)->getShape().getStaticDims()[0] : 1;
-    size_t IC = (getParentEdgeAt(0)->getShape().getRank() > 1) ? getParentEdgeAt(0)->getShape().getStaticDims()[1] : 1;
-    size_t IH = (getParentEdgeAt(0)->getShape().getRank() > 2) ? getParentEdgeAt(0)->getShape().getStaticDims()[2] : 1;
-    size_t IW = (getParentEdgeAt(0)->getShape().getRank() > 3) ? getParentEdgeAt(0)->getShape().getStaticDims()[3] : 1;
+    size_t B =  (getInputShapeAtPort(0).getRank() > 0) ? getInputShapeAtPort(0).getStaticDims()[0] : 1;
+    size_t IC = (getInputShapeAtPort(0).getRank() > 1) ? getInputShapeAtPort(0).getStaticDims()[1] : 1;
+    size_t IH = (getInputShapeAtPort(0).getRank() > 2) ? getInputShapeAtPort(0).getStaticDims()[2] : 1;
+    size_t IW = (getInputShapeAtPort(0).getRank() > 3) ? getInputShapeAtPort(0).getStaticDims()[3] : 1;
 
     size_t mask_size = mask.size();
     int end_index = 0;

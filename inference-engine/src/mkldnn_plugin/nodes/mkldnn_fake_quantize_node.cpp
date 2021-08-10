@@ -1094,13 +1094,13 @@ MKLDNNFakeQuantizeNode::MKLDNNFakeQuantizeNode(const std::shared_ptr<ngraph::Nod
 
 std::vector<LayoutType> MKLDNNFakeQuantizeNode::getDataFormats() const {
     // Special case for first FQ in the network
-    if (getParentEdgesAtPort(0)[0]->getShape().getStaticDims()[getAxis()] == 3) {
+    if (getInputShapeAtPort(0).getStaticDims()[getAxis()] == 3) {
         return { LayoutType::ncsp };
     } else {
         if (isBinarization()) {
             return { LayoutType::nspc };
         } else {
-            if (one_of(getParentEdgesAtPort(0)[0]->getShape().getRank(), 4, 5)) {
+            if (one_of(getInputShapeAtPort(0).getRank(), 4, 5)) {
                 if (getAxis() == 1) {
                     auto blkFormat = mayiuse(cpu::x64::avx512_common) ? LayoutType::nCsp16c : LayoutType::nCsp8c;
                     return { blkFormat, LayoutType::nspc, LayoutType::ncsp };
@@ -1141,12 +1141,12 @@ void MKLDNNFakeQuantizeNode::getSupportedDescriptors() {
             IE_THROW() << errorPrefix << "has unsupported number of parent edges at port " << i;
     }
 
-    if (getParentEdgesAtPort(0)[0]->getShape().getRank() != getChildEdgesAtPort(0)[0]->getShape().getRank()) {
+    if (getInputShapeAtPort(0).getRank() != getInputShapeAtPort(0).getRank()) {
         IE_THROW() << errorPrefix << "has different ranks for input and output tensors";
     }
 
     if (isBinarization()) {
-        if (getParentEdgesAtPort(0)[0]->getShape().getRank() != 4ul) {
+        if (getInputShapeAtPort(0).getRank() != 4ul) {
             IE_THROW() << errorPrefix << "doesn't support input/output rank != 4";
         }
     }
@@ -1193,10 +1193,10 @@ void MKLDNNFakeQuantizeNode::initSupportedPrimitiveDescriptors() {
 
             if (i == 0) {
                 auto descCreator = BlockedDescCreator::getCommonCreators().at(fmt);
-                dataConfig.desc = descCreator->createUniqueDesc(getInputPrecision(), getParentEdgeAt(i)->getShape().getStaticDims());
+                dataConfig.desc = descCreator->createUniqueDesc(getInputPrecision(), getInputShapeAtPort(i).getStaticDims());
             } else {
                 auto descCreator = BlockedDescCreator::getCommonCreators().at(LayoutType::ncsp);
-                dataConfig.desc = descCreator->createUniqueDesc(Precision::FP32, getParentEdgeAt(i)->getShape().getStaticDims());
+                dataConfig.desc = descCreator->createUniqueDesc(Precision::FP32, getInputShapeAtPort(i).getStaticDims());
             }
             config.inConfs.push_back(dataConfig);
         }
@@ -1205,7 +1205,7 @@ void MKLDNNFakeQuantizeNode::initSupportedPrimitiveDescriptors() {
         dataConfig.inPlace = -1;
         dataConfig.constant = false;
         auto descCreator = BlockedDescCreator::getCommonCreators().at(fmt);
-        dataConfig.desc = descCreator->createUniqueDesc(getOutputPrecision(), getChildEdgeAt(0)->getShape().getStaticDims());
+        dataConfig.desc = descCreator->createUniqueDesc(getOutputPrecision(), getOutputShapeAtPort(0).getStaticDims());
         config.outConfs.push_back(dataConfig);
 
         supportedPrimitiveDescriptors.push_back({config, impl_type});
@@ -1257,7 +1257,7 @@ void MKLDNNFakeQuantizeNode::createPrimitive() {
     if (quantize_kernel)
         quantize_kernel->create_ker();
 
-    size_t axisSize = getParentEdgeAt(0)->getShape().getStaticDims()[getAxis()];
+    size_t axisSize = getInputShapeAtPort(0).getStaticDims()[getAxis()];
     size_t axisPaddedSize = rnd_up(axisSize, 16);
 
     DnnlBlockedMemoryDesc weightsDataDesc(Shape(InferenceEngine::SizeVector{axisPaddedSize}), memory::data_type::f32, memory::format_tag::x);

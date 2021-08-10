@@ -94,7 +94,7 @@ void MKLDNNTileNode::initSupportedPrimitiveDescriptors() {
     config.outConfs.resize(1);
     config.inConfs[TILE_INPUT].desc = descCreator->createUniqueDesc(precision, getParentEdgeAt(TILE_INPUT)->getShape().getStaticDims());
     config.inConfs[TILE_REPEATS].desc = descCreator->createUniqueDesc(Precision::I32, getParentEdgeAt(TILE_REPEATS)->getShape().getStaticDims());
-    config.outConfs[0].desc = descCreator->createUniqueDesc(precision, getChildEdgeAt(0)->getShape().getStaticDims());
+    config.outConfs[0].desc = descCreator->createUniqueDesc(precision, getOutputShapeAtPort(0).getStaticDims());
     config.outConfs[0].inPlace = noTiling ? 0 : -1;
     supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
 }

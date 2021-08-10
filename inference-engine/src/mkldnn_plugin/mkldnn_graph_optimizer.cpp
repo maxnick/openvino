@@ -166,8 +166,8 @@ void MKLDNNGraphOptimizer::FuseConvolutionAndBias(MKLDNNGraph &graph) {
         if (biasNode->getType() != Input || !biasNode->isConstant() || biasNode->getChildEdges().size() != 1)
             return false;
 
-        auto convOutDims = parentNode->getChildEdgesAtPort(0)[0]->getShape().getDims();
-        auto biasDims = getNormalizedDimsBySize(biasNode->getChildEdgesAtPort(0)[0]->getShape().getDims(),
+        auto convOutDims = parentNode->getOutputShapeAtPort(0).getDims();
+        auto biasDims = getNormalizedDimsBySize(biasNode->getOutputShapeAtPort(0).getDims(),
                                                 convOutDims.size());
         // TODO [NM]: Legacy ConvBias fusion transformation supports both per-tensor (via explicit broadcasing) and per-channel cases.
         // Most of the real models contain per-channel bias, so we need to reavaluate the need to support per-tensor variant.
@@ -323,14 +323,14 @@ void MKLDNNGraphOptimizer::FuseConvolutionAndBias(MKLDNNGraph &graph) {
 //             node->getParentEdges().size() != 2 || node->getChildEdges().size() != 1)
 //             return false;
 
-//         return isSutableSecondInput(node->getParentEdgesAtPort(1)[0]->getParent(), node->getParentEdgesAtPort(0)[0]->getShape().getDims());
+//         return isSutableSecondInput(node->getParentEdgesAtPort(1)[0]->getParent(), node->getInputShapeAtPort(0).getDims());
 //     };
 
 //     auto isSutableChildNode = [&](MKLDNNNodePtr parentNode, MKLDNNNodePtr childNode) {
 //         if (childNode->getAlgorithm() != EltwiseAdd || !childNode->getFusedWith().empty() || childNode->getParentEdges().size() != 2)
 //             return false;
 
-//         return isSutableSecondInput(childNode->getParentEdgesAtPort(1)[0]->getParent(), childNode->getParentEdgesAtPort(0)[0]->getShape().getDims());
+//         return isSutableSecondInput(childNode->getParentEdgesAtPort(1)[0]->getParent(), childNode->getInputShapeAtPort(0).getDims());
 //     };
 
 //     auto parent = graphNodes.begin();
@@ -417,7 +417,7 @@ void MKLDNNGraphOptimizer::FuseConvolutionAndBias(MKLDNNGraph &graph) {
 //         bool retVal = false;
 //         if (node->getType() == Convolution) {
 //             if (auto convNode = std::dynamic_pointer_cast<MKLDNNConvolutionNode>(node)) {
-//                 auto rank = convNode->getParentEdgeAt(0)->getShape().getRank();
+//                 auto rank = convNode->getInputShapeAtPort(0).getRank();
 //                 // int8 depthwise convolution does not support fusing zero points in 3D case
 //                 if (implication(convNode->isDepthWise(), rank == 4)) {
 //                     retVal = true;
@@ -432,8 +432,8 @@ void MKLDNNGraphOptimizer::FuseConvolutionAndBias(MKLDNNGraph &graph) {
 //         if (convNode == nullptr)
 //             IE_THROW() << "Cannot get convolution node " << node->getName();
 
-//         int IC = node->getParentEdgesAtPort(0)[0]->getShape().getDims()[1];
-//         int OC = node->getChildEdgesAtPort(0)[0]->getShape().getDims()[1];
+//         int IC = node->getInputShapeAtPort(0).getDims()[1];
+//         int OC = node->getOutputShapeAtPort(0).getDims()[1];
 
 //         if (Shape::UNDEFINED_DIM == IC || Shape::UNDEFINED_DIM == OC) {
 //             return false;
@@ -600,7 +600,7 @@ static bool BF16QuantizeNodeFusing(MKLDNNNodePtr parentNode, MKLDNNNodePtr child
 //     auto& graphNodes = graph.GetNodes();
 
 //     auto isSutableParentNode = [](MKLDNNNodePtr node) {
-//         return node->getType() == FullyConnected && node->getChildEdges().size() == 1 && node->getParentEdgeAt(0)->getShape().getRank() != 3;
+//         return node->getType() == FullyConnected && node->getChildEdges().size() == 1 && node->getInputShapeAtPort(0).getRank() != 3;
 //     };
 
 //     auto parent = graphNodes.begin();
@@ -665,8 +665,8 @@ static bool BF16QuantizeNodeFusing(MKLDNNNodePtr parentNode, MKLDNNNodePtr child
 
 //         const auto &strides = conv->getStride();
 //         const auto &paddings = conv->getPaddingL();
-//         const auto &inDims = node->getParentEdgeAt(0)->getShape().getDims();
-//         const auto &outDims = node->getChildEdgeAt(0)->getShape().getDims();
+//         const auto &inDims = node->getInputShapeAtPort(0).getDims();
+//         const auto &outDims = node->getOutputShapeAtPort(0).getDims();
 //         bool isSupportedParams = conv->getGroupNum() == 1 &&
 //                 inDims.size() == 4 &&
 //                 dimsEqualStrong(inDims[inDims.size() - 1], outDims[outDims.size() - 1]) &&
@@ -723,7 +723,7 @@ static bool BF16QuantizeNodeFusing(MKLDNNNodePtr parentNode, MKLDNNNodePtr child
 //                                  convChild->getStride()[stridesSize - 1] == convChild->getStride()[stridesSize - 2] &&
 //                                  withBias &&
 //                                  one_of(convChild->getStride()[stridesSize - 1], 1, 2) &&
-//                                  childNode->getChildEdgeAt(0)->getShape().getRank() == 4;
+//                                  childNode->getOutputShapeAtPort(0).getRank() == 4;
 
 //         return isSupportedParams;
 //     };
@@ -1455,7 +1455,7 @@ void MKLDNNGraphOptimizer::FuseConvolutionSumAndConvolutionSumActivation(MKLDNNG
 //         MKLDNNNodePtr& broadcastNode = graphNode;
 //         MKLDNNNodePtr eltwiseNode = broadcastNode->getChildEdgeAt(0)->getChild();
 //         eltwiseNode->inputShapes[broadcastNode->getChildEdgeAt(0)->getOutputNum()]
-//                 = broadcastNode->getParentEdgeAt(0)->getShape();
+//                 = broadcastNode->getInputShapeAtPort(0);
 
 //         auto& edges = graph.GetEdges();
 //         for (size_t i = 1lu; i < broadcastNode->getParentEdges().size(); i++) {

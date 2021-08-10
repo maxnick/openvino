@@ -102,8 +102,8 @@ void MKLDNNFullyConnectedNode::getSupportedDescriptors() {
         outputDataType = memory::data_type::bf16;
     }
 
-    const auto inDims = getParentEdgeAt(0)->getShape().getStaticDims();
-    const auto outDims = getChildEdgeAt(0)->getShape().getStaticDims();
+    const auto inDims = getInputShapeAtPort(0).getStaticDims();
+    const auto outDims = getOutputShapeAtPort(0).getStaticDims();
 
     if (inDims.size() == 3) {
         weightsDims = InferenceEngine::SizeVector({static_cast<size_t>(outDims[2]), static_cast<size_t>(inDims[2])});
@@ -114,7 +114,7 @@ void MKLDNNFullyConnectedNode::getSupportedDescriptors() {
     }
     biasesDims.push_back(weightsDims[0]);
 
-    for (auto format : getAvailableFormatsForDims(getParentEdgeAt(0)->getShape())) {
+    for (auto format : getAvailableFormatsForDims(getInputShapeAtPort(0))) {
         auto in_candidate = mkldnn::memory::desc(MKLDNNExtensionUtils::convertToDnnlDims(inDims), inputDataType, format);
         auto out_candidate = mkldnn::memory::desc(MKLDNNExtensionUtils::convertToDnnlDims(outDims), outputDataType, mkldnn::memory::format_tag::any);
 

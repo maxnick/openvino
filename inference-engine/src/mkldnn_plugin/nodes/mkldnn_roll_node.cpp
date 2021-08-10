@@ -92,7 +92,7 @@ void MKLDNNRollNode::initSupportedPrimitiveDescriptors() {
 
     auto dataType = MKLDNNExtensionUtils::IEPrecisionToDataType(precision);
 
-    auto srcDims = getParentEdgeAt(0)->getShape().getStaticDims();
+    auto srcDims = getInputShapeAtPort(0).getStaticDims();
 
     NodeConfig config;
     config.dynBatchSupport = false;
@@ -105,11 +105,11 @@ void MKLDNNRollNode::initSupportedPrimitiveDescriptors() {
         return dataConfig;
     };
 
-    config.inConfs.push_back(createDataConfig(getParentEdgeAt(0)->getShape(), dataType));
-    config.inConfs.push_back(createDataConfig(getParentEdgeAt(1)->getShape(), memory::data_type::s32));
+    config.inConfs.push_back(createDataConfig(getInputShapeAtPort(0), dataType));
+    config.inConfs.push_back(createDataConfig(getInputShapeAtPort(1), memory::data_type::s32));
     config.inConfs.push_back(createDataConfig(getParentEdgeAt(2)->getShape(), memory::data_type::s32));
 
-    config.outConfs.push_back(createDataConfig(getChildEdgeAt(0)->getShape(), dataType));
+    config.outConfs.push_back(createDataConfig(getOutputShapeAtPort(0), dataType));
 
     supportedPrimitiveDescriptors.push_back({config, impl_desc_type::ref});
 }

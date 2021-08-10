@@ -718,7 +718,7 @@ void MKLDNNNormalizeL2Node::getSupportedDescriptors() {
     if (getChildEdges().empty())
         IE_THROW() << errorPrefix << " has incorrect number of output edges: " << getChildEdges().size();
 
-    if (getParentEdgeAt(0)->getShape().getRank() > 4 || getParentEdgeAt(0)->getShape().getRank() < 2) {
+    if (getInputShapeAtPort(0).getRank() > 4 || getInputShapeAtPort(0).getRank() < 2) {
         IE_THROW() << errorPrefix << "has invalid input shape. Normalize supports from 2D to 4D blobs.";
     }
 }
@@ -767,15 +767,15 @@ void MKLDNNNormalizeL2Node::initSupportedPrimitiveDescriptors() {
     config.outConfs[0].inPlace = canBeInplace ? 0 : -1;
 
     auto pushDesc = [&](memory::format_tag format) {
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getParentEdgeAt(DATA)->getShape(), inputDataType, format);
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getParentEdgeAt(AXES)->getShape(), memory::data_type::s32,
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getInputShapeAtPort(DATA), inputDataType, format);
+        config.inConfs[1].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getInputShapeAtPort(AXES), memory::data_type::s32,
                                                                memory::format_tag::x);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getParentEdgeAt(DATA)->getShape(), outputDataType, format);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getInputShapeAtPort(DATA), outputDataType, format);
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
     };
 
     // only plain layout support when w/o sse42
-    if (getParentEdgeAt(DATA)->getShape().getRank() == 4 && !cornerCase) {
+    if (getInputShapeAtPort(DATA).getRank() == 4 && !cornerCase) {
         if (mayiuse(cpu::x64::sse41)) {
             pushDesc(memory::format_tag::nhwc);
             if (mayiuse(cpu::x64::avx512_common)) {
@@ -787,7 +787,7 @@ void MKLDNNNormalizeL2Node::initSupportedPrimitiveDescriptors() {
     }
     if (canBeInplace)
         config.inConfs[0].inPlace = 0;
-    pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getChildEdgeAt(DATA)->getShape().getRank()));
+    pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getOutputShapeAtPort(DATA).getRank()));
 }
 
 bool MKLDNNNormalizeL2Node::canFuse(const MKLDNNNodePtr& node) const {
@@ -844,7 +844,7 @@ void MKLDNNNormalizeL2Node::createPrimitive() {
         }
 
         jcp.across_spatial = across_spatial;
-        auto dims = getParentEdgeAt(0)->getShape().getStaticDims();
+        auto dims = getInputShapeAtPort(0).getStaticDims();
         size_t dims_size = dims.size();
         jcp.n = (dims_size > 0) ? dims[0] : 1lu;
         jcp.c = (dims_size > 1) ? dims[1] : 1lu;
@@ -910,7 +910,7 @@ void MKLDNNNormalizeL2Node::execute(mkldnn::stream strm) {
     const uint8_t *src_ptr = reinterpret_cast<const uint8_t*>(srcMemPtr->GetPtr());
     uint8_t *dst_ptr = reinterpret_cast<uint8_t*>(dstMemPtr->GetPtr());
 
-    auto dims = getParentEdgeAt(DATA)->getShape().getStaticDims();
+    auto dims = getInputShapeAtPort(DATA).getStaticDims();
 
     NormalizeContext ctx = {
         *this,

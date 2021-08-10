@@ -94,8 +94,8 @@ void MKLDNNGatherNode::createPrimitive() {
 
     const SizeVector srcDims = getParentEdgeAt(GATHER_DATA)->getShape().getStaticDims();
     const SizeVector idxDims = getParentEdgeAt(GATHER_INDEXES)->getShape().getStaticDims();
-    const SizeVector dstDims = getChildEdgeAt(0)->getShape().getStaticDims();
-    dataSize = getParentEdgeAt(GATHER_DATA)->getMemory().getDesc().getPrecision().size();
+    const SizeVector dstDims = getOutputShapeAtPort(0).getStaticDims();
+    dataSize = getParentEdgeAt(GATHER_DATA)->getMemory().GetDesc().getPrecision().size();
 
     indexRange = srcDims[axis];
     batchSize = std::accumulate(srcDims.begin(), srcDims.begin() + batchDims, 1, std::multiplies<size_t>());

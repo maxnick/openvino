@@ -99,7 +99,7 @@ void MKLDNNDepthToSpaceNode::initSupportedPrimitiveDescriptors() {
         return;
 
     InferenceEngine::Precision precision = getOriginalInputPrecisionAtPort(0);
-    auto srcDims = getParentEdgeAt(0)->getShape().getStaticDims();
+    auto srcDims = getInputShapeAtPort(0).getStaticDims();
     const size_t nDims = srcDims.size();
 
     impl_desc_type impl_type;
@@ -140,8 +140,8 @@ void MKLDNNDepthToSpaceNode::initSupportedPrimitiveDescriptors() {
     auto range = BlockedDescCreator::makeFilteredRange(creators, nDims, supportedTypes);
 
     for (auto itr = range.first; itr != range.second; ++itr) {
-        config.inConfs[0].desc = itr->second->createUniqueDesc(precision, getParentEdgeAt(0)->getShape().getStaticDims());
-        config.outConfs[0].desc = itr->second->createUniqueDesc(precision, getChildEdgeAt(0)->getShape().getStaticDims());
+        config.inConfs[0].desc = itr->second->createUniqueDesc(precision, getInputShapeAtPort(0).getStaticDims());
+        config.outConfs[0].desc = itr->second->createUniqueDesc(precision, getOutputShapeAtPort(0).getStaticDims());
         supportedPrimitiveDescriptors.emplace_back(config, impl_type);
     }
 }
@@ -156,8 +156,8 @@ void MKLDNNDepthToSpaceNode::createPrimitive() {
     if (getSelectedPrimitiveDescriptor() == nullptr)
         THROW_ERROR << "has unidentified preferable primitive descriptor";
 
-    SizeVector srcDims = getParentEdgeAt(0)->getShape().getStaticDims();
-    SizeVector dstDims = getChildEdgeAt(0)->getShape().getStaticDims();
+    SizeVector srcDims = getInputShapeAtPort(0).getStaticDims();
+    SizeVector dstDims = getOutputShapeAtPort(0).getStaticDims();
 
     size_t nDims = srcDims.size();
     const size_t nSpatialDims = nDims - 2;

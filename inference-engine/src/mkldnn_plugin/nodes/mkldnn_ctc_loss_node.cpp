@@ -66,9 +66,9 @@ void MKLDNNCTCLossNode::execute(mkldnn::stream strm) {
     const int* labelsLength = reinterpret_cast<const int *>(getParentEdgeAt(3)->getMemoryPtr()->GetPtr());
     float* dstData = reinterpret_cast<float *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
 
-    const size_t batchNum = getParentEdgeAt(0)->getShape().getStaticDims()[0];
-    const size_t maxTime = getParentEdgeAt(0)->getShape().getStaticDims()[1];
-    const size_t classesNum = getParentEdgeAt(0)->getShape().getStaticDims()[2];
+    const size_t batchNum = getInputShapeAtPort(0).getStaticDims()[0];
+    const size_t maxTime = getInputShapeAtPort(0).getStaticDims()[1];
+    const size_t classesNum = getInputShapeAtPort(0).getStaticDims()[2];
 
     int blankIndex = classesNum - 1;
     if (inputShapes.size() > 4) {

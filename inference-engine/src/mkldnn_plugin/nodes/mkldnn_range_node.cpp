@@ -110,7 +110,7 @@ void MKLDNNRangeNode::execute(mkldnn::stream strm) {
 
 template <typename data_t>
 InferenceEngine::StatusCode MKLDNNRangeNode::rangeKernel() noexcept {
-    size_t dst_size = (getChildEdgesAtPort(0)[0]->getShape().getStaticDims())[0];
+    size_t dst_size = (getOutputShapeAtPort(0).getStaticDims())[0];
     data_t* dst_data = reinterpret_cast<data_t *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
     data_t start = reinterpret_cast<const data_t *>(getParentEdgeAt(RANGE_START)->getMemoryPtr()->GetPtr())[0];
     data_t limit = reinterpret_cast<const data_t *>(getParentEdgeAt(RANGE_LIMIT)->getMemoryPtr()->GetPtr())[0];

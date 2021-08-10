@@ -70,9 +70,9 @@ void MKLDNNMatMulNode::getSupportedDescriptors() {
     if (getChildEdges().empty())
         IE_THROW()  << errorPrefix << " has incorrect number of output edges for layer " << getName();
 
-    auto inDims0 = getParentEdgeAt(0)->getShape().getStaticDims();
-    auto inDims1 = getParentEdgeAt(1)->getShape().getStaticDims();
-    auto outDims = getChildEdgeAt(0)->getShape().getStaticDims();
+    auto inDims0 = getInputShapeAtPort(0).getStaticDims();
+    auto inDims1 = getInputShapeAtPort(1).getStaticDims();
+    auto outDims = getOutputShapeAtPort(0).getStaticDims();
 
     if (inDims0.size() != inDims1.size() || inDims0.size() != outDims.size())
         IE_THROW()  << errorPrefix << " has invalid dims count";
@@ -146,9 +146,9 @@ void MKLDNNMatMulNode::initSupportedPrimitiveDescriptors() {
         return dataConfig;
     };
 
-    config.inConfs.push_back(createDataConfig(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType0));
-    config.inConfs.push_back(createDataConfig(getParentEdgeAt(1)->getShape().getStaticDims(), inputDataType1));
-    config.outConfs.push_back(createDataConfig(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType));
+    config.inConfs.push_back(createDataConfig(getInputShapeAtPort(0).getStaticDims(), inputDataType0));
+    config.inConfs.push_back(createDataConfig(getInputShapeAtPort(1).getStaticDims(), inputDataType1));
+    config.outConfs.push_back(createDataConfig(getOutputShapeAtPort(0).getStaticDims(), outputDataType));
 
     supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::gemm_any);
 }

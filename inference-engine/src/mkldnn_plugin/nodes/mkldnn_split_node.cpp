@@ -75,9 +75,9 @@ void MKLDNNSplitNode::initSupportedPrimitiveDescriptors() {
     if (!supportedPrimitiveDescriptors.empty())
         return;
 
-    auto srcShape = getParentEdgeAt(0)->getShape();
+    auto srcShape = getInputShapeAtPort(0);
     auto axis_size = 0;
-    auto dstFirstDims = getChildEdgeAt(0)->getShape().getStaticDims();
+    auto dstFirstDims = getOutputShapeAtPort(0).getStaticDims();
     for (size_t i = 0; i < outputShapes.size(); i++) {
         auto o_Dims = outputShapes[i].getStaticDims();
         if (dstFirstDims.size() != o_Dims.size()) {
@@ -274,7 +274,7 @@ void MKLDNNSplitNode::execute(mkldnn::stream strm) {
     }
 
     uint8_t* srcData = reinterpret_cast<uint8_t*>(this->getParentEdgeAt(0)->getMemoryPtr()->GetPtr());
-    size_t batch = this->getParentEdgeAt(0)->getShape().getStaticDims()[0];
+    size_t batch = this->getInputShapeAtPort(0).getStaticDims()[0];
 
     if (batch != MB)
         optimizedParams.countStrides = optimizedParams.countStrides / batch * MB;
@@ -507,8 +507,8 @@ void MKLDNNSplitNode::prepareOptimizedParams() {
 
 void MKLDNNSplitNode::optimizedNspc2Ncsp(size_t MB) {
     auto parentEdge = getParentEdgeAt(0);
-    const int rank = parentEdge->getShape().getRank();
-    const auto parentDims = parentEdge->getShape().getStaticDims();
+    const int rank = getInputShapeAtPort(0).getRank();
+    const auto parentDims = getInputShapeAtPort(0).getStaticDims();
     const size_t IC = parentDims[1];
     const size_t D = rank == 5 ? parentDims[rank - 3] : 1;
     const size_t H = parentDims[rank - 2];

@@ -466,9 +466,9 @@ bool MKLDNNNode::canBeInPlace() const {
             return false;
     }
 
-    auto inShape = getParentEdgeAt(0)->getShape();
-    for (size_t cIdx = 0; cIdx < getChildEdges().size(); cIdx++) {
-        if (getChildEdgeAt(cIdx)->getShape() != inShape) {
+    auto inShape = getInputShapeAtPort(0);
+    for (size_t cIdx = 0; cIdx < getOriginalOutputsNumber(); cIdx++) {
+        if (getOutputShapeAtPort(cIdx) != inShape) {
             return false;
         }
     }
@@ -1322,11 +1322,11 @@ bool MKLDNNNode::canBePerformedAsScaleShift(const MKLDNNNode *parentNode) const 
     }
 
     const auto isBroadcastableToDataInput = [&]() {
-        auto& dataShape = getParentEdgeAt(fusingPort)->getShape().getDims();
+        auto& dataShape = getInputShapeAtPort(fusingPort).getDims();
         for (size_t i = 0; i < getParentEdges().size(); i++) {
             if (i == fusingPort)
                 continue;
-            auto& weightShape = getParentEdgeAt(i)->getShape().getDims();
+            auto& weightShape = getInputShapeAtPort(i).getDims();
             if (getParentEdgesAtPort(i)[0]->getParent()->getChildEdges().size() != 1 || !isPerTensorOrPerChannelBroadcastable(dataShape, weightShape))
                 return false;
         }

@@ -62,9 +62,9 @@ MKLDNNConcatNode::MKLDNNConcatNode(const std::shared_ptr<ngraph::Node>& op, cons
 }
 
 void MKLDNNConcatNode::getSupportedDescriptors() {
-    auto& firstParentDims = getParentEdgeAt(0)->getShape().getStaticDims();
+    auto& firstParentDims = getInputShapeAtPort(0).getStaticDims();
     for (size_t i = 1; i < getParentEdges().size(); i++) {
-        auto& dims = getParentEdgeAt(i)->getShape().getStaticDims();
+        auto& dims = getInputShapeAtPort(i).getStaticDims();
         bool incorrectDims = false;
         for (size_t j = 0; j < firstParentDims.size(); j++) {
             if (j == axis)
@@ -101,7 +101,7 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
     // Concat supports only equal precisions for inputs and output
     outputPrecision = inputPrecision;
 
-    auto& dstDims = getChildEdgeAt(0)->getShape().getStaticDims();
+    auto& dstDims = getOutputShapeAtPort(0).getStaticDims();
     std::vector<LayoutType> tdCreatorTypes = {LayoutType::ncsp, LayoutType::nspc};
 
     // check if blocked layouts are available the channels size should be evenly divided by the block size to avoid slow oneDNN ref implementation
@@ -113,7 +113,7 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
 
             bool blocked = true;
             for (size_t i = 0; i < getParentEdges().size(); i++) {
-                auto& srcDims = getParentEdgeAt(i)->getShape().getStaticDims();
+                auto& srcDims = getInputShapeAtPort(i).getStaticDims();
                 if (srcDims[channelAxis] % item.first) {
                     blocked = false;
                     break;
@@ -143,8 +143,13 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
         for (size_t i = 0; i < getParentEdges().size(); ++i) {
             config.inConfs[i].inPlace = -1;
             config.inConfs[i].constant = false;
+<<<<<<< HEAD
             config.inConfs[i].desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(itr->second->createDesc(
                                         inputPrecision, getParentEdgeAt(i)->getShape().getStaticDims()));
+=======
+            config.inConfs[i].desc = MemoryDescUtils::applyUndefinedOffset(itr->second->createDesc(
+                                        inputPrecision, getInputShapeAtPort(i).getStaticDims()));
+>>>>>>> getShape() removing started
         }
         supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::ref);
         if (itr->first != LayoutType::nspc) {
@@ -251,7 +256,7 @@ void MKLDNNConcatNode::selectOptimalPrimitiveDescriptor() {
     }
 
     size_t maxCount = 0;
-    auto outDims = getChildEdgeAt(0)->getShape().getStaticDims();
+    auto outDims = getOutputShapeAtPort(0).getStaticDims();
     LayoutType convertTo = LayoutType::ncsp;
     for (auto &it : formatFrequency) {
         if (it.second > maxCount) {
@@ -273,7 +278,7 @@ void MKLDNNConcatNode::selectOptimalPrimitiveDescriptor() {
                 break;
             }
             for (size_t i = 0; i < getParentEdges().size(); i++) {
-                auto& inpDims = getParentEdgeAt(i)->getShape().getStaticDims();
+                auto& inpDims = getInputShapeAtPort(i).getStaticDims();
                 if (inpDims[1] % item.first != 0) {
                     convertTo = LayoutType::ncsp;
                     break;
@@ -349,7 +354,7 @@ void MKLDNNConcatNode::createPrimitive() {
         }
 
         auto desc = srcMemPtr->GetDescWithType<DnnlMemoryDesc>()->getDnnlDesc();
-        auto& dims = getParentEdgeAt(i)->getShape().getStaticDims();
+        auto& dims = getInputShapeAtPort(i).getStaticDims();
         for (size_t j = 0; j < dims.size(); j++) {
             desc.data.dims[j] = dims[j];
         }
@@ -358,7 +363,7 @@ void MKLDNNConcatNode::createPrimitive() {
     }
 
     auto desc = getChildEdgeAt(0)->getMemory().GetDescWithType<DnnlMemoryDesc>()->getDnnlDesc();
-    auto& dims = getChildEdgeAt(0)->getShape().getStaticDims();
+    auto& dims = getOutputShapeAtPort(0).getStaticDims();
     for (size_t i = 0; i < dims.size(); i++) {
         desc.data.dims[i] = dims[i];
         desc.data.padded_dims[i] = dims[i];

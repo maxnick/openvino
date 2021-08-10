@@ -77,7 +77,7 @@ void MKLDNNReorderNode::createPrimitive() {
     if (getSelectedPrimitiveDescriptor() == nullptr)
         IE_THROW() << "Preferable primitive descriptor is not set.";
 
-    auto inDims = getParentEdgeAt(0)->getShape().getStaticDims();
+    auto inDims = getInputShapeAtPort(0).getStaticDims();
 
     if (!isOptimized) {
         const auto &parentMem = getParentEdgeAt(0)->getMemory();
@@ -174,7 +174,7 @@ void MKLDNNReorderNode::optimizedNcsp2Nspc() {
     auto parentEdge = getParentEdgeAt(0);
     auto childEdge = getChildEdgeAt(0);
 
-    auto inDims = parentEdge->getShape().getStaticDims();
+    auto inDims = getInputShapeAtPort(0).getStaticDims();
     const size_t ndims = inDims.size();
     const size_t DIM0 = inDims[0];
     const size_t DIM1 = inDims[1];
@@ -205,7 +205,7 @@ void MKLDNNReorderNode::optimizedNspc2Ncsp() {
     auto parentEdge = getParentEdgeAt(0);
     auto childEdge = getChildEdgeAt(0);
 
-    auto inDims = parentEdge->getShape().getStaticDims();
+    auto inDims = getInputShapeAtPort(0).getStaticDims();
     const size_t ndims = inDims.size();
     const size_t DIM0 = inDims[0];
     const size_t DIM1 = inDims[1];

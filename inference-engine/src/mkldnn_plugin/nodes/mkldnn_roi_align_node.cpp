@@ -73,30 +73,30 @@ void MKLDNNROIAlignNode::getSupportedDescriptors() {
     if (getChildEdges().empty())
         IE_THROW() << errorPrefix << "has incorrect number of output edges: " << getChildEdges().size();
 
-    if (getParentEdgeAt(0)->getShape().getRank() != 4) {
-        IE_THROW() << errorPrefix << "doesn't support 0th input with rank: " << getParentEdgeAt(0)->getShape().getRank();
+    if (getInputShapeAtPort(0).getRank() != 4) {
+        IE_THROW() << errorPrefix << "doesn't support 0th input with rank: " << getInputShapeAtPort(0).getRank();
     }
 
-    if (getParentEdgeAt(1)->getShape().getRank() != 2) {
-        IE_THROW() << errorPrefix << "doesn't support 1st input with rank: " << getParentEdgeAt(1)->getShape().getRank();
+    if (getInputShapeAtPort(1).getRank() != 2) {
+        IE_THROW() << errorPrefix << "doesn't support 1st input with rank: " << getInputShapeAtPort(1).getRank();
     }
 
     if (getParentEdgeAt(2)->getShape().getRank() != 1) {
         IE_THROW() << errorPrefix << "doesn't support 2nd input with rank: " << getParentEdgeAt(2)->getShape().getRank();
     }
 
-    if (getChildEdgeAt(0)->getShape().getRank() != 4) {
-        IE_THROW() << errorPrefix << "doesn't support output with rank: " << getChildEdgeAt(0)->getShape().getRank();
+    if (getOutputShapeAtPort(0).getRank() != 4) {
+        IE_THROW() << errorPrefix << "doesn't support output with rank: " << getOutputShapeAtPort(0).getRank();
     }
 
-    if (getParentEdgeAt(1)->getShape().getStaticDims()[1] != 4) {
+    if (getInputShapeAtPort(1).getStaticDims()[1] != 4) {
         IE_THROW() << errorPrefix << "has invalid shape on 1st input: ["
-                           << getParentEdgeAt(1)->getShape().getStaticDims()[0] << "," << getParentEdgeAt(1)->getShape().getStaticDims()[1] << "]";
+                           << getInputShapeAtPort(1).getStaticDims()[0] << "," << getInputShapeAtPort(1).getStaticDims()[1] << "]";
     }
 
-    if (getParentEdgeAt(1)->getShape().getStaticDims()[0] != getParentEdgeAt(2)->getShape().getStaticDims()[0]) {
+    if (getInputShapeAtPort(1).getStaticDims()[0] != getParentEdgeAt(2)->getShape().getStaticDims()[0]) {
         IE_THROW() << errorPrefix << "has different sizes of inputs for proposals ("
-                           << getParentEdgeAt(1)->getShape().getStaticDims()[0] << ") and indexes ("
+                           << getInputShapeAtPort(1).getStaticDims()[0] << ") and indexes ("
                            << getParentEdgeAt(2)->getShape().getStaticDims()[0] << ")";
     }
 }
@@ -129,12 +129,12 @@ void MKLDNNROIAlignNode::initSupportedPrimitiveDescriptors() {
     };
 
     for (auto fmts : supportedFormats) {
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType, fmts.first);
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(1)->getShape().getStaticDims(), memory::data_type::f32,
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType, fmts.first);
+        config.inConfs[1].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(1).getStaticDims(), memory::data_type::f32,
                                                                memory::format_tag::nc);
         config.inConfs[2].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(2)->getShape().getStaticDims(), memory::data_type::s32,
                                                                memory::format_tag::x);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType, fmts.second);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outputDataType, fmts.second);
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
     }
 }

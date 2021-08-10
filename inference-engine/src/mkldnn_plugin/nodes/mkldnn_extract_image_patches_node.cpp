@@ -419,12 +419,12 @@ void MKLDNNExtractImagePatchesNode::execute(mkldnn::stream strm) {
     char *dst_data = reinterpret_cast<char *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
     const size_t dtype_size = getOriginalInputPrecisionAtPort(0).size();
 
-    const auto& inDims = getParentEdgeAt(0)->getShape().getStaticDims();
+    const auto& inDims = getInputShapeAtPort(0).getStaticDims();
     const size_t IC = inDims[1];
     const size_t IH = inDims[2];
     const size_t IW = inDims[3];
 
-    const auto& outDims = getChildEdgesAtPort(0)[0]->getShape().getStaticDims();
+    const auto& outDims = getOutputShapeAtPort(0).getStaticDims();
     const size_t OB = outDims[0];
     const size_t OH = outDims[2];
     const size_t OW = outDims[3];

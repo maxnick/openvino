@@ -55,10 +55,10 @@ void MKLDNNReorgYoloNode::execute(mkldnn::stream strm) {
     const auto *src_data = reinterpret_cast<const float *>(getParentEdgeAt(0)->getMemoryPtr()->GetPtr());
     auto *dst_data = reinterpret_cast<float *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
 
-    int IW = (getParentEdgeAt(0)->getShape().getRank() > 3) ? getParentEdgeAt(0)->getShape().getStaticDims()[3] : 1;
-    int IH = (getParentEdgeAt(0)->getShape().getRank() > 2) ? getParentEdgeAt(0)->getShape().getStaticDims()[2] : 1;
-    int IC = (getParentEdgeAt(0)->getShape().getRank() > 1) ? getParentEdgeAt(0)->getShape().getStaticDims()[1] : 1;
-    int B  = (getParentEdgeAt(0)->getShape().getRank() > 0) ? getParentEdgeAt(0)->getShape().getStaticDims()[0] : 1;
+    int IW = (getInputShapeAtPort(0).getRank() > 3) ? getInputShapeAtPort(0).getStaticDims()[3] : 1;
+    int IH = (getInputShapeAtPort(0).getRank() > 2) ? getInputShapeAtPort(0).getStaticDims()[2] : 1;
+    int IC = (getInputShapeAtPort(0).getRank() > 1) ? getInputShapeAtPort(0).getStaticDims()[1] : 1;
+    int B  = (getInputShapeAtPort(0).getRank() > 0) ? getInputShapeAtPort(0).getStaticDims()[0] : 1;
 
     int ic_off = IC / (stride * stride);
     int ih_off = IH * stride;

@@ -153,7 +153,7 @@ bool MKLDNNDeconvolutionNode::canBeExecutedInInt8() const {
     if (!withGroups && stride.back() > 3)
         return false;
     if (!impl::cpu::x64::mayiuse(impl::cpu::x64::avx512_common)) {
-        auto inDims = getChildEdgeAt(0)->getShape().getStaticDims();
+        auto inDims = getOutputShapeAtPort(0).getStaticDims();
         // heuristicConst = 2^26
         // heuristicParam = IC^2 * SP
         auto heuristicConst = 67108864;
@@ -232,8 +232,8 @@ void MKLDNNDeconvolutionNode::getSupportedDescriptors() {
     for (int i = 0; i < paddingR.size(); i++) {
         int with_group = getAlgorithm() == DeconvolutionGrouped ? 1 : 0;
         int krn = weightDims[with_group + 2 + i];
-        int src = getChildEdgeAt(0)->getShape().getStaticDims()[2 + i];
-        int dst = getParentEdgeAt(0)->getShape().getStaticDims()[2 + i];
+        int src = getOutputShapeAtPort(0).getStaticDims()[2 + i];
+        int dst = getInputShapeAtPort(0).getStaticDims()[2 + i];
 
         krn = (krn - 1)*(dilation[i] + 1) + 1;
         int calc_dst = (src - krn + paddingL[i]) / stride[i] + 1;
@@ -244,14 +244,14 @@ void MKLDNNDeconvolutionNode::getSupportedDescriptors() {
         //  WA: if int8 deconvolution is supported, we create internal weights blob in IO format
         std::swap(weightDims[withGroups + 0], weightDims[withGroups + 1]);
         internalBlobs.push_back(createWeiBlobAsIO(weightDims));
-        auto format = getParentEdgeAt(0)->getShape().getRank() == 5 ? dnnl::memory::format_tag::ndhwc : dnnl::memory::format_tag::nhwc;
-        DnnlMemoryDesc in_candidate(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType, format);
-        DnnlMemoryDesc out_candidate(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType, format);
+        auto format = getInputShapeAtPort(0).getRank() == 5 ? dnnl::memory::format_tag::ndhwc : dnnl::memory::format_tag::nhwc;
+        MKLDNNMemoryDesc in_candidate(getInputShapeAtPort(0).getStaticDims(), inputDataType, format);
+        MKLDNNMemoryDesc out_candidate(getOutputShapeAtPort(0).getStaticDims(), outputDataType, format);
         createDescriptor({&in_candidate}, {&out_candidate});
     } else {
-        for (auto format : getAvailableFormatsForDims(getParentEdgeAt(0)->getShape())) {
-            DnnlMemoryDesc in_candidate(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType, format);
-            DnnlMemoryDesc out_candidate(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType, format);
+        for (auto format : getAvailableFormatsForDims(getInputShapeAtPort(0))) {
+            MKLDNNMemoryDesc in_candidate(getInputShapeAtPort(0).getStaticDims(), inputDataType, format);
+            MKLDNNMemoryDesc out_candidate(getOutputShapeAtPort(0).getStaticDims(), outputDataType, format);
             createDescriptor({&in_candidate}, {&out_candidate});
         }
     }

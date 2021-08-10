@@ -108,7 +108,7 @@ void MKLDNNTopKNode::execute(mkldnn::stream strm) {
         } else {
             dst_idx = reinterpret_cast<int *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
         }
-        SizeVector dstDims = getChildEdgesAtPort(0)[0]->getShape().getStaticDims();
+        SizeVector dstDims = getOutputShapeAtPort(0).getStaticDims();
 
         if (dstDims[axis] != static_cast<size_t>(src_k)) {
             std::string errorMsg = "Output tensor dimension mismatch";

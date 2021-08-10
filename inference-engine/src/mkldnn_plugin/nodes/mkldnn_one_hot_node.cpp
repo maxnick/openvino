@@ -125,13 +125,13 @@ void MKLDNNOneHotNode::one_hot(size_t prefix_size, size_t suffix_size) {
 
 void MKLDNNOneHotNode::execute(mkldnn::stream strm) {
     std::size_t prefix_size = 1;
-    auto input_dims = getParentEdgeAt(0)->getShape().getStaticDims();
+    auto input_dims = getInputShapeAtPort(0).getStaticDims();
 
     std::size_t actual_axis = (axis == -1) ? src_dims.size() : axis;
     for (size_t i = 0; i < actual_axis; ++i)
         prefix_size *= input_dims[i];
 
-    std::size_t suffix_size = getParentEdgeAt(0)->getShape().GetShape().getElementsCount() / prefix_size;
+    std::size_t suffix_size = getInputShapeAtPort(0).GetShape().getElementsCount() / prefix_size;
 
     OneHotContext ctx = {this, prefix_size, suffix_size};
     OV_SWITCH(MKLDNNPlugin, OneHotExecute, ctx, output_precision.size(),

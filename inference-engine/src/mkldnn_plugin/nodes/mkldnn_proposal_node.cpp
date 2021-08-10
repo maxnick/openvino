@@ -165,7 +165,7 @@ void MKLDNNProposalNode::execute(mkldnn::stream strm) {
         if (store_prob)
             outProbData = reinterpret_cast <float *>(getChildEdgesAtPort(PROBABILITIES_OUT_IDX)[0]->getMemoryPtr()->GetPtr());
 
-        auto inProbDims = getParentEdgeAt(0)->getShape().getStaticDims();
+        auto inProbDims = getInputShapeAtPort(0).getStaticDims();
         const size_t imgInfoSize = getParentEdgeAt(2)->getShape().getStaticDims()[0];
 
         // input image height & width

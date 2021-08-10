@@ -113,17 +113,17 @@ void MKLDNNPoolingNode::getSupportedDescriptors() {
     effective_pad_begin = data_pad_begin;
     effective_pad_end.resize(data_pad_end.size());
 
-    auto parentDims = getParentEdgeAt(0)->getShape().getStaticDims();
-    auto childDims = getChildEdgeAt(0)->getShape().getStaticDims();
-    const size_t inputRank = getParentEdgeAt(0)->getShape().getRank();
+    auto parentDims = getInputShapeAtPort(0).getStaticDims();
+    auto childDims = getOutputShapeAtPort(0).getStaticDims();
+    const size_t inputRank = getInputShapeAtPort(0).getRank();
 
     if ((inputRank < 4) || (inputRank > 5))
         IE_THROW() << "Pooling layer. Unsupported mode. Only 4D and 5D blobs are supported as input.";
 
     for (int i = 0; i < effective_pad_end.size(); i++) {
         int krn = kernel[i];
-        int src = getParentEdgeAt(0)->getShape().getStaticDims()[2 + i];
-        int dst = getChildEdgeAt(0)->getShape().getStaticDims()[2 + i];
+        int src = getInputShapeAtPort(0).getStaticDims()[2 + i];
+        int dst = getOutputShapeAtPort(0).getStaticDims()[2 + i];
 
         int calc_dst = (src - krn + data_pad_begin[i]) / stride[i] + 1;
         effective_pad_end[i] = (dst - calc_dst) * stride[i];
@@ -151,9 +151,9 @@ void MKLDNNPoolingNode::getSupportedDescriptors() {
             outputDataType = memory::data_type::f32;
         }
         // It doesn't support any format
-        for (auto format : getAvailableFormatsForDims(getParentEdgeAt(0)->getShape())) {
-            const auto in_candidate = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(parentDims, inputDataType, format);
-            const auto out_candidate = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(childDims, outputDataType, format);
+        for (auto format : getAvailableFormatsForDims(getInputShapeAtPort(0))) {
+            const auto in_candidate = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(parentDims, inputDataType, format);
+            const auto out_candidate = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(childDims, outputDataType, format);
             createDescriptor({in_candidate.get()}, {out_candidate.get()});
         }
     }

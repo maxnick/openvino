@@ -93,7 +93,7 @@ void MKLDNNGatherTreeNode::gatherTreeKernel() noexcept {
     SizeVector step_idx_dims = getParentEdgeAt(GATHER_TREE_STEP_IDX)->getShape().getStaticDims();
     SizeVector parent_idx_dims = getParentEdgeAt(GATHER_TREE_PARENT_IDX)->getShape().getStaticDims();
     SizeVector max_seq_len_dims = getParentEdgeAt(GATHER_TREE_MAX_SEQ_LEN)->getShape().getStaticDims();
-    SizeVector final_idx_dims = getChildEdgesAtPort(0)[0]->getShape().getStaticDims();
+    SizeVector final_idx_dims = getOutputShapeAtPort(0).getStaticDims();
     int32_t max_time = step_idx_dims[0];
     const size_t batch_size = step_idx_dims[1];
     const size_t beam_width = step_idx_dims[2];

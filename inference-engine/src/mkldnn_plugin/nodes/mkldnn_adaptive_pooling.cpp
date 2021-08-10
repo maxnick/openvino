@@ -69,19 +69,19 @@ void MKLDNNAdaptivePoolingNode::getSupportedDescriptors() {
     if (getChildEdges().size() != (algorithm == AdaptivePoolingMax ? 2 : 1))
         IE_THROW() << errorPrefix << "has incorrect number of output edges: " << getParentEdges().size();
 
-    auto parentDims = getParentEdgeAt(0)->getShape().getStaticDims();
-    auto childDims = getChildEdgeAt(0)->getShape().getStaticDims();
+    auto parentDims = getInputShapeAtPort(0).getStaticDims();
+    auto childDims = getOutputShapeAtPort(0).getStaticDims();
 
     spatialDimsCount = parentDims.size() - 2;
     if (!one_of(spatialDimsCount, 1, 2, 3)) {
-        IE_THROW() << errorPrefix << "doesn't support 0th input with rank: " << getParentEdgeAt(0)->getShape().getRank();
+        IE_THROW() << errorPrefix << "doesn't support 0th input with rank: " << getInputShapeAtPort(0).getRank();
     }
 
-    if (getParentEdgeAt(1)->getShape().getRank() != 1) {
-        IE_THROW() << errorPrefix << "doesn't support 1st input with rank: " << getParentEdgeAt(1)->getShape().getRank();
+    if (getInputShapeAtPort(1).getRank() != 1) {
+        IE_THROW() << errorPrefix << "doesn't support 1st input with rank: " << getInputShapeAtPort(1).getRank();
     }
 
-    if (getChildEdgeAt(0)->getShape().getRank() != getParentEdgeAt(0)->getShape().getRank()) {
+    if (getOutputShapeAtPort(0).getRank() != getInputShapeAtPort(0).getRank()) {
         IE_THROW() << errorPrefix << "must keep data rank";
     }
 }
@@ -99,7 +99,7 @@ void MKLDNNAdaptivePoolingNode::initSupportedPrimitiveDescriptors() {
     config.outConfs.resize((algorithm == Algorithm::AdaptivePoolingAvg ? 1 : 2));
 
     std::vector<LayoutType> dataFormats{ LayoutType::ncsp };
-    if (getParentEdgeAt(0)->getShape().getStaticDims()[1] != 1) {
+    if (getInputShapeAtPort(0).getStaticDims()[1] != 1) {
         dataFormats.push_back(LayoutType::nspc);
         dataFormats.push_back(LayoutType::nCsp16c);
         dataFormats.push_back(LayoutType::nCsp8c);

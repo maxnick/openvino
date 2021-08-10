@@ -38,15 +38,15 @@ void MKLDNNSoftMaxNode::getSupportedDescriptors() {
     if (!getChildEdges().size())
         IE_THROW() << "Incorrect number of output edges for layer " << getName();
 
-    if (getParentEdgeAt(0)->getShape().getRank() == 3) {
-        MemoryDescPtr in_candidate = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType,
+    if (getInputShapeAtPort(0).getRank() == 3) {
+        MemoryDescPtr in_candidate = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType,
                                                                                  memory::format_tag::abc);
         createDescriptor({in_candidate.get()}, {});
     }
 
-    for (auto format : getAvailableFormatsForDims(getParentEdgeAt(0)->getShape())) {
-        const auto dims = getParentEdgeAt(0)->getShape().getStaticDims();
-        if (DnnlMemoryDesc(dims, inputDataType, format).blocksExtended())
+    for (auto format : getAvailableFormatsForDims(getInputShapeAtPort(0))) {
+        const auto dims = getInputShapeAtPort(0).getStaticDims();
+        if (MKLDNNMemoryDesc(dims, inputDataType, format).blocksExtended())
             continue;
 
         MemoryDescPtr in_candidate = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(dims, inputDataType, format);

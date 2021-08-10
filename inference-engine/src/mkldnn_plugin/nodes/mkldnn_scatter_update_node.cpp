@@ -80,7 +80,7 @@ void MKLDNNScatterUpdateNode::initSupportedPrimitiveDescriptors() {
     auto srcDataDim = getParentEdgeAt(DATA_ID)->getShape().getStaticDims();
     auto indicesDim = getParentEdgeAt(INDICES_ID)->getShape().getStaticDims();
     auto updateDim = getParentEdgeAt(UPDATE_ID)->getShape().getStaticDims();
-    auto dstDataDim = getChildEdgeAt(0)->getShape().getStaticDims();
+    auto dstDataDim = getOutputShapeAtPort(0).getStaticDims();
 
     size_t srcRank = srcDataDim.size();
     size_t indicesRank = indicesDim.size();
@@ -209,14 +209,14 @@ void MKLDNNScatterUpdateNode::initSupportedPrimitiveDescriptors() {
         if (axisRelaxed)
             config.inConfs[AXIS_ID].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(AXIS_ID)->getShape().getStaticDims(),
                 MKLDNNExtensionUtils::IEPrecisionToDataType(axisPrec), memory::format_tag::x);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), dataType, outFormat);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), dataType, outFormat);
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
     };
 
     pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(DATA_ID)->getShape().getRank()),
              MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(INDICES_ID)->getShape().getRank()),
              MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(UPDATE_ID)->getShape().getRank()),
-             MKLDNNExtensionUtils::GetPlainFormatByRank(getChildEdgeAt(0)->getShape().getRank()));
+             MKLDNNExtensionUtils::GetPlainFormatByRank(getOutputShapeAtPort(0).getRank()));
 }
 
 void MKLDNNScatterUpdateNode::createPrimitive() {

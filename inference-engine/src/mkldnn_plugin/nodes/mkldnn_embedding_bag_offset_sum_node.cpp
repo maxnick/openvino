@@ -122,8 +122,8 @@ void MKLDNNEmbeddingBagOffsetSumNode::execute(mkldnn::stream strm) {
     if (_withWeights)
         weightsData = reinterpret_cast<const uint8_t *>(getParentEdgeAt(PER_SAMPLE_WEIGHTS_IDX)->getMemoryPtr()->GetPtr());
 
-    MKLDNNEmbeddingBagSumNode::execute(srcData, weightsData, dstData, getParentEdgeAt(0)->getMemory().getDesc().getPrecision(),
-                                       getParentEdgeAt(0)->getShape().getStaticDims(), getChildEdgeAt(0)->getShape().getStaticDims());
+    MKLDNNEmbeddingBagSumNode::execute(srcData, weightsData, dstData, getParentEdgeAt(0)->getMemory().GetDesc().getPrecision(),
+                                       getInputShapeAtPort(0).getStaticDims(), getOutputShapeAtPort(0).getStaticDims());
 }
 
 bool MKLDNNEmbeddingBagOffsetSumNode::created() const {
