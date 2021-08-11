@@ -196,7 +196,6 @@ void MKLDNNConvolutionNode::getSupportedDescriptors() {
         IE_THROW() << "Incorrect number of output edges for layer " << getName();
 
     int ndims = getInputShapeAtPort(0).getRank();
-    MKLDNNDims weightsDims = MKLDNNDims(weightDims);
 
     withDWConv = isFusedWith(Convolution);
 
@@ -227,7 +226,7 @@ void MKLDNNConvolutionNode::getSupportedDescriptors() {
 
             for (int j = 0; j < paddingR.size(); j++) {
                 int with_group = isGrouped ? 1 : 0;
-                int krn = weightsDims[with_group + 2 + j];
+                int krn = weightDims[with_group + 2 + j];
                 int src = getInputShapeAtPort(0).getStaticDims()[2 + j];
                 int dst = getOutputShapeAtPort(0).getStaticDims()[2 + j];
 
@@ -494,9 +493,7 @@ void MKLDNNConvolutionNode::createDescriptor(const std::vector<const MemoryDesc*
         wdt = memory::data_type::s8;
     }
 
-    MKLDNNDims blocked_weightDims(weightDims);
-    MKLDNNDims blocked_biasesDims(biasesDims);
-    mkldnn::memory::desc wgh_candidate(blocked_weightDims, wdt, memory::format_tag::any);
+    mkldnn::memory::desc wgh_candidate(MKLDNNExtensionUtils::convertToDnnlDims(weightDims), wdt, memory::format_tag::any);
 
     std::vector<mkldnn::algorithm> algorithms;
 
@@ -508,7 +505,7 @@ void MKLDNNConvolutionNode::createDescriptor(const std::vector<const MemoryDesc*
         try {
             std::shared_ptr<mkldnn::convolution_forward::desc> conv_desc;
             if (withBiases) {
-                mkldnn::memory::desc bias_candidate(blocked_biasesDims, bdt, memory::format_tag::any);
+                mkldnn::memory::desc bias_candidate(MKLDNNExtensionUtils::convertToDnnlDims(biasesDims), bdt, memory::format_tag::any);
 
                 conv_desc.reset(new convolution_forward::desc(prop_kind::forward_scoring, alg,
                             inDesc, wgh_candidate, bias_candidate, outDesc,

@@ -11,7 +11,6 @@
 
 #include "mkldnn.hpp"
 #include "mkldnn/iml_type_mapper.h"
-#include "mkldnn_dims.h"
 #include "mkldnn_edge.h"
 #include "mkldnn_memory.h"
 #include "ie_parallel.hpp"
