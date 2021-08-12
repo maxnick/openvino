@@ -98,7 +98,7 @@ void MKLDNNMemory::Create(MemoryDescPtr desc, const void* data, bool pads_zeroin
     }
 
     if (pMemDesc->isDefined()) {
-        Create(MemoryDescUtils::convertToMKLDNNMemoryDesc(*pMemDesc)->getMklDesc(), data, pads_zeroing);
+        Create(MemoryDescUtils::convertToOnednnMemoryDesc(*pMemDesc)->getMklDesc(), data, pads_zeroing);
     } else {
         //delayed dynamic allocation
         size_t maxMemSize = pMemDesc->getMaxMemSize();
@@ -140,11 +140,11 @@ void *MKLDNNMemory::GetPtr() const  {
 }
 
 template<>
-MKLDNNMemoryDescPtr MKLDNNMemory::GetDescWithType<MKLDNNMemoryDesc, 0, 0>() const {
+OnednnMemoryDescPtr MKLDNNMemory::GetDescWithType<OnednnMemoryDesc, 0, 0>() const {
     if (pMemDesc->getType() & MemoryDescType::Mkldnn) {
-        return std::unique_ptr<MKLDNNMemoryDesc>(dynamic_cast<MKLDNNMemoryDesc *>(pMemDesc->clone().release()));
+        return std::unique_ptr<OnednnMemoryDesc>(dynamic_cast<OnednnMemoryDesc *>(pMemDesc->clone().release()));
     } else if (pMemDesc->getType() == MemoryDescType::Blocked) {
-        return MemoryDescUtils::convertToMKLDNNMemoryDesc(*(pMemDesc->as<BlockedMemoryDesc>()));
+        return MemoryDescUtils::convertToOnednnMemoryDesc(*(pMemDesc->as<BlockedMemoryDesc>()));
     } else {
         IE_THROW() << "Can not convert unsupported memory descriptor";
     }

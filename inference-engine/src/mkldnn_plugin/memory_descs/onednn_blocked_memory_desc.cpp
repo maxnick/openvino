@@ -717,7 +717,7 @@ bool OnednnBlockedMemoryDesc::isSame(mkldnn::memory::format_tag fmt) const {
         return false;
 
     if (desc.data.format_kind != dnnl_blocked || refDesc.data.format_kind != dnnl_blocked)
-        IE_THROW() << "MKLDNNMemoryDesc::isSame is not implemented for non blocked memory format";
+        IE_THROW() << "OnednnMemoryDesc::isSame is not implemented for non blocked memory format";
 
     auto actualBlkDesc = desc.data.format_desc.blocking;
     auto refBlkDesc = refDesc.data.format_desc.blocking;

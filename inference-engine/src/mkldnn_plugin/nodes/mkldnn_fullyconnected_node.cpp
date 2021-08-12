@@ -238,7 +238,7 @@ std::shared_ptr<mkldnn::primitive_attr> MKLDNNFullyConnectedNode::initPrimitiveA
     return attr;
 }
 
-// WA: creation MKLDNNMemoryDesc with format == any is prohibited
+// WA: creation OnednnMemoryDesc with format == any is prohibited
 // so we create mkldnn::memory::desc directly
 // we need specific method and can't remove createDescriptor from base class because its used into initDescriptor
 void MKLDNNFullyConnectedNode::createDescriptorInternal(const mkldnn::memory::desc &inputDesc,
@@ -286,7 +286,7 @@ void MKLDNNFullyConnectedNode::createDescriptorInternal(const mkldnn::memory::de
 
 void MKLDNNFullyConnectedNode::createDescriptor(const std::vector<const MemoryDesc*> &inputDesc,
                                                 const std::vector<const MemoryDesc*> &outputDesc) {
-    createDescriptorInternal(MemoryDescUtils::convertToMKLDNNMemoryDesc(*inputDesc[0]), MemoryDescUtils::convertToMKLDNNMemoryDesc(*outputDesc[0]));
+    createDescriptorInternal(MemoryDescUtils::convertToOnednnMemoryDesc(*inputDesc[0]), MemoryDescUtils::convertToOnednnMemoryDesc(*outputDesc[0]));
 }
 
 std::unique_ptr<MemoryDesc> MKLDNNFullyConnectedNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {

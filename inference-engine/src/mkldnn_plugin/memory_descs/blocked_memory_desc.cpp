@@ -9,7 +9,7 @@ using namespace MKLDNNPlugin;
 
 bool BlockedMemoryDesc::isCompatible(const BlockedMemoryDesc &rhs) const {
     if (this->getType() == OneDnnBlocked && rhs.getType() == OneDnnBlocked) {
-        return dynamic_cast<const OnednnBlockedMemoryDesc *>(this)->isCompatible(rhs);
+        return this->isCompatible(rhs);
     }
 
     if (this->getShape() != rhs.getShape() || this->getPrecision() != rhs.getPrecision())

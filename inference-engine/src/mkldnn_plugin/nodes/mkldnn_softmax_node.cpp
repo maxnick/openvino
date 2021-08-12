@@ -39,17 +39,17 @@ void MKLDNNSoftMaxNode::getSupportedDescriptors() {
         IE_THROW() << "Incorrect number of output edges for layer " << getName();
 
     if (getParentEdgeAt(0)->getShape().getRank() == 3) {
-        MemoryDescPtr in_candidate = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType,
+        MemoryDescPtr in_candidate = MKLDNNPlugin::make_unique<OnednnMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType,
                                                                                  memory::format_tag::abc);
         createDescriptor({in_candidate.get()}, {});
     }
 
     for (auto format : getAvailableFormatsForDims(getParentEdgeAt(0)->getShape())) {
         const auto dims = getParentEdgeAt(0)->getShape().getStaticDims();
-        if (MKLDNNMemoryDesc(dims, inputDataType, format).blocksExtended())
+        if (OnednnMemoryDesc(dims, inputDataType, format).blocksExtended())
             continue;
 
-        MemoryDescPtr in_candidate = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(dims, inputDataType, format);
+        MemoryDescPtr in_candidate = MKLDNNPlugin::make_unique<OnednnMemoryDesc>(dims, inputDataType, format);
 
         createDescriptor({in_candidate.get()}, {});
     }
@@ -121,7 +121,7 @@ bool MKLDNNSoftMaxNode::created() const {
 
 void MKLDNNSoftMaxNode::createDescriptor(const std::vector<const MemoryDesc*> &inputDesc,
                                          const std::vector<const MemoryDesc*> &outputDesc) {
-    MKLDNNMemoryDesc in_candidate = MemoryDescUtils::convertToMKLDNNMemoryDesc(*inputDesc[0]);
+    OnednnMemoryDesc in_candidate = MemoryDescUtils::convertToOnednnMemoryDesc(*inputDesc[0]);
 
     MKLDNNDescriptor desc(std::shared_ptr<softmax_forward::desc>(
             new softmax_forward::desc(prop_kind::forward_scoring, in_candidate, axis)));

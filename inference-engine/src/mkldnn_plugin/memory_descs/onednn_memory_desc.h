@@ -9,7 +9,7 @@
 /**
  * @brief
  *
- * MKLDNNMemoryDesc - the descriptor of tensor representation in memory. Describes all required information
+ * OnednnMemoryDesc - the descriptor of tensor representation in memory. Describes all required information
  * for proper allocation and handling tensor in some buffer. The real memory is not present, just description.
  * This object answers on question how and where data with logical index [x1, x2, .. xN] placed in real buffer.
  * In the simplest case it describe a mapping between "logical offset" and "real offset".
@@ -22,9 +22,9 @@ namespace MKLDNNPlugin {
  * Represent internal plugin abstraction of tensor description
  *
  */
-class MKLDNNMemoryDesc : public virtual MemoryDesc {
+class OnednnMemoryDesc : public virtual MemoryDesc {
 public:
-    explicit MKLDNNMemoryDesc(const mkldnn::memory::desc& desc);
+    explicit OnednnMemoryDesc(const mkldnn::memory::desc& desc);
 
     mkldnn::memory::data_type getDataType() const {
         return static_cast<mkldnn::memory::data_type>(desc.data.data_type);
@@ -35,7 +35,7 @@ public:
     }
 
     std::unique_ptr<MemoryDesc> clone() const override {
-        return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(*this);
+        return MKLDNNPlugin::make_unique<OnednnMemoryDesc>(*this);
     }
 
     std::string serializeFormat() const override;
@@ -60,7 +60,7 @@ public:
     }
 
 protected:
-    MKLDNNMemoryDesc() : MemoryDesc(Shape{}, Mkldnn) {}
+    OnednnMemoryDesc() : MemoryDesc(Shape{}, Mkldnn) {}
     static constexpr size_t UNREACHABLE_DIM = std::numeric_limits<size_t>::max();
 
     mkldnn::memory::desc desc;
@@ -73,6 +73,6 @@ private:
     std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
 };
 
-using MKLDNNMemoryDescPtr = std::unique_ptr<MKLDNNMemoryDesc>;
+using OnednnMemoryDescPtr = std::unique_ptr<OnednnMemoryDesc>;
 
 }  // namespace MKLDNNPlugin

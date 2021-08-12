@@ -9,7 +9,7 @@
 
 namespace MKLDNNPlugin {
 
-class OnednnBlockedMemoryDesc : public BlockedMemoryDesc, public MKLDNNMemoryDesc {
+class OnednnBlockedMemoryDesc : public BlockedMemoryDesc, public OnednnMemoryDesc {
 public:
     OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape);
 

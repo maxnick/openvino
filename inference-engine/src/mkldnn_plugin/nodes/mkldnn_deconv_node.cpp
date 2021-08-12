@@ -43,8 +43,8 @@ bool MKLDNNDeconvolutionNode::isSupportedOperation(const std::shared_ptr<ngraph:
 
 MKLDNNDeconvolutionNode::MKLDNNDeconvolutionNode(const std::shared_ptr<ngraph::Node>& op,
                                                  const mkldnn::engine& eng, MKLDNNWeightsSharing::Ptr &cache) : MKLDNNNode(op, eng, cache) {
-    internalBlobDesc.emplace_back([&](primitive_desc_iterator &primitive_desc_it, size_t idx) -> MKLDNNMemoryDesc {
-        return MKLDNNMemoryDesc(primitive_desc_it.weights_desc(0));
+    internalBlobDesc.emplace_back([&](primitive_desc_iterator &primitive_desc_it, size_t idx) -> OnednnMemoryDesc {
+        return OnednnMemoryDesc(primitive_desc_it.weights_desc(0));
     });
     std::string errorMessage;
     if (isSupportedOperation(op, errorMessage)) {
@@ -245,13 +245,13 @@ void MKLDNNDeconvolutionNode::getSupportedDescriptors() {
         std::swap(weightDims[withGroups + 0], weightDims[withGroups + 1]);
         internalBlobs.push_back(createWeiBlobAsIO(weightDims));
         auto format = getParentEdgeAt(0)->getShape().getRank() == 5 ? dnnl::memory::format_tag::ndhwc : dnnl::memory::format_tag::nhwc;
-        MKLDNNMemoryDesc in_candidate(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType, format);
-        MKLDNNMemoryDesc out_candidate(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType, format);
+        OnednnMemoryDesc in_candidate(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType, format);
+        OnednnMemoryDesc out_candidate(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType, format);
         createDescriptor({&in_candidate}, {&out_candidate});
     } else {
         for (auto format : getAvailableFormatsForDims(getParentEdgeAt(0)->getShape())) {
-            MKLDNNMemoryDesc in_candidate(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType, format);
-            MKLDNNMemoryDesc out_candidate(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType, format);
+            OnednnMemoryDesc in_candidate(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType, format);
+            OnednnMemoryDesc out_candidate(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType, format);
             createDescriptor({&in_candidate}, {&out_candidate});
         }
     }
@@ -362,8 +362,8 @@ void MKLDNNDeconvolutionNode::createPrimitive() {
 
 void MKLDNNDeconvolutionNode::createDescriptor(const std::vector<const MemoryDesc*> &inputDesc,
                                                const std::vector<const MemoryDesc*> &outputDesc) {
-    const MKLDNNMemoryDesc in_candidate = MemoryDescUtils::convertToMKLDNNMemoryDesc(*inputDesc[0]);
-    const MKLDNNMemoryDesc out_candidate = MemoryDescUtils::convertToMKLDNNMemoryDesc(*outputDesc[0]);
+    const OnednnMemoryDesc in_candidate = MemoryDescUtils::convertToOnednnMemoryDesc(*inputDesc[0]);
+    const OnednnMemoryDesc out_candidate = MemoryDescUtils::convertToOnednnMemoryDesc(*outputDesc[0]);
 
     // grouping and autoblicking is not compatible
     if ((withGroups && !isDW) && (in_candidate.blocksExtended() || out_candidate.blocksExtended()))

@@ -2,37 +2,37 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "mkldnn_memory_desc.h"
+#include "onednn_memory_desc.h"
 #include "mkldnn_extension_utils.h"
 #include <common/memory_desc_wrapper.hpp>
 #include "mkldnn/ie_mkldnn.h"
 
 namespace MKLDNNPlugin {
 
-MKLDNNMemoryDesc::MKLDNNMemoryDesc(const mkldnn::memory::desc& desc) :
+OnednnMemoryDesc::OnednnMemoryDesc(const mkldnn::memory::desc& desc) :
     MemoryDesc(Shape(MKLDNNExtensionUtils::convertToSizeVector(desc.dims())), Mkldnn), desc(desc) {
     if (desc.data.format_kind == dnnl::impl::format_kind::any)
         IE_THROW(Unexpected) << "Memory format any is prohibited!";
 }
 
-size_t MKLDNNMemoryDesc::getMemSizeImp() const {
+size_t OnednnMemoryDesc::getMemSizeImp() const {
     return desc.get_size();
 }
 
-size_t MKLDNNMemoryDesc::getElementOffset(size_t elemNumber) const {
+size_t OnednnMemoryDesc::getElementOffset(size_t elemNumber) const {
     mkldnn::impl::memory_desc_wrapper wrapped(desc.data);
     return wrapped.off_l(elemNumber);
 }
 
-bool MKLDNNMemoryDesc::isCompatible(const MemoryDesc &rhs) const {
+bool OnednnMemoryDesc::isCompatible(const MemoryDesc &rhs) const {
     if (MemoryDescType::Mkldnn == rhs.getType()) {
-        return this->desc == rhs.as<MKLDNNMemoryDesc>()->desc;
+        return this->desc == rhs.as<OnednnMemoryDesc>()->desc;
     } else {
         return false;
     }
 }
 
-std::string MKLDNNMemoryDesc::serializeFormat() const {
+std::string OnednnMemoryDesc::serializeFormat() const {
     if (desc.data.format_kind == dnnl_format_kind_wino) {
         switch (desc.data.format_desc.wino_desc.wino_format) {
             case dnnl_wino_memory_format_t::dnnl_wino_wei_aaOIoi: return "wino_aaOIoi";
@@ -45,7 +45,7 @@ std::string MKLDNNMemoryDesc::serializeFormat() const {
     return "undef";
 }
 
-bool MKLDNNMemoryDesc::isDefinedImp() const {
+bool OnednnMemoryDesc::isDefinedImp() const {
     mkldnn::impl::memory_desc_wrapper wrappedThis(desc.data);
     if (!wrappedThis.is_blocking_desc()) {
         return true;
@@ -58,19 +58,19 @@ bool MKLDNNMemoryDesc::isDefinedImp() const {
     return wrappedThis.offset0() != Shape::UNDEFINED_DIM;
 }
 
-InferenceEngine::Precision MKLDNNMemoryDesc::getPrecision() const {
+InferenceEngine::Precision OnednnMemoryDesc::getPrecision() const {
     return MKLDNNExtensionUtils::DataTypeToIEPrecision(desc.data_type());
 }
 
-void MKLDNNMemoryDesc::setPrecision(InferenceEngine::Precision prc) {
+void OnednnMemoryDesc::setPrecision(InferenceEngine::Precision prc) {
     desc.data.data_type = static_cast<dnnl_data_type_t>(MKLDNNExtensionUtils::IEPrecisionToDataType(prc));
 }
 
-std::unique_ptr<MemoryDesc> MKLDNNMemoryDesc::cloneWithNewDimsImp(const std::vector<size_t> &dims) const {
+std::unique_ptr<MemoryDesc> OnednnMemoryDesc::cloneWithNewDimsImp(const std::vector<size_t> &dims) const {
     IE_THROW(Unexpected) << "Cannot clone non blocked oneDNN desc with new dims";
 }
 
-size_t MKLDNNMemoryDesc::getMaxMemSize() const {
+size_t OnednnMemoryDesc::getMaxMemSize() const {
     if (desc.data.format_kind != dnnl_blocked || shape.isStatic()) {
         return getCurrentSize();
     }

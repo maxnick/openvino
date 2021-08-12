@@ -10,7 +10,7 @@
 
 namespace MKLDNNPlugin {
 
-class MKLDNNMemoryDesc;
+class OnednnMemoryDesc;
 class BlockedMemoryDesc;
 class OnednnBlockedMemoryDesc;
 class CpuBlockedMemoryDesc;
@@ -19,25 +19,25 @@ class MKLDNNMemory;
 class MemoryDescUtils {
 public:
     /**
-     * @brief Creates OnednnBlockedMemoryDesc if desc is blocked, otherwise MKLDNNMemoryDesc
+     * @brief Creates OnednnBlockedMemoryDesc if desc is blocked, otherwise OnednnMemoryDesc
      * @param desc mkldnn::memory::desc from which one of the descriptors will be created
-     * @return pointer to OnednnBlockedMemoryDesc or MKLDNNMemoryDesc
+     * @return pointer to OnednnBlockedMemoryDesc or OnednnMemoryDesc
      */
     static MemoryDescPtr makeDescriptor(const mkldnn::memory::desc &desc);
 
     /**
-     * @brief Converts MemoryDesc to MKLDNNMemoryDesc
+     * @brief Converts MemoryDesc to OnednnMemoryDesc
      * @param desc MemoryDesc to be converted
-     * @return converted MKLDNNMemoryDesc
+     * @return converted OnednnMemoryDesc
      */
-    static std::unique_ptr<MKLDNNMemoryDesc> convertToMKLDNNMemoryDesc(const MemoryDesc& desc);
+    static std::unique_ptr<OnednnMemoryDesc> convertToOnednnMemoryDesc(const MemoryDesc& desc);
 
     /**
-     * @brief Converts BlockedMemoryDesc to MKLDNNMemoryDesc
+     * @brief Converts BlockedMemoryDesc to OnednnMemoryDesc
      * @param desc BlockedMemoryDesc to be converted
-     * @return converted MKLDNNMemoryDesc
+     * @return converted OnednnMemoryDesc
      */
-    static std::unique_ptr<MKLDNNMemoryDesc> convertToMKLDNNMemoryDesc(const CpuBlockedMemoryDesc& desc);
+    static std::unique_ptr<OnednnMemoryDesc> convertToOnednnMemoryDesc(const CpuBlockedMemoryDesc& desc);
 
     /**
      * @brief Converts InferenceEngine::TensorDesc to OnednnBlockedMemoryDesc

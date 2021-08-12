@@ -13,7 +13,7 @@
 #include <mkldnn_types.h>
 #include <cpu_shape.h>
 
-#include "memory_descs/mkldnn_memory_desc.h"
+#include "memory_descs/onednn_memory_desc.h"
 
 #include <string>
 #include <functional>

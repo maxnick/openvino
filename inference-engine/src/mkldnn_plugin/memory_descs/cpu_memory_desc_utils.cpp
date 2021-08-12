@@ -24,21 +24,21 @@ MemoryDescPtr MemoryDescUtils::makeDescriptor(const mkldnn::memory::desc &desc) 
     if (desc.data.format_kind == dnnl_blocked) {
         return std::unique_ptr<OnednnBlockedMemoryDesc>(new OnednnBlockedMemoryDesc(desc));
     } else {
-        return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(desc);
+        return MKLDNNPlugin::make_unique<OnednnMemoryDesc>(desc);
     }
 }
 
-std::unique_ptr<MKLDNNMemoryDesc> MemoryDescUtils::convertToMKLDNNMemoryDesc(const MemoryDesc& desc) {
+std::unique_ptr<OnednnMemoryDesc> MemoryDescUtils::convertToOnednnMemoryDesc(const MemoryDesc& desc) {
     if (MemoryDescType::Blocked == desc.getType()) {
-        return convertToMKLDNNMemoryDesc(*(desc.as<CpuBlockedMemoryDesc>()));
+        return convertToOnednnMemoryDesc(*(desc.as<CpuBlockedMemoryDesc>()));
     } else if (MemoryDescType::Mkldnn & desc.getType()) {
-        return std::unique_ptr<MKLDNNMemoryDesc>(dynamic_cast<MKLDNNMemoryDesc *>(desc.clone().release()));
+        return std::unique_ptr<OnednnMemoryDesc>(dynamic_cast<OnednnMemoryDesc *>(desc.clone().release()));
     } else {
-        IE_THROW() << "Cannot convert MemoryDesc to MKLDNNMemoryDesc";
+        IE_THROW() << "Cannot convert MemoryDesc to OnednnMemoryDesc";
     }
 }
 
-std::unique_ptr<MKLDNNMemoryDesc> MemoryDescUtils::convertToMKLDNNMemoryDesc(const CpuBlockedMemoryDesc& desc) {
+std::unique_ptr<OnednnMemoryDesc> MemoryDescUtils::convertToOnednnMemoryDesc(const CpuBlockedMemoryDesc& desc) {
     return std::unique_ptr<OnednnBlockedMemoryDesc>(new OnednnBlockedMemoryDesc(desc.getPrecision(), desc.getShape(), desc.getBlockDims(),
                                                               desc.getOrder(), desc.getOffsetPadding(), desc.getOffsetPaddingToData(), desc.getStrides()));
 }

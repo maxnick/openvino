@@ -96,18 +96,18 @@ void MKLDNNReorderNode::createPrimitive() {
             // oneDNN doesn't provide JIT reorder impl for non-avx2 targets so we fallback on simple c++ implementation which shows better perf
             canUseOptimizedNcsp2Nspc = true;
         } else {
-            createReorderPrimitive(srcMemPtr->GetDescWithType<MKLDNNMemoryDesc>()->getMklDesc(), srcMemPtr->GetPrimitive().get_data_handle(),
-                                   dstMemPtr->GetDescWithType<MKLDNNMemoryDesc>()->getMklDesc(), dstMemPtr->GetPrimitive().get_data_handle());
+            createReorderPrimitive(srcMemPtr->GetDescWithType<OnednnMemoryDesc>()->getMklDesc(), srcMemPtr->GetPrimitive().get_data_handle(),
+                                   dstMemPtr->GetDescWithType<OnednnMemoryDesc>()->getMklDesc(), dstMemPtr->GetPrimitive().get_data_handle());
         }
     }
 }
 
 void MKLDNNReorderNode::createReorderPrimitive(const mkldnn::memory::desc &srcDesc, void* srcPtr, const mkldnn::memory::desc &dstDesc, void* dstPtr) {
     src_blocked = std::make_shared<MKLDNNMemory>(getEngine());
-    src_blocked->Create(MKLDNNMemoryDesc(srcDesc), srcPtr, false);
+    src_blocked->Create(OnednnMemoryDesc(srcDesc), srcPtr, false);
 
     dst_blocked = std::make_shared<MKLDNNMemory>(getEngine());
-    dst_blocked->Create(MKLDNNMemoryDesc(dstDesc), dstPtr, false);
+    dst_blocked->Create(OnednnMemoryDesc(dstDesc), dstPtr, false);
 
     mkldnn::primitive_attr attr;
     auto createReorder = [&]() -> bool {
@@ -142,7 +142,7 @@ void MKLDNNReorderNode::createReorderPrimitive(const mkldnn::memory::desc &srcDe
             const auto newFormat = MKLDNNExtensionUtils::GetPlainFormatByRank(newDims.size());
 
             auto newDesc = mkldnn::memory::desc(MKLDNNExtensionUtils::convertToDnnlDims(newDims), src_blocked->GetDataType(), newFormat);
-            src_blocked->Create(MKLDNNMemoryDesc(newDesc), srcPtr, false);
+            src_blocked->Create(OnednnMemoryDesc(newDesc), srcPtr, false);
 
             success = createReorder();
         }
@@ -246,8 +246,8 @@ void MKLDNNReorderNode::setDynamicBatchLim(int lim) {
     if (prim) {
         auto &dstMemPtr = getChildEdgeAt(0)->getMemoryPtr();
         auto &srcMemPtr = getParentEdgeAt(0)->getMemoryPtr();
-        memory::desc src_d = srcMemPtr->GetDescWithType<MKLDNNMemoryDesc>()->getMklDesc();
-        memory::desc dst_d = dstMemPtr->GetDescWithType<MKLDNNMemoryDesc>()->getMklDesc();
+        memory::desc src_d = srcMemPtr->GetDescWithType<OnednnMemoryDesc>()->getMklDesc();
+        memory::desc dst_d = dstMemPtr->GetDescWithType<OnednnMemoryDesc>()->getMklDesc();
         void *src_data_hdl = srcMemPtr->GetPrimitive().get_data_handle();
         void *dst_data_hdl = dstMemPtr->GetPrimitive().get_data_handle();
 

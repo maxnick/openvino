@@ -481,8 +481,8 @@ bool MKLDNNConvolutionNode::created() const {
 
 void MKLDNNConvolutionNode::createDescriptor(const std::vector<const MemoryDesc*>& inputDesc,
                                              const std::vector<const MemoryDesc*>& outputDesc) {
-    const auto inDesc = MemoryDescUtils::convertToMKLDNNMemoryDesc(*inputDesc[0])->getMklDesc();
-    const auto outDesc = MemoryDescUtils::convertToMKLDNNMemoryDesc(*outputDesc[0])->getMklDesc();
+    const auto inDesc = MemoryDescUtils::convertToOnednnMemoryDesc(*inputDesc[0])->getMklDesc();
+    const auto outDesc = MemoryDescUtils::convertToOnednnMemoryDesc(*outputDesc[0])->getMklDesc();
 
     memory::data_type wdt = static_cast<memory::data_type>(inDesc.data.data_type);
     memory::data_type bdt = memory::data_type::f32;
@@ -699,8 +699,8 @@ bool MKLDNNConvolutionNode::isPossibleToSkipInitConfig(MKLDNNDescriptor &desc) c
             isPossibleJitPlanar = false;
 
     std::shared_ptr<mkldnn::convolution_forward::desc> convDesc(desc);
-    auto srcMemDesc = MKLDNNMemoryDesc {convDesc->data.src_desc};
-    auto dstMemDesc = MKLDNNMemoryDesc {convDesc->data.dst_desc};
+    auto srcMemDesc = OnednnMemoryDesc {convDesc->data.src_desc};
+    auto dstMemDesc = OnednnMemoryDesc {convDesc->data.dst_desc};
     auto srcDataType = convDesc->data.src_desc.data_type;
     auto dstDataType = convDesc->data.dst_desc.data_type;
     bool isPlanarFloatConv = srcMemDesc.hasLayoutType(LayoutType::ncsp)
