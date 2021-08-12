@@ -50,7 +50,7 @@ void MKLDNNMemory::Create(const memory::dims& dims, memory::data_type data_type,
         format = memory::format_tag::any;
     }
 
-    memory::desc desc = OnednnBlockedMemoryDesc(Shape(MKLDNNExtensionUtils::convertToSizeVector(dims)), data_type, format);
+    memory::desc desc = OnednnBlockedMemoryDesc(Shape(MKLDNNExtensionUtils::convertToSizeVector(dims)), data_type, format).getMklDesc();
 
     Create(desc, data);
 }
@@ -97,16 +97,14 @@ void MKLDNNMemory::Create(MemoryDescPtr desc, const void* data, bool pads_zeroin
         useExternalStorage = false;
     }
 
-    // TODO [DS] : getMkldnnDesc!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     if (pMemDesc->isDefined()) {
-        const auto a = *MemoryDescUtils::convertToMKLDNNMemoryDesc(*pMemDesc);
-        Create(mkldnn::memory::desc(a), data, pads_zeroing);
+        Create(MemoryDescUtils::convertToMKLDNNMemoryDesc(*pMemDesc)->getMklDesc(), data, pads_zeroing);
     } else {
         //delayed dynamic allocation
         size_t maxMemSize = pMemDesc->getMaxMemSize();
         size_t dummySize = MemoryDesc::UNDEFINED_SIZE == maxMemSize ? 1 : maxMemSize;
         OnednnBlockedMemoryDesc dummyDesc(InferenceEngine::Precision::U8, Shape(InferenceEngine::SizeVector{dummySize}));
-        Create(mkldnn::memory::desc(dummyDesc), data, false);  // no pads zeroing
+        Create(dummyDesc.getMklDesc(), data, false);  // no pads zeroing
     }
     size_t newUpperBound = prim->get_desc().get_size();
     if (newUpperBound > memUpperBound) {
@@ -145,7 +143,7 @@ template<>
 MKLDNNMemoryDescPtr MKLDNNMemory::GetDescWithType<MKLDNNMemoryDesc, 0, 0>() const {
     if (pMemDesc->getType() & MemoryDescType::Mkldnn) {
         return std::unique_ptr<MKLDNNMemoryDesc>(dynamic_cast<MKLDNNMemoryDesc *>(pMemDesc->clone().release()));
-    } else if (pMemDesc->getType() == MemoryDescType::CpuBlocked) {
+    } else if (pMemDesc->getType() == MemoryDescType::Blocked) {
         return MemoryDescUtils::convertToMKLDNNMemoryDesc(*(pMemDesc->as<BlockedMemoryDesc>()));
     } else {
         IE_THROW() << "Can not convert unsupported memory descriptor";

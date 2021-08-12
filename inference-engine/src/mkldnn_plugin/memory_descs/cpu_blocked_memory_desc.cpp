@@ -7,7 +7,7 @@
 
 using namespace MKLDNNPlugin;
 
-CpuBlockedMemoryDesc::CpuBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape) : MemoryDesc(shape, CpuBlocked), precision(prc) {
+CpuBlockedMemoryDesc::CpuBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape) : MemoryDesc(shape, Blocked), precision(prc) {
     auto& dims = shape.getDims();
     order.resize(dims.size());
     std::iota(order.begin(), order.end(), 0);
@@ -23,7 +23,7 @@ CpuBlockedMemoryDesc::CpuBlockedMemoryDesc(InferenceEngine::Precision prc, const
 
 CpuBlockedMemoryDesc::CpuBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
                   const std::vector<size_t>& order, size_t offsetPadding, const std::vector<size_t>& offsetPaddingToData,
-                  const std::vector<size_t>& strides) : MemoryDesc(shape, CpuBlocked), precision(prc) {
+                  const std::vector<size_t>& strides) : MemoryDesc(shape, Blocked), precision(prc) {
     if (std::any_of(order.begin(), order.end(), [](size_t val) { return val == Shape::UNDEFINED_DIM; })) {
         IE_THROW() << "CpuBlockedMemoryDesc do not support undefined order.";
     }

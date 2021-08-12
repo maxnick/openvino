@@ -440,8 +440,8 @@ void MKLDNNGraph::ExecuteConstantNodesOnly() {
 }
 
 static bool isReorderAvailable(const MemoryDesc& parentDesc, const MemoryDesc& childDesc, const mkldnn::engine& eng) {
-    memory::desc dstMemDesc = *MemoryDescUtils::convertToMKLDNNMemoryDesc(childDesc);
-    memory::desc srcMemDesc = *MemoryDescUtils::convertToMKLDNNMemoryDesc(parentDesc);;
+    memory::desc dstMemDesc = MemoryDescUtils::convertToMKLDNNMemoryDesc(childDesc)->getMklDesc();
+    memory::desc srcMemDesc = MemoryDescUtils::convertToMKLDNNMemoryDesc(parentDesc)->getMklDesc();
     mkldnn::primitive_attr attr;
 
     dnnl_primitive_desc_t result = nullptr;

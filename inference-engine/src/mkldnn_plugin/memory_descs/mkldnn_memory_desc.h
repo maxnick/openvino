@@ -30,8 +30,6 @@ public:
         return static_cast<mkldnn::memory::data_type>(desc.data.data_type);
     }
 
-    operator mkldnn::memory::desc() const;
-
     dnnl_format_kind_t getFormatKind() const {
         return desc.data.format_kind;
     }
@@ -62,7 +60,7 @@ public:
     }
 
 protected:
-    MKLDNNMemoryDesc(const Shape& shape) : MemoryDesc(shape, Mkldnn) {}
+    MKLDNNMemoryDesc() : MemoryDesc(Shape{}, Mkldnn) {}
     static constexpr size_t UNREACHABLE_DIM = std::numeric_limits<size_t>::max();
 
     mkldnn::memory::desc desc;

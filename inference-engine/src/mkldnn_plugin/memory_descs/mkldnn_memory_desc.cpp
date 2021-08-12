@@ -9,10 +9,6 @@
 
 namespace MKLDNNPlugin {
 
-MKLDNNMemoryDesc::operator mkldnn::memory::desc() const {
-    return desc;
-}
-
 MKLDNNMemoryDesc::MKLDNNMemoryDesc(const mkldnn::memory::desc& desc) :
     MemoryDesc(Shape(MKLDNNExtensionUtils::convertToSizeVector(desc.dims())), Mkldnn), desc(desc) {
     if (desc.data.format_kind == dnnl::impl::format_kind::any)

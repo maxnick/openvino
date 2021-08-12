@@ -15,7 +15,6 @@ enum MemoryDescType {
     Blocked = 1,
     Mkldnn = 1 << 1,
 
-    CpuBlocked = Blocked,
     OneDnnBlocked = Blocked | Mkldnn
 };
 

@@ -64,5 +64,6 @@ protected:
 };
 
 using BlockedMemoryDescPtr = std::unique_ptr<BlockedMemoryDesc>;
+using BlockedMemoryDescCPtr = std::unique_ptr<const BlockedMemoryDesc>;
 
 } // namespace MKLDNNPlugin

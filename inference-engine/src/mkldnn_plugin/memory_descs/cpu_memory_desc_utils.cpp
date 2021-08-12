@@ -29,10 +29,10 @@ MemoryDescPtr MemoryDescUtils::makeDescriptor(const mkldnn::memory::desc &desc) 
 }
 
 std::unique_ptr<MKLDNNMemoryDesc> MemoryDescUtils::convertToMKLDNNMemoryDesc(const MemoryDesc& desc) {
-    if (MemoryDescType::CpuBlocked == desc.getType()) {
+    if (MemoryDescType::Blocked == desc.getType()) {
         return convertToMKLDNNMemoryDesc(*(desc.as<CpuBlockedMemoryDesc>()));
     } else if (MemoryDescType::Mkldnn & desc.getType()) {
-        return MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(desc.as<MKLDNNMemoryDesc>()->getMklDesc());
+        return std::unique_ptr<MKLDNNMemoryDesc>(dynamic_cast<MKLDNNMemoryDesc *>(desc.clone().release()));
     } else {
         IE_THROW() << "Cannot convert MemoryDesc to MKLDNNMemoryDesc";
     }
@@ -63,7 +63,7 @@ MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const MemoryDesc& desc) {
     offsetPaddingToData.resize(blkMemDesc->getBlockDims().size(), 0);
     size_t offsetPadding = Shape::UNDEFINED_DIM;
 
-    if (blkMemDesc->getType() == MemoryDescType::CpuBlocked) {
+    if (blkMemDesc->getType() == MemoryDescType::Blocked) {
         return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(blkMemDesc->getPrecision(), blkMemDesc->getShape(), blkMemDesc->getBlockDims(),
                                                                blkMemDesc->getOrder(), offsetPadding, offsetPaddingToData, strides);
     } else if (blkMemDesc->getType() == MemoryDescType::OneDnnBlocked) {
@@ -78,7 +78,7 @@ MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const MemoryDesc& desc) {
 MemoryDescPtr MemoryDescUtils::resetOffset(const MemoryDesc* desc) {
     const auto blkMemDesc = desc->as<BlockedMemoryDesc>();
 
-    if (MemoryDescType::CpuBlocked == desc->getType()) {
+    if (MemoryDescType::Blocked == desc->getType()) {
         return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(blkMemDesc->getPrecision(), blkMemDesc->getShape(),
                                                                blkMemDesc->getBlockDims(), blkMemDesc->getOrder());
     } else if (MemoryDescType::OneDnnBlocked == desc->getType()) {

@@ -3,10 +3,15 @@
 //
 
 #include "blocked_memory_desc.h"
+#include "onednn_blocked_memory_desc.h"
 
 using namespace MKLDNNPlugin;
 
 bool BlockedMemoryDesc::isCompatible(const BlockedMemoryDesc &rhs) const {
+    if (this->getType() == OneDnnBlocked && rhs.getType() == OneDnnBlocked) {
+        return dynamic_cast<const OnednnBlockedMemoryDesc *>(this)->isCompatible(rhs);
+    }
+
     if (this->getShape() != rhs.getShape() || this->getPrecision() != rhs.getPrecision())
         return false;
 

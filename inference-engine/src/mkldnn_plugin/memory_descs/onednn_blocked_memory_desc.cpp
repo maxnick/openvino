@@ -17,8 +17,7 @@ extern status_t fill_blocked(memory_desc_t &md, std::vector<int> &perm,
 using namespace MKLDNNPlugin;
 using namespace InferenceEngine;
 
-OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape) : MKLDNNMemoryDesc(shape),
-        MemoryDesc(shape, OneDnnBlocked) {
+OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape) : MemoryDesc(shape, OneDnnBlocked) {
     InitializePlain(shape, MKLDNNExtensionUtils::IEPrecisionToDataType(prc));
 }
 
@@ -43,7 +42,7 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc,
  */
 OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
                                                  const std::vector<size_t>& order, size_t offsetPadding, const std::vector<size_t>& offsetPaddingToData,
-                                                 const std::vector<size_t>& strides) : MKLDNNMemoryDesc(shape), MemoryDesc(shape, OneDnnBlocked) {
+                                                 const std::vector<size_t>& strides) : MemoryDesc(shape, OneDnnBlocked) {
     using namespace mkldnn;
     // scalar case
     if (shape.getRank() == 0) {
@@ -178,7 +177,7 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc,
 }
 
 OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format) :
-                                    MKLDNNMemoryDesc(shape), MemoryDesc(shape, OneDnnBlocked) {
+        MemoryDesc(shape, OneDnnBlocked) {
     using namespace mkldnn;
     if (format == memory::format_tag::any)
         IE_THROW(Unexpected) << "Can't create mkldnn::desc with any format";
@@ -345,7 +344,6 @@ bool OnednnBlockedMemoryDesc::isCompatible(const OnednnBlockedMemoryDesc& rhs) c
 }
 
 OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(const mkldnn::memory::desc& mdesc) :
-                MKLDNNMemoryDesc(Shape(MKLDNNExtensionUtils::convertToSizeVector(mdesc.dims()))),
                 MemoryDesc(MKLDNNExtensionUtils::convertToSizeVector(mdesc.dims()), OneDnnBlocked) {
     desc = mdesc;
     if (desc.data.format_kind == dnnl::impl::format_kind::any)
@@ -417,9 +415,6 @@ bool OnednnBlockedMemoryDesc::hasLayoutType(LayoutType layoutType) const {
 }
 
 bool OnednnBlockedMemoryDesc::isPlainFormat() const {
-    if (desc.data.format_kind != dnnl_blocked)
-        return false;
-
     if (shape.getRank() != order.size()) {
         return false;
     }
@@ -455,9 +450,6 @@ bool OnednnBlockedMemoryDesc::isBlockedCFormat(size_t blk_size) const {
 }
 
 bool OnednnBlockedMemoryDesc::isTailCFormat() const {
-    if (desc.data.format_kind != dnnl_blocked)
-        return false;
-
     if (shape.getRank() < 3) {
         return false;
     }
