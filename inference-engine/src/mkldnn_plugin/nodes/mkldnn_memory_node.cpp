@@ -26,6 +26,11 @@ MKLDNNMemoryNode::MKLDNNMemoryNode(const std::shared_ptr<ngraph::Node>& op) {
 
 bool MKLDNNMemoryOutputNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
+
         if (!MKLDNNPlugin::one_of(op->get_type_info(),
                 ngraph::op::v3::Assign::type_info,
                 ngraph::op::v6::Assign::type_info)) {
@@ -65,7 +70,7 @@ void MKLDNNMemoryOutputNode::initSupportedPrimitiveDescriptors() {
     config.inConfs.resize(1);
     config.inConfs[0].inPlace = -1;
     config.inConfs[0].constant = false;
-    config.inConfs[0].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(precision, getInputShapeAtPort(0));
+    config.inConfs[0].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(precision, getInputShapeAtPort(0));
     supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::unknown);
 }
 
@@ -79,6 +84,11 @@ void MKLDNNMemoryOutputNode::execute(mkldnn::stream strm)  {
 
 bool MKLDNNMemoryInputNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
+
         if (!MKLDNNPlugin::one_of(op->get_type_info(),
                 ngraph::op::v3::ReadValue::type_info,
                 ngraph::op::v6::ReadValue::type_info)) {

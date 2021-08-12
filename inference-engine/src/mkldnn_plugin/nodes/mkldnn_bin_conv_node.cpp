@@ -874,6 +874,11 @@ private:
 
 bool MKLDNNBinaryConvolutionNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
+
         const auto binConv = std::dynamic_pointer_cast<const ngraph::opset1::BinaryConvolution>(op);
         if (!binConv) {
             errorMessage = "Only opset1 BinaryConvolution operation is supported";
@@ -1015,9 +1020,9 @@ void MKLDNNBinaryConvolutionNode::createPrimitive() {
     if (!selectedPrimitiveDescriptor)
         IE_THROW() << "CPU binary convolution with name '" << getName() << "' doesn't have primitive descriptors.";
 
-    auto srcDims = getInputShapeAtPort(0).getStaticDims();
-    auto weiDims = getInputShapeAtPort(1).getStaticDims();
-    auto dstDims = getOutputShapeAtPort(0).getStaticDims();
+    auto srcDims = getParentEdgesAtPort(0)[0]->getMemory().GetShape().getStaticDims();
+    auto weiDims = getParentEdgesAtPort(1)[0]->getMemory().GetShape().getStaticDims();
+    auto dstDims = getChildEdgesAtPort(0)[0]->getMemory().GetShape().getStaticDims();
 
     auto implType = selectedPrimitiveDescriptor->getImplementationType();
 

@@ -20,6 +20,11 @@ using namespace InferenceEngine;
 
 bool MKLDNNSplitNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
+
         if (!MKLDNNPlugin::one_of(op->get_type_info(), ngraph::op::v1::Split::type_info, ngraph::op::v1::VariadicSplit::type_info)) {
             errorMessage = "Only opset1 Split and VariadicSplit operations are supported";
             return false;
@@ -274,7 +279,7 @@ void MKLDNNSplitNode::execute(mkldnn::stream strm) {
     }
 
     uint8_t* srcData = reinterpret_cast<uint8_t*>(this->getParentEdgeAt(0)->getMemoryPtr()->GetPtr());
-    size_t batch = this->getInputShapeAtPort(0).getStaticDims()[0];
+    size_t batch = getParentEdgesAtPort(0)[0]->getMemory().getStaticDims()[0];
 
     if (batch != MB)
         optimizedParams.countStrides = optimizedParams.countStrides / batch * MB;
@@ -507,8 +512,8 @@ void MKLDNNSplitNode::prepareOptimizedParams() {
 
 void MKLDNNSplitNode::optimizedNspc2Ncsp(size_t MB) {
     auto parentEdge = getParentEdgeAt(0);
-    const int rank = getInputShapeAtPort(0).getRank();
-    const auto parentDims = getInputShapeAtPort(0).getStaticDims();
+    const int rank = parentEdge->getMemory().GetShape().getRank();
+    const auto parentDims = parentEdge->getMemory().getStaticDims();
     const size_t IC = parentDims[1];
     const size_t D = rank == 5 ? parentDims[rank - 3] : 1;
     const size_t H = parentDims[rank - 2];

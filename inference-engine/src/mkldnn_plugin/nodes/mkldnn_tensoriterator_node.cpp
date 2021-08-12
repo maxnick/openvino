@@ -273,6 +273,11 @@ int getNumIteration(const std::shared_ptr<const ngraph::Node>& op, const std::ve
 
 bool MKLDNNTensorIteratorNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
+
         if (!one_of(op->get_type_info(),
                 ngraph::op::v0::TensorIterator::type_info,
                 ngraph::op::v5::Loop::type_info)) {
