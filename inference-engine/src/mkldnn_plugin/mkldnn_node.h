@@ -678,14 +678,14 @@ public:
         return isDynamic;
     }
 
-    Shape getInputShapeAtPort(size_t port) const {
+    const Shape& getInputShapeAtPort(size_t port) const {
         if (inputShapes.size() <= port) {
             IE_THROW() << "Incorrect input port number for node " << getName();
         }
         return inputShapes[port];
     }
 
-    Shape getOutputShapeAtPort(size_t port) const {
+    const Shape& getOutputShapeAtPort(size_t port) const {
         if (outputShapes.size() <= port) {
             IE_THROW() << "Incorrect output port number for node " << getName();
         }

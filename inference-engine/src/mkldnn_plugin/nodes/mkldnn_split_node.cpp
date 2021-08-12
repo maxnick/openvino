@@ -144,7 +144,7 @@ void MKLDNNSplitNode::initSupportedPrimitiveDescriptors() {
         config.inConfs.resize(INPUTS_NUM);
         config.inConfs[0].inPlace = -1;
         config.inConfs[0].constant = false;
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(itr->second->createDesc(inpPrecision, srcShape.getStaticDims()));
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(itr->second->createDesc(inpPrecision, srcShape));
         config.inConfs[1].inPlace = -1;
         config.inConfs[1].constant = true;
         config.inConfs[1].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(axisPrecision, Shape(SizeVector {1}));
@@ -158,7 +158,7 @@ void MKLDNNSplitNode::initSupportedPrimitiveDescriptors() {
         for (size_t i = 0; i < outputShapes.size(); i++) {
             config.outConfs[i].inPlace = -1;
             config.outConfs[i].constant = false;
-            config.outConfs[i].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(itr->second->createDesc(inpPrecision, outputShapes[i].getStaticDims()));
+            config.outConfs[i].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(itr->second->createDesc(inpPrecision, outputShapes[i]));
         }
         supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::ref);
 
