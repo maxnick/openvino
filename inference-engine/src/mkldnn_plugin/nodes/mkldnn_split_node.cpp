@@ -340,7 +340,8 @@ void MKLDNNSplitNode::initOptimalPrimitiveDescriptor() {
     auto firstInBlockingDesc = config.inConfs[0].desc->as<BlockedMemoryDesc>();
     size_t offset = 0;
     for (size_t i = 0; i < outputShapes.size(); i++) {
-        auto outBlockingDesc = config.outConfs[i].desc->as<BlockedMemoryDesc>();
+        auto oldDesc = config.outConfs[i].desc->clone();
+        auto outBlockingDesc = oldDesc->as<BlockedMemoryDesc>();
         config.outConfs[i].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(outBlockingDesc->getPrecision(),
                                                                  outBlockingDesc->getShape(),
                                                                  outBlockingDesc->getBlockDims(),

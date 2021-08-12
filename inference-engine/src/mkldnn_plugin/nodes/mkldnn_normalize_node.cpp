@@ -755,6 +755,8 @@ void MKLDNNNormalizeL2Node::initSupportedPrimitiveDescriptors() {
         IE_THROW() << errorPrefix << "has unsupported output precision. " << getName();
     }
 
+    input_prec = inputPrecision;
+    output_prec = outputPrecision;
     src_data_size = inputPrecision.size();
     dst_data_size = outputPrecision.size();
 
@@ -768,9 +770,12 @@ void MKLDNNNormalizeL2Node::initSupportedPrimitiveDescriptors() {
 
     auto& creatorsMap = BlockedDescCreator::getCommonCreators();
     auto pushDesc = [&](LayoutType format) {
-        config.inConfs[0].desc = creatorsMap.at(format)->createUniqueDesc(inputPrecision, getInputShapeAtPort(DATA));
-        config.inConfs[1].desc = creatorsMap.at(LayoutType::ncsp)->createUniqueDesc(InferenceEngine::Precision::I32, getInputShapeAtPort(AXES));
-        config.outConfs[0].desc = creatorsMap.at(format)->createUniqueDesc(outputPrecision, getInputShapeAtPort(DATA));
+        auto a = creatorsMap.at(format)->createUniqueDesc(inputPrecision, getInputShapeAtPort(DATA));
+        config.inConfs[0].desc = std::move(a);
+        a = creatorsMap.at(LayoutType::ncsp)->createUniqueDesc(InferenceEngine::Precision::I32, getInputShapeAtPort(AXES));
+        config.inConfs[1].desc = std::move(a);
+        a = creatorsMap.at(format)->createUniqueDesc(outputPrecision, getOutputShapeAtPort(DATA));
+        config.outConfs[0].desc = std::move(a);
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
     };
 

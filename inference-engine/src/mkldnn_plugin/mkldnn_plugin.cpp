@@ -397,6 +397,8 @@ static void Transformation(CNNNetwork& clonedNetwork, const Config& conf) {
     postLPTPassManager.run_passes(nGraphFunc);
 
     ConvertToCPUSpecificOpset(nGraphFunc);
+
+    // clonedNetwork.serialize("/home/maximandronov/test_repo/openvino/models/AAA/ng.xml");
 }
 
 InferenceEngine::IExecutableNetworkInternal::Ptr
