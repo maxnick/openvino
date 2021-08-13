@@ -1478,7 +1478,7 @@ void MKLDNNReduceNode::initSupportedPrimitiveDescriptors() {
                                                                                        inDataType, inFormat);
         config.inConfs[REDUCE_INDEXES].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(REDUCE_INDEXES)->getShape().getStaticDims(),
                                                                             memory::data_type::s32, memory::format_tag::x);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outDataType, outFormat);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outDataType, outFormat);
         supportedPrimitiveDescriptors.push_back({config, impl_type});
     };
 

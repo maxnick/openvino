@@ -413,9 +413,9 @@ void MKLDNNROIPoolingNode::initSupportedPrimitiveDescriptors() {
         impl_type = impl_desc_type::ref;
     }
 
-    config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), dataType, format);
-    config.inConfs[1].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(1).getStaticDims(), dataType, memory::format_tag::nc);
-    config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), dataType, format);
+    config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), dataType, format);
+    config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(1).getStaticDims(), dataType, memory::format_tag::nc);
+    config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), dataType, format);
     supportedPrimitiveDescriptors.push_back({config, impl_type});
 }
 

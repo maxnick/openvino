@@ -838,13 +838,13 @@ void MKLDNNDeformableConvolutionNode::initSupportedPrimitiveDescriptors() {
         auto weiFormat = group > 1 ? mayiuse(avx512_common) ? memory::format_tag::gOIhw16i16o : memory::format_tag::gOIhw8i8o
                                    : mayiuse(avx512_common) ? memory::format_tag::OIhw16i16o : memory::format_tag::OIhw8i8o;
 
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(),
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(0).getStaticDims(),
                                                                               memory::data_type::f32, dataFormat);
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(1).getStaticDims(),
+        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(1).getStaticDims(),
                                                                               memory::data_type::f32, offFormat);
         config.inConfs[2].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(2)->getShape().getStaticDims(),
                                                                               memory::data_type::f32, weiFormat);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(),
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(),
                                                                               memory::data_type::f32, dataFormat);
         supportedPrimitiveDescriptors.push_back({config, impl_type});
     } else {
@@ -854,9 +854,9 @@ void MKLDNNDeformableConvolutionNode::initSupportedPrimitiveDescriptors() {
                                                                memory::format_tag::nchw);
         config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(1)->getShape().getStaticDims(), memory::data_type::f32,
 =======
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), memory::data_type::f32,
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), memory::data_type::f32,
                                                                memory::format_tag::nchw);
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(1).getStaticDims(), memory::data_type::f32,
+        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(1).getStaticDims(), memory::data_type::f32,
 >>>>>>> getShape() removing started
                                                                memory::format_tag::nchw);
         config.inConfs[2].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(2)->getShape().getStaticDims(), memory::data_type::f32,
@@ -864,7 +864,7 @@ void MKLDNNDeformableConvolutionNode::initSupportedPrimitiveDescriptors() {
 <<<<<<< HEAD
         config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), memory::data_type::f32,
 =======
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), memory::data_type::f32,
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), memory::data_type::f32,
 >>>>>>> getShape() removing started
                                                                 memory::format_tag::nchw);
         supportedPrimitiveDescriptors.push_back({config, impl_type});

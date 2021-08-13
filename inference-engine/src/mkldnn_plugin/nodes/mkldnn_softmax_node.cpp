@@ -39,14 +39,14 @@ void MKLDNNSoftMaxNode::getSupportedDescriptors() {
         IE_THROW() << "Incorrect number of output edges for layer " << getName();
 
     if (getInputShapeAtPort(0).getRank() == 3) {
-        MemoryDescPtr in_candidate = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType,
+        MemoryDescPtr in_candidate = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType,
                                                                                  memory::format_tag::abc);
         createDescriptor({in_candidate.get()}, {});
     }
 
     for (auto format : getAvailableFormatsForDims(getInputShapeAtPort(0))) {
         const auto dims = getInputShapeAtPort(0).getStaticDims();
-        if (MKLDNNMemoryDesc(dims, inputDataType, format).blocksExtended())
+        if (DnnlMemoryDesc(dims, inputDataType, format).blocksExtended())
             continue;
 
         MemoryDescPtr in_candidate = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(dims, inputDataType, format);

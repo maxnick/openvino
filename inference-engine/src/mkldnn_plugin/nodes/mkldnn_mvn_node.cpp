@@ -743,17 +743,7 @@ void MKLDNNMVNNode::initSupportedPrimitiveDescriptors() {
     config.inConfs[0].inPlace = -1;
     config.outConfs[0].inPlace = canBeInplace ? 0 : -1;
     if (inputsNum == 2) {
-<<<<<<< HEAD
-<<<<<<< HEAD
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getParentEdgeAt(1)->getShape(), memory::data_type::s32,
-                                                               MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(1)->getShape().getRank()));
-=======
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getInputShapeAtPort(1), memory::data_type::s32,
-                                                               MKLDNNExtensionUtils::GetPlainFormatByRank(getInputShapeAtPort(1).getRank()));
->>>>>>> getShape() removing started
-=======
         config.inConfs[1].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(InferenceEngine::Precision::I32, getInputShapeAtPort(1));
->>>>>>> first wave nodes
         config.inConfs[1].constant = true;
     }
 

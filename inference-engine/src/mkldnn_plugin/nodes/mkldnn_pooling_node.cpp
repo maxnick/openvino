@@ -152,8 +152,8 @@ void MKLDNNPoolingNode::getSupportedDescriptors() {
         }
         // It doesn't support any format
         for (auto format : getAvailableFormatsForDims(getInputShapeAtPort(0))) {
-            const auto in_candidate = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(parentDims, inputDataType, format);
-            const auto out_candidate = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(childDims, outputDataType, format);
+            const auto in_candidate = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(parentDims, inputDataType, format);
+            const auto out_candidate = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(childDims, outputDataType, format);
             createDescriptor({in_candidate.get()}, {out_candidate.get()});
         }
     }

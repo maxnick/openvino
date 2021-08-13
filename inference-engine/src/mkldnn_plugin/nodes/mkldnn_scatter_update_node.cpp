@@ -209,7 +209,7 @@ void MKLDNNScatterUpdateNode::initSupportedPrimitiveDescriptors() {
         if (axisRelaxed)
             config.inConfs[AXIS_ID].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(AXIS_ID)->getShape().getStaticDims(),
                 MKLDNNExtensionUtils::IEPrecisionToDataType(axisPrec), memory::format_tag::x);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), dataType, outFormat);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), dataType, outFormat);
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
     };
 

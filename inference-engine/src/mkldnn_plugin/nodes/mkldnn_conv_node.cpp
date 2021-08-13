@@ -249,9 +249,9 @@ void MKLDNNConvolutionNode::getSupportedDescriptors() {
             outputDataType = memory::data_type::f32;
         if (eltwisePrecision == Precision::BF16)
             eltwisePrecision = Precision::FP32;
-        in_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getInputShapeAtPort(0),
+        in_candidate = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getInputShapeAtPort(0),
                                                      inputDataType, ndims == 5 ? memory::format_tag::ndhwc : memory::format_tag::nhwc);
-        out_candidate = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(getOutputShapeAtPort(0),
+        out_candidate = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getOutputShapeAtPort(0),
                                                       outputDataType, ndims == 5 ? memory::format_tag::ndhwc : memory::format_tag::nhwc);
         createDescriptor({ in_candidate.get() }, { out_candidate.get() });
     } else {

@@ -245,13 +245,13 @@ void MKLDNNDeconvolutionNode::getSupportedDescriptors() {
         std::swap(weightDims[withGroups + 0], weightDims[withGroups + 1]);
         internalBlobs.push_back(createWeiBlobAsIO(weightDims));
         auto format = getInputShapeAtPort(0).getRank() == 5 ? dnnl::memory::format_tag::ndhwc : dnnl::memory::format_tag::nhwc;
-        MKLDNNMemoryDesc in_candidate(getInputShapeAtPort(0).getStaticDims(), inputDataType, format);
-        MKLDNNMemoryDesc out_candidate(getOutputShapeAtPort(0).getStaticDims(), outputDataType, format);
+        DnnlMemoryDesc in_candidate(getInputShapeAtPort(0).getStaticDims(), inputDataType, format);
+        DnnlMemoryDesc out_candidate(getOutputShapeAtPort(0).getStaticDims(), outputDataType, format);
         createDescriptor({&in_candidate}, {&out_candidate});
     } else {
         for (auto format : getAvailableFormatsForDims(getInputShapeAtPort(0))) {
-            MKLDNNMemoryDesc in_candidate(getInputShapeAtPort(0).getStaticDims(), inputDataType, format);
-            MKLDNNMemoryDesc out_candidate(getOutputShapeAtPort(0).getStaticDims(), outputDataType, format);
+            DnnlMemoryDesc in_candidate(getInputShapeAtPort(0).getStaticDims(), inputDataType, format);
+            DnnlMemoryDesc out_candidate(getOutputShapeAtPort(0).getStaticDims(), outputDataType, format);
             createDescriptor({&in_candidate}, {&out_candidate});
         }
     }

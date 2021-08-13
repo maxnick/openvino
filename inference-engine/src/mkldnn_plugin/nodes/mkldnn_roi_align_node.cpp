@@ -129,12 +129,12 @@ void MKLDNNROIAlignNode::initSupportedPrimitiveDescriptors() {
     };
 
     for (auto fmts : supportedFormats) {
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType, fmts.first);
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getInputShapeAtPort(1).getStaticDims(), memory::data_type::f32,
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType, fmts.first);
+        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(1).getStaticDims(), memory::data_type::f32,
                                                                memory::format_tag::nc);
         config.inConfs[2].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(2)->getShape().getStaticDims(), memory::data_type::s32,
                                                                memory::format_tag::x);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outputDataType, fmts.second);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outputDataType, fmts.second);
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
     }
 }
