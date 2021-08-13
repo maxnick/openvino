@@ -5,11 +5,12 @@
 #pragma once
 
 #include "cpu_blocked_memory_desc.h"
+#include "mkldnn_extension_utils.h"
 
 /**
  * @brief
  *
- * OnednnMemoryDesc - the descriptor of tensor representation in memory. Describes all required information
+ * DnnlMemoryDesc - the descriptor of tensor representation in memory. Describes all required information
  * for proper allocation and handling tensor in some buffer. The real memory is not present, just description.
  * This object answers on question how and where data with logical index [x1, x2, .. xN] placed in real buffer.
  * In the simplest case it describe a mapping between "logical offset" and "real offset".
@@ -22,10 +23,13 @@ namespace MKLDNNPlugin {
  * Represent internal plugin abstraction of tensor description
  *
  */
-class OnednnMemoryDesc : public virtual MemoryDesc {
-public:
-    explicit OnednnMemoryDesc(const mkldnn::memory::desc& desc);
 
+class DnnlMemoryDesc;
+
+using DnnlMemoryDescPtr = std::unique_ptr<DnnlMemoryDesc>;
+
+class DnnlMemoryDesc : public virtual MemoryDesc {
+public:
     mkldnn::memory::data_type getDataType() const {
         return static_cast<mkldnn::memory::data_type>(desc.data.data_type);
     }
@@ -35,7 +39,7 @@ public:
     }
 
     std::unique_ptr<MemoryDesc> clone() const override {
-        return MKLDNNPlugin::make_unique<OnednnMemoryDesc>(*this);
+        return MKLDNNPlugin::make_unique<DnnlMemoryDesc>(*this);
     }
 
     std::string serializeFormat() const override;
@@ -48,31 +52,31 @@ public:
 
     size_t getMaxMemSize() const override;
 
+    // TODO [DS] phase 2: rename -> ?
     mkldnn::memory::desc getMklDesc() const {
         return desc;
     }
 
     bool hasLayoutType(LayoutType layoutType) const override { return false; }
 
-    size_t getPaddedElementsCount() const override {
-        return std::accumulate(std::begin(desc.data.padded_dims), std::begin(desc.data.padded_dims) + desc.data.ndims, size_t{1},
-                               std::multiplies<int64_t>());
-    }
+    virtual bool isSame(mkldnn::memory::format_tag fmt) const { return false; }
 
 protected:
-    OnednnMemoryDesc() : MemoryDesc(Shape{}, Mkldnn) {}
+    DnnlMemoryDesc() {}
     static constexpr size_t UNREACHABLE_DIM = std::numeric_limits<size_t>::max();
 
     mkldnn::memory::desc desc;
 
 private:
+    explicit DnnlMemoryDesc(const mkldnn::memory::desc& desc);
+
     size_t getElementOffset(size_t elemNumber) const override;
 
     size_t getMemSizeImp() const override;
     bool isDefinedImp() const override;
     std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
-};
 
-using OnednnMemoryDescPtr = std::unique_ptr<OnednnMemoryDesc>;
+    friend DnnlMemoryDescPtr MKLDNNExtensionUtils::makeDescriptor(const mkldnn::memory::desc &desc);
+};
 
 }  // namespace MKLDNNPlugin

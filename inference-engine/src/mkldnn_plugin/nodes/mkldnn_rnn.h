@@ -40,7 +40,7 @@ private:
     void copyWeightsData();
 
 private:
-    using OnednnMemoryDescPtr = std::unique_ptr<OnednnMemoryDesc>;
+    using DnnlMemoryDescPtr = std::unique_ptr<DnnlMemoryDesc>;
 
     InferenceEngine::Precision runtimePrecision;
     /** Specify mode Cell or Seq. true - Cell, false - Seq */
@@ -69,8 +69,8 @@ private:
     const size_t L = 1;   /**< What is it??. Constant for mkldnn impl */
     const size_t D = 1;   /**< Num of direction. 1 or 2 */
 
-    std::vector<OnednnMemoryDesc> in_data_d;
-    std::vector<OnednnMemoryDesc> out_data_d;
+    std::vector<DnnlMemoryDesc> in_data_d;
+    std::vector<DnnlMemoryDesc> out_data_d;
 
     enum RNNInOutKind {
         Layer       = 0,
@@ -78,9 +78,9 @@ private:
         CellState   = 2
     };
 
-    OnednnMemoryDescPtr w_data_d;
-    OnednnMemoryDescPtr w_state_d;
-    OnednnMemoryDescPtr w_bias_d;
+    DnnlMemoryDescPtr w_data_d;
+    DnnlMemoryDescPtr w_state_d;
+    DnnlMemoryDescPtr w_bias_d;
 
     std::vector<size_t > in_data_dims;
     std::vector<size_t > out_data_dims;

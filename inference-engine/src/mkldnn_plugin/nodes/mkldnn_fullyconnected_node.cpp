@@ -13,7 +13,7 @@
 #include <mkldnn.hpp>
 #include "utils/general_utils.h"
 #include <memory_descs/cpu_memory_desc_utils.h>
-#include "memory_descs/onednn_blocked_memory_desc.h"
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -238,7 +238,7 @@ std::shared_ptr<mkldnn::primitive_attr> MKLDNNFullyConnectedNode::initPrimitiveA
     return attr;
 }
 
-// WA: creation OnednnMemoryDesc with format == any is prohibited
+// WA: creation DnnlMemoryDesc with format == any is prohibited
 // so we create mkldnn::memory::desc directly
 // we need specific method and can't remove createDescriptor from base class because its used into initDescriptor
 void MKLDNNFullyConnectedNode::createDescriptorInternal(const mkldnn::memory::desc &inputDesc,
@@ -286,7 +286,7 @@ void MKLDNNFullyConnectedNode::createDescriptorInternal(const mkldnn::memory::de
 
 void MKLDNNFullyConnectedNode::createDescriptor(const std::vector<const MemoryDesc*> &inputDesc,
                                                 const std::vector<const MemoryDesc*> &outputDesc) {
-    createDescriptorInternal(MemoryDescUtils::convertToOnednnMemoryDesc(*inputDesc[0]), MemoryDescUtils::convertToOnednnMemoryDesc(*outputDesc[0]));
+    createDescriptorInternal(MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0]), MemoryDescUtils::convertToDnnlMemoryDesc(*outputDesc[0]));
 }
 
 std::unique_ptr<MemoryDesc> MKLDNNFullyConnectedNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
@@ -296,7 +296,7 @@ std::unique_ptr<MemoryDesc> MKLDNNFullyConnectedNode::getSrcMemDesc(mkldnn::prim
         return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(MKLDNNExtensionUtils::DataTypeToIEPrecision(
             static_cast<mkldnn::memory::data_type>(desc.data.data_type)), getParentEdgeAt(idx)->getShape());
     }
-    return MemoryDescUtils::makeDescriptor(desc);
+    return MKLDNNExtensionUtils::makeDescriptor(desc);
 }
 
 std::unique_ptr<MemoryDesc> MKLDNNFullyConnectedNode::getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
@@ -306,7 +306,7 @@ std::unique_ptr<MemoryDesc> MKLDNNFullyConnectedNode::getDstMemDesc(mkldnn::prim
         return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(MKLDNNExtensionUtils::DataTypeToIEPrecision(
             static_cast<mkldnn::memory::data_type>(desc.data.data_type)), getChildEdgeAt(idx)->getShape());
     }
-    return MemoryDescUtils::makeDescriptor(desc);
+    return MKLDNNExtensionUtils::makeDescriptor(desc);
 }
 
 InferenceEngine::Precision MKLDNNFullyConnectedNode::getRuntimePrecision() const {

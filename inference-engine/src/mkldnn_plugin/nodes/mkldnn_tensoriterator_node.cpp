@@ -68,7 +68,7 @@ public:
         IE_ASSERT(full_dims == part_dims) << "Shape mismatch for tensor iterator port";
 
         // make chunk view
-        auto chunk_desc = full_blob->GetDescWithType<OnednnMemoryDesc>()->getMklDesc();
+        auto chunk_desc = full_blob->GetDescWithType<DnnlMemoryDesc>()->getMklDesc();
         chunk_desc.data.dims[axis] = abs_stride;
         chunk_desc.data.padded_dims[axis] = abs_stride;  // TODO: asamption that plain tensor
 

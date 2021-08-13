@@ -5,6 +5,7 @@
 #include "mkldnn_extension_utils.h"
 #include "utils/general_utils.h"
 #include <vector>
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -112,5 +113,13 @@ memory::format_tag MKLDNNExtensionUtils::GetPlainFormatByRank(size_t rank) {
             return memory::format_tag::abcdef;
         default:
             return memory::format_tag::undef;
+    }
+}
+
+DnnlMemoryDescPtr MKLDNNExtensionUtils::makeDescriptor(const mkldnn::memory::desc &desc) {
+    if (desc.data.format_kind == dnnl_blocked) {
+        return std::unique_ptr<DnnlBlockedMemoryDesc>(new DnnlBlockedMemoryDesc(desc));
+    } else {
+        return std::unique_ptr<DnnlMemoryDesc>(new DnnlMemoryDesc(desc));
     }
 }

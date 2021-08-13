@@ -7,7 +7,7 @@
 #include <mkldnn_extension_utils.h>
 #include <ngraph/opsets/opset1.hpp>
 #include <memory_descs/cpu_memory_desc_utils.h>
-#include "memory_descs/onednn_blocked_memory_desc.h"
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 
 using namespace MKLDNNPlugin;
 using namespace InferenceEngine;
@@ -94,7 +94,7 @@ void MKLDNNLrnNode::getSupportedDescriptors() {
     const auto parentStaticDims = parentShape.getStaticDims();
 
     for (auto format : getAvailableFormatsForDims(parentShape)) {
-        auto in_candidate = MKLDNNPlugin::make_unique<OnednnMemoryDesc>(parentStaticDims, inputDataType, format);
+        auto in_candidate = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(parentStaticDims, inputDataType, format);
         createDescriptor({in_candidate.get()}, {});
     }
 }
@@ -103,7 +103,7 @@ std::unique_ptr<MemoryDesc> MKLDNNLrnNode::getSrcMemDesc(mkldnn::primitive_desc_
     if (idx > 0) {
         return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(getOriginalInputPrecisionAtPort(idx), getParentEdgeAt(idx)->getShape());
     } else {
-        return MemoryDescUtils::makeDescriptor(primitive_desc_it.dst_desc(idx));
+        return MKLDNNExtensionUtils::makeDescriptor(primitive_desc_it.dst_desc(idx));
     }
 }
 
@@ -128,7 +128,7 @@ void MKLDNNLrnNode::createDescriptor(const std::vector<const MemoryDesc*> &input
                                      const std::vector<const MemoryDesc*> &outputDesc) {
     mkldnn::algorithm alg = isAcrossMaps ? mkldnn::algorithm::lrn_across_channels : mkldnn::algorithm::lrn_within_channel;
     MKLDNNDescriptor desc(std::shared_ptr<mkldnn::lrn_forward::desc>(
-            new mkldnn::lrn_forward::desc(mkldnn::prop_kind::forward_scoring, alg, MemoryDescUtils::convertToOnednnMemoryDesc(*inputDesc[0]),
+            new mkldnn::lrn_forward::desc(mkldnn::prop_kind::forward_scoring, alg, MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0]),
                                           size, alpha, beta, k)));
     descs.push_back(desc);
 }

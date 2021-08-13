@@ -65,7 +65,7 @@ static IEB_HEADER prepare_header(const MemoryDesc& desc) {
     return header;
 }
 
-static OnednnBlockedMemoryDesc parse_header(IEB_HEADER &header) {
+static DnnlBlockedMemoryDesc parse_header(IEB_HEADER &header) {
     if (header.magic[0] != IEB_MAGIC[0] ||
         header.magic[1] != IEB_MAGIC[1] ||
         header.magic[2] != IEB_MAGIC[2] ||
@@ -81,7 +81,7 @@ static OnednnBlockedMemoryDesc parse_header(IEB_HEADER &header) {
     for (int i = 0; i < header.ndims; i++)
         dims[i] = header.dims[i];
 
-    return OnednnBlockedMemoryDesc{prc, Shape(dims)};
+    return DnnlBlockedMemoryDesc{prc, Shape(dims)};
 }
 
 void BlobDumper::prepare_plain_data(const MKLDNNMemoryPtr &memory, std::vector<uint8_t> &data) const {

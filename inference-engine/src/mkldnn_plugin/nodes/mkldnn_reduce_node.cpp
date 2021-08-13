@@ -1474,11 +1474,11 @@ void MKLDNNReduceNode::initSupportedPrimitiveDescriptors() {
 
     auto pushDesc = [&](memory::format_tag inFormat, memory::format_tag outFormat, memory::data_type inDataType,
             memory::data_type outDataType, impl_desc_type impl_type) {
-        config.inConfs[REDUCE_DATA].desc = MKLDNNPlugin::make_unique<OnednnMemoryDesc>(getParentEdgeAt(REDUCE_DATA)->getShape().getStaticDims(),
+        config.inConfs[REDUCE_DATA].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(REDUCE_DATA)->getShape().getStaticDims(),
                                                                                        inDataType, inFormat);
-        config.inConfs[REDUCE_INDEXES].desc = MKLDNNPlugin::make_unique<OnednnMemoryDesc>(getParentEdgeAt(REDUCE_INDEXES)->getShape().getStaticDims(),
+        config.inConfs[REDUCE_INDEXES].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(REDUCE_INDEXES)->getShape().getStaticDims(),
                                                                             memory::data_type::s32, memory::format_tag::x);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<OnednnMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), outDataType, outFormat);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), outDataType, outFormat);
         supportedPrimitiveDescriptors.push_back({config, impl_type});
     };
 

@@ -723,7 +723,7 @@ protected:
     virtual void appendPostOps(mkldnn::post_ops& ops);
     virtual std::shared_ptr<mkldnn::primitive_attr> initPrimitiveAttr() const { return nullptr; }
 
-    typedef std::function<OnednnMemoryDesc (mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx)>
+    typedef std::function<DnnlMemoryDesc (mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx)>
             GetPrimitiveMemoryFormatFunc;
     std::vector<GetPrimitiveMemoryFormatFunc> internalBlobDesc;
 

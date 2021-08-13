@@ -6,21 +6,23 @@
 
 #include "blocked_memory_desc.h"
 #include "mkldnn_memory.h"
+#include "mkldnn_extension_utils.h"
 
 namespace MKLDNNPlugin {
 
-class OnednnBlockedMemoryDesc : public BlockedMemoryDesc, public OnednnMemoryDesc {
+class DnnlBlockedMemoryDesc : public BlockedMemoryDesc, public DnnlMemoryDesc {
 public:
-    OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape);
+    DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape);
 
-    OnednnBlockedMemoryDesc(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format);
+    DnnlBlockedMemoryDesc(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format);
 
     MemoryDescPtr clone() const override {
-        return MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(*this);
+        return MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(*this);
     }
 
     bool isCompatible(const MemoryDesc& rhs) const override;
-    bool isCompatible(const OnednnBlockedMemoryDesc& rhs) const;
+    bool isCompatible(const BlockedMemoryDesc &rhs) const override;
+    bool isCompatible(const DnnlBlockedMemoryDesc& rhs) const;
     bool isCompatible(const CpuBlockedMemoryDesc& rhs) const;
 
     const std::vector<size_t>& getBlockDims() const override;
@@ -37,22 +39,26 @@ public:
 
     bool blocksExtended() const override;
 
-    bool isSame(mkldnn::memory::format_tag fmt) const;
+    bool isSame(mkldnn::memory::format_tag fmt) const override;
 
     std::string serializeFormat() const override;
 
+    size_t getMaxMemSize() const override;
+
 private:
-    OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
+    DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
                             const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
                             const std::vector<size_t>& strides = {});
 
-    OnednnBlockedMemoryDesc(const mkldnn::memory::desc& mdesc);
+    DnnlBlockedMemoryDesc(const mkldnn::memory::desc& mdesc);
 
     std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
 
     bool isPlainFormat() const;
     bool isBlockedCFormat(size_t blk_size = UNREACHABLE_DIM) const;
     bool isTailCFormat() const;
+
+    bool isDefinedImp() const override;
 
     /**
      * Try to define original format tag use on creation
@@ -61,6 +67,7 @@ private:
      */
     mkldnn::memory::format_tag getFormat() const;
 
+    friend DnnlMemoryDescPtr MKLDNNExtensionUtils::makeDescriptor(const mkldnn::memory::desc &desc);
     friend class MemoryDescUtils;
 };
 

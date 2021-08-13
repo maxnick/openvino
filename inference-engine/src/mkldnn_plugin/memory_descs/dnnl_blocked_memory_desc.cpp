@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "memory_descs/onednn_blocked_memory_desc.h"
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 #include <dnnl_types.h>
 #include <common/memory_desc_wrapper.hpp>
 
 using namespace MKLDNNPlugin;
 using namespace InferenceEngine;
 
-OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape) : MemoryDesc(shape, OneDnnBlocked) {
+DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape) : MemoryDesc(shape, OneDnnBlocked) {
     const auto ndims = shape.getRank();
     const auto dims = shape.getDims();
     mkldnn::memory::dims plain_strides;
@@ -47,7 +47,7 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc,
  *
  *   Limitation of conversion first N elements of order should be permutation of [0,1,2 ... N]
  */
-OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
+DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
                                                  const std::vector<size_t>& order, size_t offsetPadding, const std::vector<size_t>& offsetPaddingToData,
                                                  const std::vector<size_t>& strides) : MemoryDesc(shape, OneDnnBlocked) {
     using namespace mkldnn;
@@ -65,23 +65,23 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc,
     }
 
     if (order.size() != blockedDims.size()) {
-        IE_THROW() << "Can not construct OnednnBlockedMemoryDesc, order and blocked dims must have equals size";
+        IE_THROW() << "Can not construct DnnlBlockedMemoryDesc, order and blocked dims must have equals size";
     }
 
     if (!offsetPaddingToData.empty() && offsetPaddingToData.size() != order.size()) {
-        IE_THROW() << "Can not construct OnednnBlockedMemoryDesc, offsetPaddingToData must have equal size with order and blocked dims";
+        IE_THROW() << "Can not construct DnnlBlockedMemoryDesc, offsetPaddingToData must have equal size with order and blocked dims";
     }
 
     if (!strides.empty() && strides.size() != order.size()) {
-        IE_THROW() << "Can not construct OnednnBlockedMemoryDesc, strides must have equal size with order and blocked dims";
+        IE_THROW() << "Can not construct DnnlBlockedMemoryDesc, strides must have equal size with order and blocked dims";
     }
 
     if (std::any_of(order.begin(), order.end(), [](size_t val) { return val == Shape::UNDEFINED_DIM; })) {
-        IE_THROW() << "OnednnBlockedMemoryDesc doesn't support undefined order.";
+        IE_THROW() << "DnnlBlockedMemoryDesc doesn't support undefined order.";
     }
 
     if (std::any_of(blockedDims.begin() + shape.getRank(), blockedDims.end(), [](size_t val) { return val == Shape::UNDEFINED_DIM; })) {
-        IE_THROW() << "OnednnBlockedMemoryDesc doesn't support undefined blockedDims.";
+        IE_THROW() << "DnnlBlockedMemoryDesc doesn't support undefined blockedDims.";
     }
 
     auto dims = MKLDNNExtensionUtils::convertToDnnlDims(shape.getDims());
@@ -98,7 +98,7 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc,
         // TODO: That's strong constrains and can be mitigated. IE::TensorDesc allow to transpose blocked dims
         //       and may be we can achieve correct "descending strides" form which allow conversion.
         if (!is_descending_strides)
-            IE_THROW() << "Can not construct OnednnBlockedMemoryDesc from strides: " << vec2str(strides);
+            IE_THROW() << "Can not construct DnnlBlockedMemoryDesc from strides: " << vec2str(strides);
     }
 
     std::vector<size_t> outer_order(outer_ndims, outer_ndims + 1); // outer_order[i] is index of stride for i-th dimension
@@ -109,7 +109,7 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc,
             std::find(outer_order.begin(), outer_order.end(), outer_ndims + 1) == outer_order.end();
 
     if (!outer_is_correct_permutation_of_n)
-        IE_THROW() << "Can not construct OnednnBlockedMemoryDesc because of incorrect order: " << vec2str(order);
+        IE_THROW() << "Can not construct DnnlBlockedMemoryDesc because of incorrect order: " << vec2str(order);
 
     if (!strides.empty() && std::none_of(strides.begin(), strides.end(), [](size_t x) { return Shape::UNDEFINED_DIM == x; })) {
         bool inner_block_are_dense = one_of(strides.back(), 0, 1);  // stride 1 - is dense case, 0 - broad casted
@@ -118,7 +118,7 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc,
         }
 
         if (!inner_block_are_dense)
-            IE_THROW() << "Can not construct OnednnBlockedMemoryDesc from strides: " << vec2str(strides) << " inner blocks are not dense.";
+            IE_THROW() << "Can not construct DnnlBlockedMemoryDesc from strides: " << vec2str(strides) << " inner blocks are not dense.";
     }
 
     // Fill general memory desc fields
@@ -134,7 +134,7 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc,
                                                      [](size_t pad) { return pad == 0; });
 
         if (!inner_pad_offsets_is_zero)
-            IE_THROW() << "Can not construct OnednnBlockedMemoryDesc, inner pad offsets is not zero: " << vec2str(offsetPaddingToData);
+            IE_THROW() << "Can not construct DnnlBlockedMemoryDesc, inner pad offsets is not zero: " << vec2str(offsetPaddingToData);
         auto dnnlPaddedOffsets = MKLDNNExtensionUtils::convertToDnnlDims(offsetPaddingToData);
         std::copy(dnnlPaddedOffsets.begin(), dnnlPaddedOffsets.begin() + outer_ndims, desc.data.padded_offsets);
     } else {
@@ -183,7 +183,7 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(InferenceEngine::Precision prc,
     this->order = order;
 }
 
-OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format) :
+DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format) :
         MemoryDesc(shape, OneDnnBlocked) {
     using namespace mkldnn;
     if (format == memory::format_tag::any || format == memory::format_tag::undef)
@@ -206,7 +206,7 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(const Shape& shape, mkldnn::mem
     order.insert(order.end(), inner_idxs.begin(), inner_idxs.end());
 }
 
-const std::vector<size_t>& OnednnBlockedMemoryDesc::getBlockDims() const {
+const std::vector<size_t>& DnnlBlockedMemoryDesc::getBlockDims() const {
     if (blockedDims.empty()) {
         const auto dims = desc.dims();
 
@@ -243,7 +243,7 @@ const std::vector<size_t>& OnednnBlockedMemoryDesc::getBlockDims() const {
     return blockedDims;
 }
 
-const std::vector<size_t>& OnednnBlockedMemoryDesc::getStrides() const {
+const std::vector<size_t>& DnnlBlockedMemoryDesc::getStrides() const {
     if (strides.empty()) {
         const auto dims = desc.dims();
 
@@ -273,34 +273,42 @@ const std::vector<size_t>& OnednnBlockedMemoryDesc::getStrides() const {
     return strides;
 }
 
-const std::vector<size_t>& OnednnBlockedMemoryDesc::getOrder() const {
+const std::vector<size_t>& DnnlBlockedMemoryDesc::getOrder() const {
     return order;
 }
 
-const std::vector<size_t>& OnednnBlockedMemoryDesc::getOffsetPaddingToData() const {
+const std::vector<size_t>& DnnlBlockedMemoryDesc::getOffsetPaddingToData() const {
     if (offsetPaddingToData.empty()) {
         offsetPaddingToData = std::vector<size_t>(std::begin(desc.data.padded_offsets), std::begin(desc.data.padded_offsets) + getOrder().size());
     }
     return offsetPaddingToData;
 }
 
-size_t OnednnBlockedMemoryDesc::getOffsetPadding() const {
+size_t DnnlBlockedMemoryDesc::getOffsetPadding() const {
     return desc.data.offset0;
 }
 
-bool OnednnBlockedMemoryDesc::isCompatible(const MemoryDesc& rhs) const {
+bool DnnlBlockedMemoryDesc::isCompatible(const MemoryDesc& rhs) const {
     const MemoryDesc* pRhs = &rhs;
-    if (auto desc = dynamic_cast<const OnednnBlockedMemoryDesc*>(pRhs)) {
-        return isCompatible(*desc);
-    } else if (auto desc = dynamic_cast<const CpuBlockedMemoryDesc*>(pRhs)) {
+    if (auto desc = dynamic_cast<const BlockedMemoryDesc*>(pRhs)) {
         return isCompatible(*desc);
     } else {
         return false;
     }
 }
 
-bool OnednnBlockedMemoryDesc::isCompatible(const CpuBlockedMemoryDesc& rhs) const {
-    return BlockedMemoryDesc::isCompatible(rhs);
+bool DnnlBlockedMemoryDesc::isCompatible(const BlockedMemoryDesc &rhs) const {
+    if (auto desc = dynamic_cast<const DnnlBlockedMemoryDesc*>(&rhs)) {
+        return isCompatible(*desc);
+    } else if (auto desc = dynamic_cast<const CpuBlockedMemoryDesc*>(&rhs)) {
+        return isCompatible(*desc);
+    } else {
+        return false;
+    }
+}
+
+bool DnnlBlockedMemoryDesc::isCompatible(const CpuBlockedMemoryDesc& rhs) const {
+    return rhs.isCompatible(*this);
 }
 
 static bool array_cmp_weak(const dnnl_dim_t *a1, const dnnl_dim_t *a2, size_t size) {
@@ -309,7 +317,7 @@ static bool array_cmp_weak(const dnnl_dim_t *a1, const dnnl_dim_t *a2, size_t si
     return true;
 }
 
-bool OnednnBlockedMemoryDesc::isCompatible(const OnednnBlockedMemoryDesc& rhs) const {
+bool DnnlBlockedMemoryDesc::isCompatible(const DnnlBlockedMemoryDesc& rhs) const {
     using namespace dnnl;
     using namespace impl;
     using namespace impl::utils;
@@ -346,7 +354,7 @@ bool OnednnBlockedMemoryDesc::isCompatible(const OnednnBlockedMemoryDesc& rhs) c
            && dimsEqualWeak(wrappedThis.offset0(), wrappedRhs.offset0());
 }
 
-OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(const mkldnn::memory::desc& mdesc) :
+DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(const mkldnn::memory::desc& mdesc) :
                 MemoryDesc(MKLDNNExtensionUtils::convertToSizeVector(mdesc.dims()), OneDnnBlocked) {
     desc = mdesc;
     if (desc.data.format_kind == dnnl::impl::format_kind::any)
@@ -354,7 +362,7 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(const mkldnn::memory::desc& mde
 
     mkldnn::impl::memory_desc_wrapper descWrapped(desc.data);
     if (!descWrapped.is_blocking_desc())
-        IE_THROW(Unexpected) << "Can't create OnednnBlockedMemoryDesc from not blocking desc";
+        IE_THROW(Unexpected) << "Can't create DnnlBlockedMemoryDesc from not blocking desc";
 
     if (descWrapped.has_runtime_dims_or_strides()) {
         IE_THROW(Unexpected) << "Cannot calculate order from undefined dims or strides";
@@ -402,7 +410,7 @@ OnednnBlockedMemoryDesc::OnednnBlockedMemoryDesc(const mkldnn::memory::desc& mde
     order.swap(blk_order);
 }
 
-bool OnednnBlockedMemoryDesc::hasLayoutType(LayoutType layoutType) const {
+bool DnnlBlockedMemoryDesc::hasLayoutType(LayoutType layoutType) const {
     switch (layoutType) {
         case LayoutType::ncsp:
             return isPlainFormat();
@@ -417,7 +425,7 @@ bool OnednnBlockedMemoryDesc::hasLayoutType(LayoutType layoutType) const {
     }
 }
 
-bool OnednnBlockedMemoryDesc::isPlainFormat() const {
+bool DnnlBlockedMemoryDesc::isPlainFormat() const {
     if (shape.getRank() != order.size()) {
         return false;
     }
@@ -429,7 +437,7 @@ bool OnednnBlockedMemoryDesc::isPlainFormat() const {
     return true;
 }
 
-bool OnednnBlockedMemoryDesc::isBlockedCFormat(size_t blk_size) const {
+bool DnnlBlockedMemoryDesc::isBlockedCFormat(size_t blk_size) const {
     const auto &blocking = desc.data.format_desc.blocking;
 
     if (desc.data.format_kind !=dnnl_blocked ||
@@ -452,7 +460,7 @@ bool OnednnBlockedMemoryDesc::isBlockedCFormat(size_t blk_size) const {
     return true;
 }
 
-bool OnednnBlockedMemoryDesc::isTailCFormat() const {
+bool DnnlBlockedMemoryDesc::isTailCFormat() const {
     if (shape.getRank() < 3) {
         return false;
     }
@@ -468,7 +476,7 @@ bool OnednnBlockedMemoryDesc::isTailCFormat() const {
     return true;
 }
 
-std::unique_ptr<MemoryDesc> OnednnBlockedMemoryDesc::cloneWithNewDimsImp(const VectorDims &dims) const {
+std::unique_ptr<MemoryDesc> DnnlBlockedMemoryDesc::cloneWithNewDimsImp(const VectorDims &dims) const {
     if (std::any_of(dims.begin(), dims.end(), [](size_t x){ return Shape::UNDEFINED_DIM == x; })) {
         IE_THROW() << "Can't clone desc if new dims are undefined";
     }
@@ -484,12 +492,12 @@ std::unique_ptr<MemoryDesc> OnednnBlockedMemoryDesc::cloneWithNewDimsImp(const V
     std::vector<int> innerIdxs(std::begin(blockingDesc.inner_idxs), std::begin(blockingDesc.inner_idxs) + numInnerBlks);
     auto retCode = dnnl::impl::fill_blocked(newMklDesc.data, perm, innerBlks, innerIdxs);
     if (retCode != dnnl::impl::status::success) {
-        IE_THROW() << "Can not clone OnednnBlockedMemoryDesc with dims: " << dims2str(dims);
+        IE_THROW() << "Can not clone DnnlBlockedMemoryDesc with dims: " << dims2str(dims);
     }
-    return std::unique_ptr<OnednnBlockedMemoryDesc>(new OnednnBlockedMemoryDesc(newMklDesc));
+    return std::unique_ptr<DnnlBlockedMemoryDesc>(new DnnlBlockedMemoryDesc(newMklDesc));
 }
 
-bool OnednnBlockedMemoryDesc::blocksExtended() const {
+bool DnnlBlockedMemoryDesc::blocksExtended() const {
     for (int i = 0; i < desc.data.ndims; i++) {
         if (desc.data.dims[i] != desc.data.padded_dims[i])
             return true;
@@ -698,14 +706,14 @@ static const std::map<int, std::vector<mkldnn::memory::format_tag>> form_tags_by
         }}
 };
 
-bool OnednnBlockedMemoryDesc::isSame(mkldnn::memory::format_tag fmt) const {
+bool DnnlBlockedMemoryDesc::isSame(mkldnn::memory::format_tag fmt) const {
     mkldnn::memory::desc refDesc(desc.dims(), desc.data_type(), fmt);
 
     if (desc.data.ndims != refDesc.data.ndims)
         return false;
 
     if (desc.data.format_kind != dnnl_blocked || refDesc.data.format_kind != dnnl_blocked)
-        IE_THROW() << "OnednnMemoryDesc::isSame is not implemented for non blocked memory format";
+        IE_THROW() << "DnnlMemoryDesc::isSame is not implemented for non blocked memory format";
 
     auto actualBlkDesc = desc.data.format_desc.blocking;
     auto refBlkDesc = refDesc.data.format_desc.blocking;
@@ -772,7 +780,7 @@ bool OnednnBlockedMemoryDesc::isSame(mkldnn::memory::format_tag fmt) const {
     return true;
 }
 
-mkldnn::memory::format_tag OnednnBlockedMemoryDesc::getFormat() const {
+mkldnn::memory::format_tag DnnlBlockedMemoryDesc::getFormat() const {
     // TODO [OneDNN]: Previously it was a field of tdesc, but now the brute
     //                force search here. Please avoid of using this method.
     const auto ndims = desc.dims().size();
@@ -789,7 +797,31 @@ mkldnn::memory::format_tag OnednnBlockedMemoryDesc::getFormat() const {
     return mkldnn::memory::format_tag::undef;
 }
 
-std::string OnednnBlockedMemoryDesc::serializeFormat() const {
+std::string DnnlBlockedMemoryDesc::serializeFormat() const {
     auto fmt = getFormat();
     return mkldnn::utils::fmt2str(fmt);
+}
+
+size_t DnnlBlockedMemoryDesc::getMaxMemSize() const {
+    if (shape.isStatic()) {
+        return getCurrentMemSize();
+    }
+
+    auto& maxDims = shape.getMaxDims();
+    if (std::any_of(maxDims.begin(), maxDims.end(), [](size_t x){ return Shape::UNDEFINED_DIM == x; })) {
+        return UNDEFINED_SIZE;
+    }
+
+    auto maxDimsDesc = cloneWithNewDims(maxDims);
+    return maxDimsDesc->getCurrentMemSize();
+}
+
+bool DnnlBlockedMemoryDesc::isDefinedImp() const {
+    mkldnn::impl::memory_desc_wrapper wrappedThis(desc.data);
+
+    if (wrappedThis.has_runtime_dims_or_strides()) {
+        return false;
+    }
+
+    return wrappedThis.offset0() != Shape::UNDEFINED_DIM;
 }

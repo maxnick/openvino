@@ -201,15 +201,15 @@ void MKLDNNScatterUpdateNode::initSupportedPrimitiveDescriptors() {
     }
 
     auto pushDesc = [&](memory::format_tag inFormat, memory::format_tag idxFormat, memory::format_tag updateFormat, memory::format_tag outFormat) {
-        config.inConfs[DATA_ID].desc = MKLDNNPlugin::make_unique<OnednnMemoryDesc>(getParentEdgeAt(DATA_ID)->getShape().getStaticDims(), dataType, inFormat);
-        config.inConfs[INDICES_ID].desc = MKLDNNPlugin::make_unique<OnednnMemoryDesc>(getParentEdgeAt(INDICES_ID)->getShape().getStaticDims(), indicesType,
+        config.inConfs[DATA_ID].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(DATA_ID)->getShape().getStaticDims(), dataType, inFormat);
+        config.inConfs[INDICES_ID].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(INDICES_ID)->getShape().getStaticDims(), indicesType,
                                                                                       idxFormat);
-        config.inConfs[UPDATE_ID].desc = MKLDNNPlugin::make_unique<OnednnMemoryDesc>(getParentEdgeAt(UPDATE_ID)->getShape().getStaticDims(), dataType,
+        config.inConfs[UPDATE_ID].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(UPDATE_ID)->getShape().getStaticDims(), dataType,
                                                                                      updateFormat);
         if (axisRelaxed)
-            config.inConfs[AXIS_ID].desc = MKLDNNPlugin::make_unique<OnednnMemoryDesc>(getParentEdgeAt(AXIS_ID)->getShape().getStaticDims(),
+            config.inConfs[AXIS_ID].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(AXIS_ID)->getShape().getStaticDims(),
                 MKLDNNExtensionUtils::IEPrecisionToDataType(axisPrec), memory::format_tag::x);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<OnednnMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), dataType, outFormat);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), dataType, outFormat);
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});
     };
 

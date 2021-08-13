@@ -15,6 +15,8 @@
 
 namespace MKLDNNPlugin {
 
+class DnnlMemoryDesc;
+
 class MKLDNNExtensionUtils {
 public:
     static uint8_t sizeOfDataType(mkldnn::memory::data_type dataType);
@@ -23,6 +25,13 @@ public:
     static VectorDims convertToSizeVector(const mkldnn::memory::dims& dims);
     static std::vector<dnnl::memory::dim> convertToDnnlDims(const VectorDims& dims);
     static mkldnn::memory::format_tag GetPlainFormatByRank(size_t rank);
+
+    /**
+     * @brief Creates DnnlBlockedMemoryDesc if desc is blocked, otherwise DnnlMemoryDesc
+     * @param desc mkldnn::memory::desc from which one of the descriptors will be created
+     * @return pointer to DnnlBlockedMemoryDesc or DnnlMemoryDesc
+     */
+    static std::unique_ptr<DnnlMemoryDesc> makeDescriptor(const mkldnn::memory::desc &desc);
 };
 
 }  // namespace MKLDNNPlugin

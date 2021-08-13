@@ -21,6 +21,7 @@ public:
     }
 
     bool isCompatible(const MemoryDesc& rhs) const override;
+    bool isCompatible(const BlockedMemoryDesc &rhs) const override;
 
     InferenceEngine::Precision getPrecision() const override {
         return precision;
@@ -76,8 +77,6 @@ public:
     std::string serializeFormat() const override;
 
     size_t getMaxMemSize() const override;
-
-    size_t getPaddedElementsCount() const override;
 
 private:
     size_t getElementOffset(size_t elemNumber) const override;

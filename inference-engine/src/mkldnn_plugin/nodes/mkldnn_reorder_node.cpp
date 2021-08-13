@@ -11,6 +11,8 @@
 #include "ie_parallel.hpp"
 #include "utils/general_utils.h"
 #include <cpu/x64/cpu_isa_traits.hpp>
+#include "nodes/common/cpu_memcpy.h"
+#include "nodes/common/cpu_convert.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -77,37 +79,38 @@ void MKLDNNReorderNode::createPrimitive() {
     auto inDims = getParentEdgeAt(0)->getShape().getStaticDims();
 
     if (!isOptimized) {
+        const auto &parentMem = getParentEdgeAt(0)->getMemory();
         if (MKLDNNPlugin::one_of(inDims.size(), 4, 5) &&
                 inDims[1] <= 64 &&
                 inDims[1] >= 16 &&
-                (getParentEdgeAt(0)->getMemory().getDesc().getPaddedElementsCount() / inDims[1]) >= 128 &&
-                getParentEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::nspc) &&
+                (parentMem.GetSize() / parentMem.getDesc().getPrecision().size() / inDims[1]) >= 128 &&
+                parentMem.getDesc().hasLayoutType(LayoutType::nspc) &&
                 getChildEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::ncsp) &&
-                getParentEdgeAt(0)->getMemory().getDesc().getPrecision() == Precision::FP32 &&
+                parentMem.getDesc().getPrecision() == Precision::FP32 &&
                 getChildEdgeAt(0)->getMemory().getDesc().getPrecision() == Precision::FP32) {
             // oneDNN JIT reorder shows bad perf for nspc to ncsp reorder case so we fallback on simple c++ implementation
             canUseOptimizedNspc2Ncsp = true;
         } else if (!impl::cpu::x64::mayiuse(impl::cpu::x64::avx2) &&
                    MKLDNNPlugin::one_of(inDims.size(), 4, 5) &&
-                   getParentEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::ncsp) &&
+                   parentMem.getDesc().hasLayoutType(LayoutType::ncsp) &&
                    getChildEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::nspc) &&
-                   getParentEdgeAt(0)->getMemory().GetDataType() == getChildEdgeAt(0)->getMemory().GetDataType() &&
-                   MKLDNNExtensionUtils::sizeOfDataType(getParentEdgeAt(0)->getMemory().GetDataType()) == 1) {
+                   parentMem.GetDataType() == getChildEdgeAt(0)->getMemory().GetDataType() &&
+                   MKLDNNExtensionUtils::sizeOfDataType(parentMem.GetDataType()) == 1) {
             // oneDNN doesn't provide JIT reorder impl for non-avx2 targets so we fallback on simple c++ implementation which shows better perf
             canUseOptimizedNcsp2Nspc = true;
         } else {
-            createReorderPrimitive(srcMemPtr->GetDescWithType<OnednnMemoryDesc>()->getMklDesc(), srcMemPtr->GetPrimitive().get_data_handle(),
-                                   dstMemPtr->GetDescWithType<OnednnMemoryDesc>()->getMklDesc(), dstMemPtr->GetPrimitive().get_data_handle());
+            createReorderPrimitive(srcMemPtr->GetDescWithType<DnnlMemoryDesc>()->getMklDesc(), srcMemPtr->GetPrimitive().get_data_handle(),
+                                   dstMemPtr->GetDescWithType<DnnlMemoryDesc>()->getMklDesc(), dstMemPtr->GetPrimitive().get_data_handle());
         }
     }
 }
 
 void MKLDNNReorderNode::createReorderPrimitive(const mkldnn::memory::desc &srcDesc, void* srcPtr, const mkldnn::memory::desc &dstDesc, void* dstPtr) {
     src_blocked = std::make_shared<MKLDNNMemory>(getEngine());
-    src_blocked->Create(OnednnMemoryDesc(srcDesc), srcPtr, false);
+    src_blocked->Create(MKLDNNExtensionUtils::makeDescriptor(srcDesc), srcPtr, false);
 
     dst_blocked = std::make_shared<MKLDNNMemory>(getEngine());
-    dst_blocked->Create(OnednnMemoryDesc(dstDesc), dstPtr, false);
+    dst_blocked->Create(MKLDNNExtensionUtils::makeDescriptor(dstDesc), dstPtr, false);
 
     mkldnn::primitive_attr attr;
     auto createReorder = [&]() -> bool {
@@ -142,7 +145,7 @@ void MKLDNNReorderNode::createReorderPrimitive(const mkldnn::memory::desc &srcDe
             const auto newFormat = MKLDNNExtensionUtils::GetPlainFormatByRank(newDims.size());
 
             auto newDesc = mkldnn::memory::desc(MKLDNNExtensionUtils::convertToDnnlDims(newDims), src_blocked->GetDataType(), newFormat);
-            src_blocked->Create(OnednnMemoryDesc(newDesc), srcPtr, false);
+            src_blocked->Create(MKLDNNExtensionUtils::makeDescriptor(newDesc), srcPtr, false);
 
             success = createReorder();
         }
@@ -246,8 +249,8 @@ void MKLDNNReorderNode::setDynamicBatchLim(int lim) {
     if (prim) {
         auto &dstMemPtr = getChildEdgeAt(0)->getMemoryPtr();
         auto &srcMemPtr = getParentEdgeAt(0)->getMemoryPtr();
-        memory::desc src_d = srcMemPtr->GetDescWithType<OnednnMemoryDesc>()->getMklDesc();
-        memory::desc dst_d = dstMemPtr->GetDescWithType<OnednnMemoryDesc>()->getMklDesc();
+        memory::desc src_d = srcMemPtr->GetDescWithType<DnnlMemoryDesc>()->getMklDesc();
+        memory::desc dst_d = dstMemPtr->GetDescWithType<DnnlMemoryDesc>()->getMklDesc();
         void *src_data_hdl = srcMemPtr->GetPrimitive().get_data_handle();
         void *dst_data_hdl = dstMemPtr->GetPrimitive().get_data_handle();
 
@@ -274,6 +277,55 @@ std::string MKLDNNReorderNode::getReorderArgs(const MemoryDesc &parentDesc, cons
         outArgs += (outArgs.empty() ? "" : "_") + formatDst;
     }
     return inArgs + "_" + outArgs;
+}
+
+void MKLDNNReorderNode::reorderData(const MKLDNNMemory &input, const MKLDNNMemory &output, size_t size) {
+    if (size != 0)
+        IE_ASSERT(size <= output.GetSize());
+    if (input.getDesc().isCompatible(output.getDesc())) {
+        auto srcPtr = static_cast<uint8_t*>(input.GetPtr());
+        auto dstPtr = static_cast<uint8_t*>(output.GetPtr());
+
+        auto copySize = size == 0 ? output.GetSize() : size;
+        cpu_memcpy(dstPtr, srcPtr, copySize);
+    } else {
+        std::unique_ptr<mkldnn::reorder> pReorder;
+        std::shared_ptr<mkldnn::memory> srcMemoryPtr;
+        std::vector<uint8_t> tmpBuff;
+
+        try {
+            pReorder = std::unique_ptr<mkldnn::reorder>(new mkldnn::reorder(input.GetPrimitive(), output.GetPrimitive()));
+            srcMemoryPtr = input.GetPrimitivePtr();
+        }
+        catch (const mkldnn::error& err) {
+            if (mkldnn_unimplemented == err.status && output.GetDataType() != input.GetDataType()) {
+                //we probably could not make the reorder because there is no one supporting this precision conversion
+                //lets try to convert data first using cpu_convert
+                auto data = static_cast<const uint8_t *>(input.GetPtr());
+                tmpBuff.resize(input.GetSize());
+
+                const auto outPrc = MKLDNNExtensionUtils::DataTypeToIEPrecision(output.GetDataType());
+                cpu_convert(data, tmpBuff.data(), MKLDNNExtensionUtils::DataTypeToIEPrecision(input.GetDataType()),
+                            outPrc, input.GetSize() / input.getDesc().getPrecision().size());
+
+                MKLDNNMemory tmpMem(output.getEngine());
+                auto tmpDesc = input.getDesc().clone();
+                tmpDesc->setPrecision(outPrc);
+                tmpMem.Create(std::move(tmpDesc), tmpBuff.data());
+
+                pReorder = std::unique_ptr<mkldnn::reorder>(new mkldnn::reorder(tmpMem.GetPrimitive(), output.GetPrimitive()));
+                srcMemoryPtr = tmpMem.GetPrimitivePtr();
+            } else {
+                throw;
+            }
+        }
+        if (pReorder) {
+            mkldnn::stream loc_stream(output.getEngine(), mkldnn::stream::flags::default_order);
+            pReorder->execute(loc_stream, *srcMemoryPtr, *output.GetPrimitivePtr());
+        } else {
+            IE_THROW() << "Could not make mkldnn reorder.";
+        }
+    }
 }
 
 REG_MKLDNN_PRIM_FOR(MKLDNNReorderNode, Reorder);

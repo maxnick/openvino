@@ -8,7 +8,7 @@
 #include "mkldnn_memory_node.hpp"
 #include "common/cpu_memcpy.h"
 #include "utils/general_utils.h"
-#include "memory_descs/onednn_blocked_memory_desc.h"
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -65,7 +65,7 @@ void MKLDNNMemoryOutputNode::initSupportedPrimitiveDescriptors() {
     config.inConfs.resize(1);
     config.inConfs[0].inPlace = -1;
     config.inConfs[0].constant = false;
-    config.inConfs[0].desc = MKLDNNPlugin::make_unique<OnednnBlockedMemoryDesc>(precision, getParentEdgeAt(0)->getShape());
+    config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(precision, getParentEdgeAt(0)->getShape());
     supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::unknown);
 }
 

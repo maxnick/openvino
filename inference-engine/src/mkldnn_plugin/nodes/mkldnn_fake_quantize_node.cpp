@@ -20,7 +20,7 @@
 
 #include <ngraph/opsets/opset1.hpp>
 #include <memory_descs/cpu_memory_desc_utils.h>
-#include "memory_descs/onednn_blocked_memory_desc.h"
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 
 // Quantization ranges validation is switched off by default in order to avoid regressions on user side
 // #define VALIDATE_QUANTIZATION_RANGES
@@ -1260,7 +1260,7 @@ void MKLDNNFakeQuantizeNode::createPrimitive() {
     size_t axisSize = getParentEdgeAt(0)->getShape().getStaticDims()[getAxis()];
     size_t axisPaddedSize = rnd_up(axisSize, 16);
 
-    OnednnBlockedMemoryDesc weightsDataDesc(Shape(InferenceEngine::SizeVector{axisPaddedSize}), memory::data_type::f32, memory::format_tag::x);
+    DnnlBlockedMemoryDesc weightsDataDesc(Shape(InferenceEngine::SizeVector{axisPaddedSize}), memory::data_type::f32, memory::format_tag::x);
 
     if (isBinarization()) {
         auto binarizationThresholdsDataMem = std::make_shared<MKLDNNMemory>(getEngine());

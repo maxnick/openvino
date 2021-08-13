@@ -9,7 +9,7 @@
 #include <string>
 #include <blob_factory.hpp>
 #include "memory_descs/cpu_memory_desc_utils.h"
-#include "memory_descs/onednn_blocked_memory_desc.h"
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -31,13 +31,13 @@ NodeConfig MKLDNNGenericNode::convertLayerToNodeConfig(const InferenceEngine::La
     for (size_t i = 0; i < layerConfig.inConfs.size(); i++) {
         config.inConfs[i].inPlace = layerConfig.inConfs[i].inPlace;
         config.inConfs[i].constant = layerConfig.inConfs[i].constant;
-        config.inConfs[i].desc = MemoryDescUtils::convertToOnednnBlockedMemoryDesc(layerConfig.inConfs[i].desc)->clone();
+        config.inConfs[i].desc = MemoryDescUtils::convertToDnnlBlockedMemoryDesc(layerConfig.inConfs[i].desc)->clone();
     }
     config.outConfs.resize(layerConfig.outConfs.size());
     for (size_t i = 0; i < layerConfig.outConfs.size(); i++) {
         config.outConfs[i].inPlace = layerConfig.outConfs[i].inPlace;
         config.outConfs[i].constant = layerConfig.outConfs[i].constant;
-        config.outConfs[i].desc = MemoryDescUtils::convertToOnednnBlockedMemoryDesc(layerConfig.outConfs[i].desc)->clone();
+        config.outConfs[i].desc = MemoryDescUtils::convertToDnnlBlockedMemoryDesc(layerConfig.outConfs[i].desc)->clone();
     }
     return config;
 }

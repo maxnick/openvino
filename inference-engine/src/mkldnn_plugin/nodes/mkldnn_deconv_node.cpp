@@ -17,7 +17,7 @@
 #include <cpu/x64/cpu_isa_traits.hpp>
 #include <nodes/common/cpu_memcpy.h>
 #include <memory_descs/cpu_memory_desc_utils.h>
-#include "memory_descs/onednn_blocked_memory_desc.h"
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -43,8 +43,8 @@ bool MKLDNNDeconvolutionNode::isSupportedOperation(const std::shared_ptr<ngraph:
 
 MKLDNNDeconvolutionNode::MKLDNNDeconvolutionNode(const std::shared_ptr<ngraph::Node>& op,
                                                  const mkldnn::engine& eng, MKLDNNWeightsSharing::Ptr &cache) : MKLDNNNode(op, eng, cache) {
-    internalBlobDesc.emplace_back([&](primitive_desc_iterator &primitive_desc_it, size_t idx) -> OnednnMemoryDesc {
-        return OnednnMemoryDesc(primitive_desc_it.weights_desc(0));
+    internalBlobDesc.emplace_back([&](primitive_desc_iterator &primitive_desc_it, size_t idx) -> DnnlMemoryDesc {
+        return DnnlMemoryDesc(primitive_desc_it.weights_desc(0));
     });
     std::string errorMessage;
     if (isSupportedOperation(op, errorMessage)) {
@@ -245,13 +245,13 @@ void MKLDNNDeconvolutionNode::getSupportedDescriptors() {
         std::swap(weightDims[withGroups + 0], weightDims[withGroups + 1]);
         internalBlobs.push_back(createWeiBlobAsIO(weightDims));
         auto format = getParentEdgeAt(0)->getShape().getRank() == 5 ? dnnl::memory::format_tag::ndhwc : dnnl::memory::format_tag::nhwc;
-        OnednnMemoryDesc in_candidate(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType, format);
-        OnednnMemoryDesc out_candidate(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType, format);
+        DnnlMemoryDesc in_candidate(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType, format);
+        DnnlMemoryDesc out_candidate(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType, format);
         createDescriptor({&in_candidate}, {&out_candidate});
     } else {
         for (auto format : getAvailableFormatsForDims(getParentEdgeAt(0)->getShape())) {
-            OnednnMemoryDesc in_candidate(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType, format);
-            OnednnMemoryDesc out_candidate(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType, format);
+            DnnlMemoryDesc in_candidate(getParentEdgeAt(0)->getShape().getStaticDims(), inputDataType, format);
+            DnnlMemoryDesc out_candidate(getChildEdgeAt(0)->getShape().getStaticDims(), outputDataType, format);
             createDescriptor({&in_candidate}, {&out_candidate});
         }
     }
@@ -293,14 +293,14 @@ void MKLDNNDeconvolutionNode::filterSupportedDescriptors() {
             bool isSuitableDesc = true;
             if (!inputMemoryFormatsFilter.empty()) {
                 if (isInt8) {
-                    auto src_tdesc = MemoryDescUtils::makeDescriptor(std::shared_ptr<dnnl::deconvolution_forward::desc>(*itd)->data.src_desc);
-                    const auto oneDnnDesc = dynamic_cast<OnednnBlockedMemoryDesc *>(src_tdesc.get());
+                    auto src_tdesc = MKLDNNExtensionUtils::makeDescriptor(std::shared_ptr<dnnl::deconvolution_forward::desc>(*itd)->data.src_desc);
+                    const auto oneDnnDesc = dynamic_cast<DnnlBlockedMemoryDesc *>(src_tdesc.get());
                     if (!oneDnnDesc)
                         isSuitableDesc = false;
                     isSuitableDesc &= oneDnnDesc->isSame(inputMemoryFormatsFilter[0]);
                 } else {
-                    auto src_tdesc = MemoryDescUtils::makeDescriptor(std::shared_ptr<mkldnn::convolution_backward_data::desc>(*itd)->data.diff_src_desc);
-                    const auto oneDnnDesc = dynamic_cast<OnednnBlockedMemoryDesc *>(src_tdesc.get());
+                    auto src_tdesc = MKLDNNExtensionUtils::makeDescriptor(std::shared_ptr<mkldnn::convolution_backward_data::desc>(*itd)->data.diff_src_desc);
+                    const auto oneDnnDesc = dynamic_cast<DnnlBlockedMemoryDesc *>(src_tdesc.get());
                     if (!oneDnnDesc)
                         isSuitableDesc = false;
                     isSuitableDesc &= oneDnnDesc->isSame(inputMemoryFormatsFilter[0]);
@@ -308,14 +308,14 @@ void MKLDNNDeconvolutionNode::filterSupportedDescriptors() {
             }
             if (!outputMemoryFormatsFilter.empty()) {
                 if (isInt8) {
-                    auto dst_tdesc = MemoryDescUtils::makeDescriptor(std::shared_ptr<mkldnn::deconvolution_forward::desc>(*itd)->data.dst_desc);
-                    const auto oneDnnDesc = dynamic_cast<OnednnBlockedMemoryDesc *>(src_tdesc.get());
+                    auto dst_tdesc = MKLDNNExtensionUtils::makeDescriptor(std::shared_ptr<mkldnn::deconvolution_forward::desc>(*itd)->data.dst_desc);
+                    const auto oneDnnDesc = dynamic_cast<DnnlBlockedMemoryDesc *>(src_tdesc.get());
                     if (!oneDnnDesc)
                         isSuitableDesc = false;
                     isSuitableDesc &= oneDnnDesc->isSame(outputMemoryFormatsFilter[0]);
                 } else {
-                    auto dst_tdesc = MemoryDescUtils::makeDescriptor(std::shared_ptr<mkldnn::convolution_backward_data::desc>(*itd)->data.diff_dst_desc);
-                    const auto oneDnnDesc = dynamic_cast<OnednnBlockedMemoryDesc *>(src_tdesc.get());
+                    auto dst_tdesc = MKLDNNExtensionUtils::makeDescriptor(std::shared_ptr<mkldnn::convolution_backward_data::desc>(*itd)->data.diff_dst_desc);
+                    const auto oneDnnDesc = dynamic_cast<DnnlBlockedMemoryDesc *>(src_tdesc.get());
                     if (!oneDnnDesc)
                         isSuitableDesc = false;
                     isSuitableDesc &= oneDnnDesc->isSame(outputMemoryFormatsFilter[0]);
@@ -362,8 +362,8 @@ void MKLDNNDeconvolutionNode::createPrimitive() {
 
 void MKLDNNDeconvolutionNode::createDescriptor(const std::vector<const MemoryDesc*> &inputDesc,
                                                const std::vector<const MemoryDesc*> &outputDesc) {
-    const OnednnMemoryDesc in_candidate = MemoryDescUtils::convertToOnednnMemoryDesc(*inputDesc[0]);
-    const OnednnMemoryDesc out_candidate = MemoryDescUtils::convertToOnednnMemoryDesc(*outputDesc[0]);
+    const DnnlMemoryDesc in_candidate = MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0]);
+    const DnnlMemoryDesc out_candidate = MemoryDescUtils::convertToDnnlMemoryDesc(*outputDesc[0]);
 
     // grouping and autoblicking is not compatible
     if ((withGroups && !isDW) && (in_candidate.blocksExtended() || out_candidate.blocksExtended()))
@@ -419,12 +419,12 @@ std::unique_ptr<MemoryDesc> MKLDNNDeconvolutionNode::getSrcMemDesc(mkldnn::primi
     }
 
     auto desc = idx > 0 ? primitive_desc_it.weights_desc(idx - 1) : isInt8 ? primitive_desc_it.src_desc(idx) : primitive_desc_it.diff_dst_desc(idx);
-    return MemoryDescUtils::makeDescriptor(desc);
+    return MKLDNNExtensionUtils::makeDescriptor(desc);
 }
 
 std::unique_ptr<MemoryDesc> MKLDNNDeconvolutionNode::getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
     auto desc =  isInt8 ? primitive_desc_it.dst_desc(idx) : primitive_desc_it.diff_src_desc(idx);
-    return MemoryDescUtils::makeDescriptor(desc);
+    return MKLDNNExtensionUtils::makeDescriptor(desc);
 }
 
 InferenceEngine::Precision MKLDNNDeconvolutionNode::getRuntimePrecision() const {

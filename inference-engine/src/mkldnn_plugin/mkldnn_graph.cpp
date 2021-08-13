@@ -47,7 +47,7 @@
 #include <ngraph/ops.hpp>
 #include <transformations/utils/utils.hpp>
 #include <low_precision/low_precision.hpp>
-#include "memory_descs/onednn_blocked_memory_desc.h"
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -440,8 +440,8 @@ void MKLDNNGraph::ExecuteConstantNodesOnly() {
 }
 
 static bool isReorderAvailable(const MemoryDesc& parentDesc, const MemoryDesc& childDesc, const mkldnn::engine& eng) {
-    memory::desc dstMemDesc = MemoryDescUtils::convertToOnednnMemoryDesc(childDesc)->getMklDesc();
-    memory::desc srcMemDesc = MemoryDescUtils::convertToOnednnMemoryDesc(parentDesc)->getMklDesc();
+    memory::desc dstMemDesc = MemoryDescUtils::convertToDnnlMemoryDesc(childDesc)->getMklDesc();
+    memory::desc srcMemDesc = MemoryDescUtils::convertToDnnlMemoryDesc(parentDesc)->getMklDesc();
     mkldnn::primitive_attr attr;
 
     dnnl_primitive_desc_t result = nullptr;
@@ -643,7 +643,7 @@ void MKLDNNGraph::AllocateWithReuse() {
     size_t total_size = static_cast<size_t>(memSolver.solve()) * alignment;
 
     memWorkspace = std::make_shared<MKLDNNMemory>(eng);
-    memWorkspace->Create(OnednnBlockedMemoryDesc(InferenceEngine::Precision::I8, Shape(InferenceEngine::SizeVector{total_size})));
+    memWorkspace->Create(DnnlBlockedMemoryDesc(InferenceEngine::Precision::I8, Shape(InferenceEngine::SizeVector{total_size})));
 
     if (edge_clusters.empty())
         return;
@@ -710,7 +710,7 @@ void MKLDNNGraph::PushInputData(const std::string& name, const InferenceEngine::
         void *inter_data_ptr = input->second->getChildEdgeAt(0)->getMemory().GetData();
 
         if (ext_data_ptr != inter_data_ptr) {
-            auto ext_tdesc = *MemoryDescUtils::convertToOnednnBlockedMemoryDesc(in->getTensorDesc());
+            auto ext_tdesc = *MemoryDescUtils::convertToDnnlBlockedMemoryDesc(in->getTensorDesc());
 
             auto ext_mem = MKLDNNMemory(eng);
             ext_mem.Create(ext_tdesc, ext_data_ptr, false);
@@ -789,7 +789,7 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
             MB_to_process = node->batchToProcess();
         }
 
-        size_t size_to_copy = intr_blob.getDesc().getPaddedElementsCount() * MB_to_process / MB;
+        size_t size_to_copy = intr_blob.GetSize() / intr_blob.getDesc().getPrecision().size() * MB_to_process / MB;
 
         const auto actualDesc = MemoryDescUtils::convertToTensorDesc(node->getParentEdgeAt(0)->getMemory().getDesc());
         const auto expectedDesc = ext_blob->getTensorDesc();
@@ -806,7 +806,7 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
         }
 
         if (actualDesc.getBlockingDesc() != expectedDesc.getBlockingDesc() && !isScalarOutput) {
-            auto outBlobDesc = *MemoryDescUtils::convertToOnednnBlockedMemoryDesc(expectedDesc);
+            auto outBlobDesc = *MemoryDescUtils::convertToDnnlBlockedMemoryDesc(expectedDesc);
             auto outBloMem = MKLDNNMemory(eng);
             outBloMem.Create(outBlobDesc, ext_blob_ptr, false);
 

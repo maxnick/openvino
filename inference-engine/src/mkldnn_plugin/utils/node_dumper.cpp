@@ -122,7 +122,7 @@ void NodeDumper::dumpInternalBlobs(const MKLDNNNodePtr& node) const {
             continue;
 
         MKLDNNMemoryPtr memory = std::make_shared<MKLDNNMemory>(node->getEngine());
-        memory->Create(MemoryDescUtils::convertToOnednnBlockedMemoryDesc(desc), blb->buffer());
+        memory->Create(MemoryDescUtils::convertToDnnlBlockedMemoryDesc(desc), blb->buffer());
         BlobDumper dumper(memory);
         dump(dumper, dump_file);
     }

@@ -10,41 +10,34 @@
 
 namespace MKLDNNPlugin {
 
-class OnednnMemoryDesc;
+class DnnlMemoryDesc;
 class BlockedMemoryDesc;
-class OnednnBlockedMemoryDesc;
+class DnnlBlockedMemoryDesc;
 class CpuBlockedMemoryDesc;
 class MKLDNNMemory;
 
 class MemoryDescUtils {
 public:
     /**
-     * @brief Creates OnednnBlockedMemoryDesc if desc is blocked, otherwise OnednnMemoryDesc
-     * @param desc mkldnn::memory::desc from which one of the descriptors will be created
-     * @return pointer to OnednnBlockedMemoryDesc or OnednnMemoryDesc
-     */
-    static MemoryDescPtr makeDescriptor(const mkldnn::memory::desc &desc);
-
-    /**
-     * @brief Converts MemoryDesc to OnednnMemoryDesc
+     * @brief Converts MemoryDesc to DnnlMemoryDesc
      * @param desc MemoryDesc to be converted
-     * @return converted OnednnMemoryDesc
+     * @return converted DnnlMemoryDesc
      */
-    static std::unique_ptr<OnednnMemoryDesc> convertToOnednnMemoryDesc(const MemoryDesc& desc);
+    static std::unique_ptr<DnnlMemoryDesc> convertToDnnlMemoryDesc(const MemoryDesc& desc);
 
     /**
-     * @brief Converts BlockedMemoryDesc to OnednnMemoryDesc
+     * @brief Converts BlockedMemoryDesc to DnnlMemoryDesc
      * @param desc BlockedMemoryDesc to be converted
-     * @return converted OnednnMemoryDesc
+     * @return converted DnnlMemoryDesc
      */
-    static std::unique_ptr<OnednnMemoryDesc> convertToOnednnMemoryDesc(const CpuBlockedMemoryDesc& desc);
+    static std::unique_ptr<DnnlMemoryDesc> convertToDnnlMemoryDesc(const CpuBlockedMemoryDesc& desc);
 
     /**
-     * @brief Converts InferenceEngine::TensorDesc to OnednnBlockedMemoryDesc
+     * @brief Converts InferenceEngine::TensorDesc to DnnlBlockedMemoryDesc
      * @param desc InferenceEngine::TensorDesc to be converted
-     * @return converted OnednnBlockedMemoryDesc
+     * @return converted DnnlBlockedMemoryDesc
      */
-    static std::unique_ptr<OnednnBlockedMemoryDesc> convertToOnednnBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc);
+    static std::unique_ptr<DnnlBlockedMemoryDesc> convertToDnnlBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc);
 
     /**
      * @brief Creates BlockedMemoryDesc with offsetPadding of UNDEFINED_DIM size

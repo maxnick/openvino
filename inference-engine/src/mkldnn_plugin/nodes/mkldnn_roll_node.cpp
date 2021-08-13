@@ -101,7 +101,7 @@ void MKLDNNRollNode::initSupportedPrimitiveDescriptors() {
         PortConfig dataConfig;
         dataConfig.inPlace = -1;
         dataConfig.constant = false;
-        dataConfig.desc = MKLDNNPlugin::make_unique<OnednnMemoryDesc>(dims.getStaticDims(), dataType, MKLDNNExtensionUtils::GetPlainFormatByRank(dims.getRank()));
+        dataConfig.desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(dims.getStaticDims(), dataType, MKLDNNExtensionUtils::GetPlainFormatByRank(dims.getRank()));
         return dataConfig;
     };
 

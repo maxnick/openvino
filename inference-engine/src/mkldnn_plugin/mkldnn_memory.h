@@ -13,7 +13,7 @@
 #include <mkldnn_types.h>
 #include <cpu_shape.h>
 
-#include "memory_descs/onednn_memory_desc.h"
+#include "memory_descs/dnnl_memory_desc.h"
 
 #include <string>
 #include <functional>
@@ -107,6 +107,10 @@ public:
         return getDesc().getShape().getStaticDims();
     }
 
+    mkldnn::engine getEngine() const {
+        return eng;
+    }
+
 private:
     void Create(const mkldnn::memory::dims& dims, mkldnn::memory::data_type data_type, mkldnn::memory::format_tag format,
                 const void* data = nullptr);
@@ -119,8 +123,6 @@ private:
     mkldnn::engine eng;
     bool useExternalStorage = false;
     size_t memUpperBound = 0ul;
-
-    friend void reorderData(const MKLDNNMemory &input, const MKLDNNMemory &output, size_t size);
 };
 
 using MKLDNNMemoryPtr = std::shared_ptr<MKLDNNMemory>;

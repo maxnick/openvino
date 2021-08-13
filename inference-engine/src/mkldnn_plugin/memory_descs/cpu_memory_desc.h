@@ -13,6 +13,7 @@
 namespace MKLDNNPlugin {
 
 enum MemoryDescType {
+    Undef = 0,
     Blocked = 1,
     Mkldnn = 1 << 1,
 
@@ -71,8 +72,6 @@ public:
     // Get memory upper bound if possible. Can be undefined
     virtual size_t getMaxMemSize() const = 0;
 
-    virtual size_t getPaddedElementsCount() const = 0;
-
     /**
      * @brief Get minimal required memory size in bytes.
      * @return return minimal required memory size in bytes or UNDEFINED_SIZE in case undefined descriptor
@@ -108,6 +107,7 @@ public:
     static constexpr size_t UNDEFINED_SIZE = std::numeric_limits<size_t>::max();
 
 protected:
+    MemoryDesc() : type(MemoryDescType::Undef) {}
     MemoryDesc(Shape shape, MemoryDescType type)
             : shape(std::move(shape)), type(type) {}
 

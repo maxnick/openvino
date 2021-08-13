@@ -18,8 +18,9 @@
 #include "nodes/common/cpu_convert.h"
 #include "mkldnn/ie_mkldnn.h"
 #include "cpu_shape.h"
-#include "memory_descs/onednn_blocked_memory_desc.h"
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 #include "utils/cpu_utils.hpp"
+#include "nodes/mkldnn_reorder_node.h"
 
 using namespace InferenceEngine;
 using namespace mkldnn;
@@ -39,10 +40,11 @@ namespace {
 MKLDNNMemory::MKLDNNMemory(const mkldnn::engine& eng) : eng(eng) {}
 
 size_t MKLDNNMemory::GetSize() const {
-    if (pMemDesc->getShape().isDynamic()) {
+    auto size = getDesc().getCurrentMemSize();
+    if (size  == MemoryDesc::UNDEFINED_SIZE) {
         IE_THROW() << "Can't get memory size for undefined shape";
     }
-    return getDesc().getCurrentMemSize();
+    return size;
 }
 
 void MKLDNNMemory::Create(const memory::dims& dims, memory::data_type data_type, memory::format_tag format, const void* data) {
@@ -50,7 +52,7 @@ void MKLDNNMemory::Create(const memory::dims& dims, memory::data_type data_type,
         format = memory::format_tag::any;
     }
 
-    memory::desc desc = OnednnBlockedMemoryDesc(Shape(MKLDNNExtensionUtils::convertToSizeVector(dims)), data_type, format).getMklDesc();
+    memory::desc desc = DnnlBlockedMemoryDesc(Shape(MKLDNNExtensionUtils::convertToSizeVector(dims)), data_type, format).getMklDesc();
 
     Create(desc, data);
 }
@@ -98,12 +100,12 @@ void MKLDNNMemory::Create(MemoryDescPtr desc, const void* data, bool pads_zeroin
     }
 
     if (pMemDesc->isDefined()) {
-        Create(MemoryDescUtils::convertToOnednnMemoryDesc(*pMemDesc)->getMklDesc(), data, pads_zeroing);
+        Create(MemoryDescUtils::convertToDnnlMemoryDesc(*pMemDesc)->getMklDesc(), data, pads_zeroing);
     } else {
         //delayed dynamic allocation
         size_t maxMemSize = pMemDesc->getMaxMemSize();
-        size_t dummySize = MemoryDesc::UNDEFINED_SIZE == maxMemSize ? 1 : maxMemSize;
-        OnednnBlockedMemoryDesc dummyDesc(InferenceEngine::Precision::U8, Shape(InferenceEngine::SizeVector{dummySize}));
+        VectorDims dummySize{MemoryDesc::UNDEFINED_SIZE == maxMemSize ? 1 : maxMemSize};
+        DnnlBlockedMemoryDesc dummyDesc(InferenceEngine::Precision::U8, Shape(dummySize));
         Create(dummyDesc.getMklDesc(), data, false);  // no pads zeroing
     }
     size_t newUpperBound = prim->get_desc().get_size();
@@ -113,7 +115,7 @@ void MKLDNNMemory::Create(MemoryDescPtr desc, const void* data, bool pads_zeroin
 }
 
 void MKLDNNMemory::SetData(const MKLDNNMemory& src, size_t size, bool ftz) const {
-    reorderData(src, *this, size);
+    MKLDNNReorderNode::reorderData(src, *this, size);
 
     if (ftz
         && src.GetDataType() == memory::data_type::f32
@@ -140,11 +142,11 @@ void *MKLDNNMemory::GetPtr() const  {
 }
 
 template<>
-OnednnMemoryDescPtr MKLDNNMemory::GetDescWithType<OnednnMemoryDesc, 0, 0>() const {
+DnnlMemoryDescPtr MKLDNNMemory::GetDescWithType<DnnlMemoryDesc, 0, 0>() const {
     if (pMemDesc->getType() & MemoryDescType::Mkldnn) {
-        return std::unique_ptr<OnednnMemoryDesc>(dynamic_cast<OnednnMemoryDesc *>(pMemDesc->clone().release()));
+        return std::unique_ptr<DnnlMemoryDesc>(dynamic_cast<DnnlMemoryDesc *>(pMemDesc->clone().release()));
     } else if (pMemDesc->getType() == MemoryDescType::Blocked) {
-        return MemoryDescUtils::convertToOnednnMemoryDesc(*(pMemDesc->as<BlockedMemoryDesc>()));
+        return MemoryDescUtils::convertToDnnlMemoryDesc(*(pMemDesc->as<BlockedMemoryDesc>()));
     } else {
         IE_THROW() << "Can not convert unsupported memory descriptor";
     }

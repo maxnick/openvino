@@ -117,12 +117,16 @@ void MKLDNNConvertNode::createPrimitive() {
 void MKLDNNConvertNode::execute(mkldnn::stream strm) {
     auto& parentMem = getParentEdgeAt(0)->getMemory();
     auto& childMem = getChildEdgeAt(0)->getMemory();
-    if (parentMem.getDesc().getPaddedElementsCount() != childMem.getDesc().getPaddedElementsCount())
+
+    const auto parentPaddElemCount = parentMem.GetSize() / parentMem.getDesc().getPrecision().size();
+    const auto childPaddElemCount = childMem.GetSize() / childMem.getDesc().getPrecision().size();
+
+    if (parentPaddElemCount != childPaddElemCount)
         IE_THROW() << errorPrefix << " has different elements number in input and output buffers";
 
     void* srcPtr = parentMem.GetPtr();
     void* dstPtr = childMem.GetPtr();
-    cpu_convert(srcPtr, dstPtr, parentMem.getDesc().getPrecision(), childMem.getDesc().getPrecision(), parentMem.getDesc().getPaddedElementsCount());
+    cpu_convert(srcPtr, dstPtr, parentMem.getDesc().getPrecision(), childMem.getDesc().getPrecision(), parentPaddElemCount);
 }
 
 bool MKLDNNConvertNode::created() const {

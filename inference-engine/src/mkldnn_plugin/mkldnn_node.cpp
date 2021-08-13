@@ -56,7 +56,7 @@
 #include "utils/cpu_utils.hpp"
 #include "nodes/common/cpu_convert.h"
 #include "memory_descs/cpu_memory_desc_utils.h"
-#include "memory_descs/onednn_blocked_memory_desc.h"
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -673,7 +673,12 @@ void MKLDNNNode::initSupportedPrimitiveDescriptors() {
                 PortConfig portConfig;
                 portConfig.inPlace = -1;
                 portConfig.constant = false;
-                portConfig.desc = MemoryDescUtils::applyUndefinedOffset(*getSrcMemDesc(itpd, i));
+                auto desc = getSrcMemDesc(itpd, i);
+                if (desc->getType() == MemoryDescType::Mkldnn) {
+                    portConfig.desc = std::move(desc);
+                } else {
+                    portConfig.desc = MemoryDescUtils::applyUndefinedOffset(*desc);
+                }
                 config.inConfs.push_back(portConfig);
             }
 
@@ -681,7 +686,12 @@ void MKLDNNNode::initSupportedPrimitiveDescriptors() {
                 PortConfig portConfig;
                 portConfig.inPlace = canBeInPlace() ? 0 : -1;
                 portConfig.constant = false;
-                portConfig.desc = MemoryDescUtils::applyUndefinedOffset(*getDstMemDesc(itpd, i));
+                auto desc = getDstMemDesc(itpd, i);
+                if (desc->getType() == MemoryDescType::Mkldnn) {
+                    portConfig.desc = std::move(desc);
+                } else {
+                    portConfig.desc = MemoryDescUtils::applyUndefinedOffset(*desc);
+                }
                 config.outConfs.push_back(portConfig);
             }
             impl_desc_type impl_type = parse_impl_name(itpd.impl_info_str());
@@ -696,7 +706,7 @@ void MKLDNNNode::initSupportedPrimitiveDescriptors() {
 void MKLDNNNode::filterSupportedPrimitiveDescriptors() {
     // Compare by partial layout descriptor (without particular strides values)
     auto areCompatible = [](const MemoryDesc& desc, mkldnn::memory::format_tag fmt) -> bool {
-        auto fmt_tdesc = OnednnBlockedMemoryDesc(desc.getShape(),
+        auto fmt_tdesc = DnnlBlockedMemoryDesc(desc.getShape(),
                                                  MKLDNNExtensionUtils::IEPrecisionToDataType(desc.getPrecision()),
                                                  fmt);
         return desc.isCompatible(fmt_tdesc);
@@ -821,7 +831,7 @@ void MKLDNNNode::prepareMemory(const NodeDesc *selected_pd, mkldnn::primitive_de
             IE_THROW() << "Destination memory didn't allocate for node " << getName()
                                << " from node " << getParentEdgeAt(i)->getParent()->getName() << ".";
     }
-    std::vector<OnednnMemoryDesc> intDescs;
+    std::vector<DnnlMemoryDesc> intDescs;
     for (auto &it : internalBlobDesc)
         intDescs.push_back(it(itpd, 0));
 
@@ -831,7 +841,7 @@ void MKLDNNNode::prepareMemory(const NodeDesc *selected_pd, mkldnn::primitive_de
 
         auto create = [&] () {
             // TODO [DS]: internal blobs should be removed or rewritten using Memory object
-            auto newDesc = *MemoryDescUtils::convertToOnednnBlockedMemoryDesc(internalBlob->getTensorDesc());
+            auto newDesc = *MemoryDescUtils::convertToDnnlBlockedMemoryDesc(internalBlob->getTensorDesc());
 
             MKLDNNMemory memory{ engine };
             memory.Create(newDesc, internalBlob->buffer());
@@ -1059,11 +1069,11 @@ bool MKLDNNNode::isConfigDefined(const NodeConfig &config) const {
 }
 
 std::unique_ptr<MemoryDesc> MKLDNNNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
-    return MemoryDescUtils::makeDescriptor(primitive_desc_it.src_desc(idx));
+    return MKLDNNExtensionUtils::makeDescriptor(primitive_desc_it.src_desc(idx));
 }
 
 std::unique_ptr<MemoryDesc> MKLDNNNode::getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
-    return MemoryDescUtils::makeDescriptor(primitive_desc_it.dst_desc(idx));
+    return MKLDNNExtensionUtils::makeDescriptor(primitive_desc_it.dst_desc(idx));
 }
 
 int MKLDNNNode::batchToProcess() {
@@ -1318,7 +1328,7 @@ void MKLDNNNode::fillScalesAndShifts(const MKLDNNNode *parentNode, std::vector<f
     const auto fillValuesFrom = [&](const MKLDNNNodePtr& constInput, std::vector<float>& buffer) {
         auto *constInputNode = dynamic_cast<MKLDNNInputNode *>(constInput.get());
         auto constBlob = constInputNode->getMemoryPtr();
-        auto const elementsCount = constBlob->getDesc().getPaddedElementsCount();
+        auto const elementsCount = constBlob->GetSize() / constBlob->getDesc().getPrecision().size();
         buffer.resize(elementsCount);
         cpu_convert(constBlob->GetPtr(),
                     &buffer[0],
