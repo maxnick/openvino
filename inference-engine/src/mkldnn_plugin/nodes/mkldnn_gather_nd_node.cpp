@@ -105,7 +105,7 @@ void MKLDNNGatherNDNode::gatherElementwise() {
     const size_t* srcMultipliers = strides.data() + _batchDims;
 
     const size_t cycles = getChildEdgeAt(0)->getShape().getElementsCount() *
-                          getChildEdgeAt(0)->getMemory().GetDesc().getPrecision().size() / (sizeof(dataType) * _batchNum);
+                          getChildEdgeAt(0)->getMemory().getDesc().getPrecision().size() / (sizeof(dataType) * _batchNum);
     const size_t CS = cycles * _sliceRank;
     const size_t CB = cycles * _blockSize;
     const size_t workAmount = _batchNum * cycles;

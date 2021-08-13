@@ -50,7 +50,7 @@ public:
         return prim;
     }
 
-    const MemoryDesc& GetDesc() const {
+    const MemoryDesc& getDesc() const {
         return *pMemDesc;
     }
 
@@ -78,13 +78,13 @@ public:
     void* GetPtr() const;
 
     mkldnn::memory::data_type GetDataType() const {
-        return MKLDNNExtensionUtils::IEPrecisionToDataType(GetDesc().getPrecision());
+        return MKLDNNExtensionUtils::IEPrecisionToDataType(getDesc().getPrecision());
     }
 
     size_t GetSize() const;
 
     Shape GetShape() const {
-        return GetDesc().getShape();
+        return getDesc().getShape();
     }
 
     void Create(const MemoryDesc& desc, const void* data = nullptr, bool pads_zeroing = true);
@@ -104,7 +104,7 @@ public:
     }
 
     const std::vector<size_t>& getStaticDims() const {
-        return GetDesc().getShape().getStaticDims();
+        return getDesc().getShape().getStaticDims();
     }
 
 private:

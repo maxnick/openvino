@@ -178,7 +178,7 @@ void MKLDNNGenericNode::execLayer() {
     for (size_t i = 0; i < outputShapes.size(); i++) {
         if (isDynBatch) {
             auto out_edge = getChildEdgesAtPort(i)[0];
-            auto td = MemoryDescUtils::convertToTensorDesc(out_edge->getMemory().GetDesc());
+            auto td = MemoryDescUtils::convertToTensorDesc(out_edge->getMemory().getDesc());
             td.setDims(execOutputShapes[i]);
             outputs.push_back(make_blob_with_precision(td, out_edge->getMemory().GetData()));
         } else {

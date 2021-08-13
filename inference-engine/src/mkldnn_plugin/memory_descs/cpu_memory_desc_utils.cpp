@@ -101,7 +101,7 @@ InferenceEngine::Blob::Ptr MemoryDescUtils::createBlob(const MemoryDesc &memDesc
 
 InferenceEngine::Blob::Ptr MemoryDescUtils::interpretAsBlob(const MKLDNNMemory &mem) {
     // TODO [DS]: Rewrite when IE is moved to the new TensorDescriptor
-    auto& memDesc = mem.GetDesc();
+    auto& memDesc = mem.getDesc();
     InferenceEngine::TensorDesc desc = convertToTensorDesc(memDesc);
 
     desc = InferenceEngine::TensorDesc(desc.getPrecision(), memDesc.getShape().getStaticDims(), desc.getBlockingDesc());

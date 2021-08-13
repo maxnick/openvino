@@ -240,13 +240,13 @@ void MKLDNNSplitNode::createPrimitive() {
     if (getSelectedPrimitiveDescriptor() == nullptr)
         THROW_ERROR << "Preferable primitive descriptor is not set.";
 
-    auto& memDesc = getParentEdgeAt(0)->getMemoryPtr()->GetDesc();
+    auto& memDesc = getParentEdgeAt(0)->getMemoryPtr()->getDesc();
 
     canUseOptimizedNspc2Ncsp = false;
     if (axis == 1 && one_of(memDesc.getShape().getRank(), 4, 5) && memDesc.hasLayoutType(LayoutType::nspc)) {
         canUseOptimizedNspc2Ncsp = true;
         for (size_t i = 0; i < getChildEdges().size(); i++) {
-            auto& childMemDesc = getChildEdgeAt(i)->getMemoryPtr()->GetDesc();
+            auto& childMemDesc = getChildEdgeAt(i)->getMemoryPtr()->getDesc();
             if (!childMemDesc.hasLayoutType(LayoutType::ncsp))
                 canUseOptimizedNspc2Ncsp = false;
         }
@@ -491,7 +491,7 @@ void MKLDNNSplitNode::prepareOptimizedParams() {
         auto outputEdge = this->getChildEdgesAtPort(i).front();
         optimizedParams.dataSize[i] = srcDataSize;
 
-        auto desc = outputEdge->getMemory().GetDesc().as<CpuBlockedMemoryDesc>();
+        auto desc = outputEdge->getMemory().getDesc().as<CpuBlockedMemoryDesc>();
         for (size_t j = axisOrderPos; j < getRank; j++)
             optimizedParams.dataSize[i] *= desc->getBlockDims()[j];
 
@@ -516,7 +516,7 @@ void MKLDNNSplitNode::optimizedNspc2Ncsp(size_t MB) {
 
     auto& srcMem = parentEdge->getMemory();
     auto srcData = reinterpret_cast<const uint8_t*>(srcMem.GetData());
-    const auto dataSize = srcMem.GetDesc().getPrecision().size();
+    const auto dataSize = srcMem.getDesc().getPrecision().size();
 
     const size_t DHW = D*H*W;
     const size_t strideIB = DHW * IC * dataSize;
@@ -532,7 +532,7 @@ void MKLDNNSplitNode::optimizedNspc2Ncsp(size_t MB) {
         for (size_t j = axis; j < dims.size(); j++) {
             innerSize *= dims[j];
         }
-        auto srcPtr = srcData + srcMem.GetDesc().getElementOffset(sIdx) * dataSize;
+        auto srcPtr = srcData + srcMem.getDesc().getElementOffset(sIdx) * dataSize;
 
         const size_t OC = dims[1];
         const size_t strideOB = OC * strideOC;

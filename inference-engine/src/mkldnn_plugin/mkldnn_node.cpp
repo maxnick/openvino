@@ -475,7 +475,7 @@ bool MKLDNNNode::canBeInPlace() const {
     return true;
 }
 
-void MKLDNNNode::resolveNotAllocatedEdges() {
+void MKLDNNNode::resolveInPlaceEdges() {
     const NodeDesc *selected_pd = getSelectedPrimitiveDescriptor();
     if (!selected_pd)
         IE_THROW() << "Cannot find selected primitive descriptor for node: " << getName();
@@ -641,7 +641,8 @@ void MKLDNNNode::execute(mkldnn::stream strm) {
 }
 
 void MKLDNNNode::executeDynamic(mkldnn::stream strm) {
-    resetOutputShape();
+    const auto newShapes = shapeInfer();
+    redefineOutputMemory(newShapes);
     executeDynamicImpl(strm);
 }
 
@@ -656,15 +657,6 @@ void MKLDNNNode::redefineOutputMemory(const std::vector<std::vector<size_t>> &ne
     for (size_t i = 0; i < getOriginalOutputsNumber(); i++) {
         getChildEdgesAtPort(i)[0]->getMemoryPtr()->redefineDesc(getOutputMemDescAtPort(i)->cloneWithNewDims(newShapes[i]));
     }
-}
-
-void MKLDNNNode::resetOutputShape() {
-    const auto newShapes = shapeInfer();
-    redefineOutputMemory(newShapes);
-}
-
-void MKLDNNNode::resetOutputShape(const std::vector<std::vector<size_t>> &newShapes) {
-    redefineOutputMemory(newShapes);
 }
 
 void MKLDNNNode::initSupportedPrimitiveDescriptors() {
@@ -1326,7 +1318,7 @@ void MKLDNNNode::fillScalesAndShifts(const MKLDNNNode *parentNode, std::vector<f
     const auto fillValuesFrom = [&](const MKLDNNNodePtr& constInput, std::vector<float>& buffer) {
         auto *constInputNode = dynamic_cast<MKLDNNInputNode *>(constInput.get());
         auto constBlob = constInputNode->getMemoryPtr();
-        auto const elementsCount = constBlob->GetDesc().getPaddedElementsCount();
+        auto const elementsCount = constBlob->getDesc().getPaddedElementsCount();
         buffer.resize(elementsCount);
         cpu_convert(constBlob->GetPtr(),
                     &buffer[0],

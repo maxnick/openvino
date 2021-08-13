@@ -1255,7 +1255,7 @@ void MKLDNNEltwiseNode::createPrimitive() {
         offsets_out.resize(maxInputSize, 1);
         offset_out_calc(offsets_out, dims_out);
         for (int j = 0; j < maxInputSize; j++) {
-            offsets_out[j] *= getChildEdgeAt(0)->getMemory().GetDesc().getPrecision().size();
+            offsets_out[j] *= getChildEdgeAt(0)->getMemory().getDesc().getPrecision().size();
         }
 
         offsets_in.resize(inputNum);
@@ -1263,7 +1263,7 @@ void MKLDNNEltwiseNode::createPrimitive() {
             offsets_in[i].resize(maxInputSize, 1);
             offset_in_calc(offsets_in[i], dims_in[i], dims_out);
             for (int j = 0; j < maxInputSize; j++) {
-                offsets_in[i][j] *= getParentEdgeAt(i)->getMemory().GetDesc().getPrecision().size();
+                offsets_in[i][j] *= getParentEdgeAt(i)->getMemory().getDesc().getPrecision().size();
             }
         }
 
@@ -1405,10 +1405,10 @@ void MKLDNNEltwiseNode::createPrimitive() {
 
     for (int i = 0; i < inpuPortsCount; i++) {
         jep.src_size[i] = dims_in[i][dims_in[i].size() - 1];
-        jep.src_prc[i] = getParentEdgesAtPort(i).front()->getMemory().GetDesc().getPrecision();
+        jep.src_prc[i] = getParentEdgesAtPort(i).front()->getMemory().getDesc().getPrecision();
     }
     jep.dst_size = dims_out[dims_out.size() - 1];
-    jep.dst_prc = getChildEdgesAtPort(0).front()->getMemory().GetDesc().getPrecision();
+    jep.dst_prc = getChildEdgesAtPort(0).front()->getMemory().getDesc().getPrecision();
 
     for (int i = 0; i < inpuPortsCount; i++) {
         jep.src_offsets[i] = offsets_in[i];

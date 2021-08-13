@@ -97,7 +97,7 @@ inline InferenceEngine::Precision normalizeToSupportedPrecision(InferenceEngine:
 inline void reorderData(const MKLDNNMemory &input, const MKLDNNMemory &output, size_t size = 0) {
     if (size != 0)
         IE_ASSERT(size <= output.GetSize());
-    if (input.GetDesc().isCompatible(output.GetDesc())) {
+    if (input.getDesc().isCompatible(output.getDesc())) {
         auto srcPtr = static_cast<uint8_t*>(input.GetPtr());
         auto dstPtr = static_cast<uint8_t*>(output.GetPtr());
 
@@ -121,10 +121,10 @@ inline void reorderData(const MKLDNNMemory &input, const MKLDNNMemory &output, s
 
                 const auto outPrc = MKLDNNExtensionUtils::DataTypeToIEPrecision(output.GetDataType());
                 cpu_convert(data, tmpBuff.data(), MKLDNNExtensionUtils::DataTypeToIEPrecision(input.GetDataType()),
-                            outPrc, input.GetDesc().getPaddedElementsCount());
+                            outPrc, input.getDesc().getPaddedElementsCount());
 
                 MKLDNNMemory tmpMem(output.eng);
-                auto tmpDesc = input.GetDesc().clone();
+                auto tmpDesc = input.getDesc().clone();
                 tmpDesc->setPrecision(outPrc);
                 tmpMem.Create(std::move(tmpDesc), tmpBuff.data());
 

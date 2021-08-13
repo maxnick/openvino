@@ -523,7 +523,7 @@ static edge_clusters_t findEdgeClusters(const std::vector<MKLDNNEdgePtr> & graph
     edge_cluster_idx_map_t edge_cluster_indices;
 
     for (auto &edge : graphEdges) {
-        if (!edge->canProvideMaxSize())
+        if (!edge->hasDefinedMaxSize())
             continue;
 
         auto edge_it = edge_cluster_indices.find(edge);
@@ -683,10 +683,10 @@ void MKLDNNGraph::Allocate() {
     // Allocate memory space for all edges marked with NeedAllocation
     AllocateWithReuse();
 
-    // Resolve all other edges with status NotAllocated or in-place
-    for (auto& node : graphNodes) node->resolveNotAllocatedEdges();
+    // Resolve all other edges with status NotAllocated and in-place
+    for (auto& node : graphNodes) node->resolveInPlaceEdges();
 
-    // Create dummy memory with undefined desc
+    // Create dummy memory with undefined desc for edges that are not allocated on the previous stages (memory solver and inPlace resolving)
     for (auto& edge : graphEdges) edge->allocate();
 
     // Check all getters. Should work.
@@ -744,7 +744,7 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
 
         // TODO [DS]: phase 2: remove this blob allocation when possible, i.e. when dynamic ie blob representation becomes available
         if (out.find(name) == out.end()) {
-            out[name] = MemoryDescUtils::createBlob(intr_blob.GetDesc());
+            out[name] = MemoryDescUtils::createBlob(intr_blob.getDesc());
         }
 
         // TODO [DS]: is it sill true for the new paradigm?
@@ -752,11 +752,15 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
 //            IE_THROW(Unexpected) << "The network outputs do not contain mkldnn graph output node name: \"" << name << "\"";
 //        }
 
-        if (out.at(name)->size() != intr_blob.GetShape().getElementsCount()) {
+        if (out[name]->getTensorDesc().getDims() != intr_blob.getStaticDims()) {
             // TODO [DS]: phase 2: rewrite when dynamic ie blob representation becomes available
 //            IE_THROW() << "Output blob number of elements is not equal network output number of elements ("
 //                       << ext_blob->size() << "!=" << intr_blob.GetShape().getElementsCount() << ").";
-            out[name] = MemoryDescUtils::createBlob(intr_blob.GetDesc());
+            if (out[name]->byteSize() >= intr_blob.GetSize()) {
+                out[name]->getTensorDesc().reshape(intr_blob.getStaticDims());
+            } else {
+                out[name] = MemoryDescUtils::createBlob(intr_blob.getDesc());
+            }
         }
 
         auto ext_blob = out.at(name);
@@ -785,9 +789,9 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
             MB_to_process = node->batchToProcess();
         }
 
-        size_t size_to_copy = intr_blob.GetDesc().getPaddedElementsCount() * MB_to_process / MB;
+        size_t size_to_copy = intr_blob.getDesc().getPaddedElementsCount() * MB_to_process / MB;
 
-        const auto actualDesc = MemoryDescUtils::convertToTensorDesc(node->getParentEdgeAt(0)->getMemory().GetDesc());
+        const auto actualDesc = MemoryDescUtils::convertToTensorDesc(node->getParentEdgeAt(0)->getMemory().getDesc());
         const auto expectedDesc = ext_blob->getTensorDesc();
 
         // TODO [NM]: need to create universal reorder which will be detect cases when we really need to use it

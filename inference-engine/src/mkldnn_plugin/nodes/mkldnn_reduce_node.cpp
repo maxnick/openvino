@@ -1526,7 +1526,7 @@ void MKLDNNReduceNode::createPrimitive() {
         IE_THROW() << errorPrefix << " has nullable preferable primitive descriptor";
 
     auto selectedPD = getSelectedPrimitiveDescriptor();
-    planar_layout = getParentEdgeAt(REDUCE_DATA)->getMemory().GetDesc().hasLayoutType(LayoutType::ncsp);
+    planar_layout = getParentEdgeAt(REDUCE_DATA)->getMemory().getDesc().hasLayoutType(LayoutType::ncsp);
 
     auto jcp = jit_reduce_config_params();
     jcp.src_dt = MKLDNNExtensionUtils::IEPrecisionToDataType(selectedPD->getConfig().inConfs[REDUCE_DATA].desc->getPrecision());

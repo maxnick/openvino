@@ -1460,7 +1460,7 @@ void MKLDNNFakeQuantizeNode::executeQuantization() {
     auto output_scale = reinterpret_cast<const float*>(internalBlobMemory[4]->GetData());
     auto output_shift = reinterpret_cast<const float*>(internalBlobMemory[5]->GetData());
 
-    auto& srcDesc = srcMemory->GetDesc();
+    auto& srcDesc = srcMemory->getDesc();
     auto srcDims = srcDesc.getShape().getStaticDims();
 
     bool is_blk_format = !srcDesc.hasLayoutType(LayoutType::nspc) && one_of(srcDesc.getShape().getRank(), 4, 5);

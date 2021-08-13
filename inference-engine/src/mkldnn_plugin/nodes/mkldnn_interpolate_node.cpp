@@ -2011,10 +2011,10 @@ void MKLDNNInterpolateNode::createPrimitive() {
     jcp.ID = srcDimPad5d[2];
     jcp.spatial_dim_size = spatialDimSize;
 
-    if (getChildEdgeAt(0)->getMemory().GetDesc().hasLayoutType(LayoutType::ncsp)) {
+    if (getChildEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::ncsp)) {
         jcp.layout = InterpolateLayoutType::planar;
-    } else if (getChildEdgeAt(0)->getMemory().GetDesc().hasLayoutType(LayoutType::nCsp8c) ||
-               getChildEdgeAt(0)->getMemory().GetDesc().hasLayoutType(LayoutType::nCsp16c)) {
+    } else if (getChildEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::nCsp8c) ||
+               getChildEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::nCsp16c)) {
         jcp.layout = InterpolateLayoutType::block;
     } else {
         jcp.layout = InterpolateLayoutType::by_channel;

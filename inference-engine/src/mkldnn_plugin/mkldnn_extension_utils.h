@@ -20,8 +20,8 @@ public:
     static uint8_t sizeOfDataType(mkldnn::memory::data_type dataType);
     static mkldnn::memory::data_type IEPrecisionToDataType(const InferenceEngine::Precision& prec);
     static InferenceEngine::Precision DataTypeToIEPrecision(mkldnn::memory::data_type dataType);
-    static InferenceEngine::SizeVector convertToSizeVector(const mkldnn::memory::dims& dims);
-    static std::vector<dnnl::memory::dim> convertToDnnlDims(const InferenceEngine::SizeVector& dims);
+    static VectorDims convertToSizeVector(const mkldnn::memory::dims& dims);
+    static std::vector<dnnl::memory::dim> convertToDnnlDims(const VectorDims& dims);
     static mkldnn::memory::format_tag GetPlainFormatByRank(size_t rank);
 };
 

@@ -50,8 +50,6 @@ private:
 
     std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
 
-    void InitializePlain(const Shape& shape, mkldnn::memory::data_type dataType);
-
     bool isPlainFormat() const;
     bool isBlockedCFormat(size_t blk_size = UNREACHABLE_DIM) const;
     bool isTailCFormat() const;

@@ -80,17 +80,17 @@ void MKLDNNReorderNode::createPrimitive() {
         if (MKLDNNPlugin::one_of(inDims.size(), 4, 5) &&
                 inDims[1] <= 64 &&
                 inDims[1] >= 16 &&
-                (getParentEdgeAt(0)->getMemory().GetDesc().getPaddedElementsCount() / inDims[1]) >= 128 &&
-                getParentEdgeAt(0)->getMemory().GetDesc().hasLayoutType(LayoutType::nspc) &&
-                getChildEdgeAt(0)->getMemory().GetDesc().hasLayoutType(LayoutType::ncsp) &&
-                getParentEdgeAt(0)->getMemory().GetDesc().getPrecision() == Precision::FP32 &&
-                getChildEdgeAt(0)->getMemory().GetDesc().getPrecision() == Precision::FP32) {
+                (getParentEdgeAt(0)->getMemory().getDesc().getPaddedElementsCount() / inDims[1]) >= 128 &&
+                getParentEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::nspc) &&
+                getChildEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::ncsp) &&
+                getParentEdgeAt(0)->getMemory().getDesc().getPrecision() == Precision::FP32 &&
+                getChildEdgeAt(0)->getMemory().getDesc().getPrecision() == Precision::FP32) {
             // oneDNN JIT reorder shows bad perf for nspc to ncsp reorder case so we fallback on simple c++ implementation
             canUseOptimizedNspc2Ncsp = true;
         } else if (!impl::cpu::x64::mayiuse(impl::cpu::x64::avx2) &&
                    MKLDNNPlugin::one_of(inDims.size(), 4, 5) &&
-                   getParentEdgeAt(0)->getMemory().GetDesc().hasLayoutType(LayoutType::ncsp) &&
-                   getChildEdgeAt(0)->getMemory().GetDesc().hasLayoutType(LayoutType::nspc) &&
+                   getParentEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::ncsp) &&
+                   getChildEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::nspc) &&
                    getParentEdgeAt(0)->getMemory().GetDataType() == getChildEdgeAt(0)->getMemory().GetDataType() &&
                    MKLDNNExtensionUtils::sizeOfDataType(getParentEdgeAt(0)->getMemory().GetDataType()) == 1) {
             // oneDNN doesn't provide JIT reorder impl for non-avx2 targets so we fallback on simple c++ implementation which shows better perf
@@ -136,7 +136,7 @@ void MKLDNNReorderNode::createReorderPrimitive(const mkldnn::memory::desc &srcDe
         // MKLDNN doesn't support direct reorders from planar data formats to grouped weights formats.
         // Code block below tries to detect such cases and reinterpret data planar formats (e.g. nchw)
         // as grouped weights planar formats (e.g. goihw) since they have same physical memory layout.
-        if (src_blocked->GetDesc().hasLayoutType(LayoutType::ncsp) &&
+        if (src_blocked->getDesc().hasLayoutType(LayoutType::ncsp) &&
             src_blocked->GetShape().getRank() + 1 == dst_blocked->GetShape().getRank()) {
             const auto newDims = dst_blocked->GetShape().getStaticDims();
             const auto newFormat = MKLDNNExtensionUtils::GetPlainFormatByRank(newDims.size());

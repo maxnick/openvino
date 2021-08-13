@@ -180,8 +180,8 @@ void MKLDNNROIAlignNode::executeSpecified() {
     auto dstBlockDesc = dstMemory.GetDescriptor().data.format_desc.blocking;
 
     int blockSize = srcBlockDesc.inner_nblks > 0 ? srcBlockDesc.inner_blks[0] : 1;
-    auto isPlainFmt = srcMemory0.GetDesc().hasLayoutType(LayoutType::ncsp);
-    auto isNhwcFmt = srcMemory0.GetDesc().hasLayoutType(LayoutType::nspc);
+    auto isPlainFmt = srcMemory0.getDesc().hasLayoutType(LayoutType::ncsp);
+    auto isNhwcFmt = srcMemory0.getDesc().hasLayoutType(LayoutType::nspc);
 
     const auto *srcData = reinterpret_cast<const inputType *>(getParentEdgeAt(0)->getMemoryPtr()->GetPtr());
     const auto *srcRoi = reinterpret_cast<const float *>(getParentEdgeAt(1)->getMemoryPtr()->GetPtr());

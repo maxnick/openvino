@@ -197,7 +197,7 @@ void MKLDNNNonMaxSuppressionNode::execute(mkldnn::stream strm) {
 
     auto indicesMemPtr = getChildEdgesAtPort(NMS_SELECTEDINDICES)[0]->getMemoryPtr();
     auto scoresMemPtr =  getChildEdgesAtPort(NMS_SELECTEDSCORES)[0]->getMemoryPtr();
-    auto& maxOutputDims = indicesMemPtr->GetDesc().getShape().getMaxDims();
+    auto& maxOutputDims = indicesMemPtr->getDesc().getShape().getMaxDims();
     const size_t selectedBoxesNum = maxOutputDims[0];
     const size_t validOutputs = std::min(filtBoxes.size(), selectedBoxesNum);
 

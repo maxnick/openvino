@@ -148,7 +148,7 @@ void MKLDNNTransposeNode::createPrimitive() {
     if (getSelectedPrimitiveDescriptor() == nullptr)
         IE_THROW() << "Preferable primitive descriptor is not set.";
 
-    if (getParentEdgeAt(0)->getMemory().GetDesc().hasLayoutType(LayoutType::ncsp) &&
+    if (getParentEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::ncsp) &&
         std::find(optimizedOrders.begin(), optimizedOrders.end(), order) != optimizedOrders.end()) {
         isOptimized = true;
         return;
@@ -275,7 +275,7 @@ void MKLDNNTransposeNode::execute(mkldnn::stream strm) {
     int MB = batchToProcess();
 
     if (isOptimized) {
-        const size_t dataSize = getParentEdgeAt(0)->getMemory().GetDesc().getPrecision().size();
+        const size_t dataSize = getParentEdgeAt(0)->getMemory().getDesc().getPrecision().size();
         TransposeContext ctx = {this, srcMemPtr, dstMemPtr, MB};
         OV_SWITCH(MKLDNNPlugin, TransposeOptimizedEmitter, ctx, dataSize,
                   OV_CASE(1, PrecisionTrait<Precision::U8>::value_type),

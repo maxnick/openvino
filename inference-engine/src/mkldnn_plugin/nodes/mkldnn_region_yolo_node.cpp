@@ -397,8 +397,8 @@ void MKLDNNRegionYoloNode::execute(mkldnn::stream strm) {
     const auto *src_data = reinterpret_cast<const uint8_t *>(getParentEdgeAt(0)->getMemoryPtr()->GetPtr());
     auto *dst_data = reinterpret_cast<uint8_t *>(getChildEdgeAt(0)->getMemoryPtr()->GetPtr());
 
-    cpu_convert(src_data, dst_data, getParentEdgeAt(0)->getMemory().GetDesc().getPrecision(),
-                getChildEdgeAt(0)->getMemory().GetDesc().getPrecision(), output_size);
+    cpu_convert(src_data, dst_data, getParentEdgeAt(0)->getMemory().getDesc().getPrecision(),
+                getChildEdgeAt(0)->getMemory().getDesc().getPrecision(), output_size);
 
     for (int b = 0; b < B; b++) {
         for (int n = 0; n < num_; n++) {

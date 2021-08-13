@@ -66,13 +66,13 @@ void OnednnMemoryDesc::setPrecision(InferenceEngine::Precision prc) {
     desc.data.data_type = static_cast<dnnl_data_type_t>(MKLDNNExtensionUtils::IEPrecisionToDataType(prc));
 }
 
-std::unique_ptr<MemoryDesc> OnednnMemoryDesc::cloneWithNewDimsImp(const std::vector<size_t> &dims) const {
+std::unique_ptr<MemoryDesc> OnednnMemoryDesc::cloneWithNewDimsImp(const VectorDims &dims) const {
     IE_THROW(Unexpected) << "Cannot clone non blocked oneDNN desc with new dims";
 }
 
 size_t OnednnMemoryDesc::getMaxMemSize() const {
     if (desc.data.format_kind != dnnl_blocked || shape.isStatic()) {
-        return getCurrentSize();
+        return getCurrentMemSize();
     }
 
     auto& maxDims = shape.getMaxDims();
@@ -81,7 +81,7 @@ size_t OnednnMemoryDesc::getMaxMemSize() const {
     }
 
     auto maxDimsDesc = cloneWithNewDims(maxDims);
-    return maxDimsDesc->getCurrentSize();
+    return maxDimsDesc->getCurrentMemSize();
 }
 
 } // namespace MKLDNNPlugin

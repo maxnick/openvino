@@ -333,7 +333,7 @@ void MKLDNNConcatNode::createPrimitive() {
         IE_THROW() << "Preferable primitive descriptor is not set.";
 
     //check if selected Tensor descriptor has nspc layout and concat axis is C
-    if (axis == channelAxis && getChildEdgeAt(0)->getMemory().GetDesc().hasLayoutType(LayoutType::nspc)) {
+    if (axis == channelAxis && getChildEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::nspc)) {
         canOptimizeNspc = true;
         return;
     }

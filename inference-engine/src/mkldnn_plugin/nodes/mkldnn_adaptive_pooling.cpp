@@ -134,8 +134,8 @@ void MKLDNNAdaptivePoolingNode::execute(mkldnn::stream strm) {
     auto srcBlockDesc = srcMemory0.GetDescriptor().data.format_desc.blocking;
 
     int blockSize = srcBlockDesc.inner_nblks > 0 ? srcBlockDesc.inner_blks[0] : 1;
-    auto isPlainFmt = srcMemory0.GetDesc().hasLayoutType(LayoutType::ncsp);
-    auto isTailCFmt = srcMemory0.GetDesc().hasLayoutType(LayoutType::nspc);
+    auto isPlainFmt = srcMemory0.getDesc().hasLayoutType(LayoutType::ncsp);
+    auto isTailCFmt = srcMemory0.getDesc().hasLayoutType(LayoutType::nspc);
 
     const auto *src = reinterpret_cast<const float *>(getParentEdgeAt(0)->getMemoryPtr()->GetPtr());
     const auto *srcPooledSpatialShapes = reinterpret_cast<const int *>(getParentEdgeAt(1)->getMemoryPtr()->GetPtr());

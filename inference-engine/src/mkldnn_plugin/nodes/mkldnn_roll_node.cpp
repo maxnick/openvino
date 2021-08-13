@@ -116,7 +116,7 @@ void MKLDNNRollNode::initSupportedPrimitiveDescriptors() {
 
 
 void MKLDNNRollNode::execute(mkldnn::stream strm) {
-    const auto dataPrecision = getParentEdgeAt(DATA_INDEX)->getMemory().GetDesc().getPrecision();
+    const auto dataPrecision = getParentEdgeAt(DATA_INDEX)->getMemory().getDesc().getPrecision();
     const auto& dataTypeSize = dataPrecision.size();
     switch (dataTypeSize) {
         case sizeof(PrecisionTrait<Precision::I8>::value_type): {

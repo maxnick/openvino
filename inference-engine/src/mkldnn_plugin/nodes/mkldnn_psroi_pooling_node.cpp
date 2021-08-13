@@ -533,8 +533,8 @@ struct MKLDNNPSROIPoolingNode::PSROIPoolingExecute {
 };
 
 void MKLDNNPSROIPoolingNode::execute(mkldnn::stream strm) {
-    auto inputPrec = getParentEdgesAtPort(0)[0]->getMemory().GetDesc().getPrecision();
-    auto outputPrec = getChildEdgesAtPort(0)[0]->getMemory().GetDesc().getPrecision();
+    auto inputPrec = getParentEdgesAtPort(0)[0]->getMemory().getDesc().getPrecision();
+    auto outputPrec = getChildEdgesAtPort(0)[0]->getMemory().getDesc().getPrecision();
 
     if (!((inputPrec == Precision::BF16 && outputPrec == Precision::BF16) ||
           (inputPrec == Precision::FP32 && outputPrec == Precision::FP32))) {

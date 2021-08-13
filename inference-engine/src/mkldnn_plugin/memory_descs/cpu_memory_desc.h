@@ -8,6 +8,7 @@
 #include <ie_precision.hpp>
 #include "cpu_shape.h"
 #include "utils/general_utils.h"
+#include "cpu_types.h"
 
 namespace MKLDNNPlugin {
 
@@ -44,7 +45,7 @@ public:
     virtual std::unique_ptr<MemoryDesc> clone() const = 0;
 
     // clone descriptor with new dims. Throws an exception if some of the new dims conflicts with the internal shape (i.e. its defined dims ,rank, upper bounds)
-    std::unique_ptr<MemoryDesc> cloneWithNewDims(const std::vector<size_t>& dims) const {
+    std::unique_ptr<MemoryDesc> cloneWithNewDims(const VectorDims& dims) const {
         if (!getShape().isCompatible(dims)) {
             IE_THROW(ParameterMismatch) << "Can not clone with new dims. Descriptor's shape: " << getShape().toString() <<
                                         " is incompatible with provided dimensions: " << dims2str(dims) << ".";
@@ -76,7 +77,7 @@ public:
      * @brief Get minimal required memory size in bytes.
      * @return return minimal required memory size in bytes or UNDEFINED_SIZE in case undefined descriptor
      */
-    size_t getCurrentSize() const {
+    size_t getCurrentMemSize() const {
         size_t retVal = UNDEFINED_SIZE;
         if (isDefined()) {
             retVal = getMemSizeImp();
@@ -110,7 +111,7 @@ protected:
     MemoryDesc(Shape shape, MemoryDescType type)
             : shape(std::move(shape)), type(type) {}
 
-    MemoryDesc(const std::vector<size_t>& dims, MemoryDescType type)
+    MemoryDesc(const VectorDims& dims, MemoryDescType type)
             : shape(dims), type(type) {}
 
     virtual size_t getMemSizeImp() const = 0;
@@ -120,7 +121,7 @@ protected:
 
     virtual bool isDefinedImp() const = 0;
 
-    virtual std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const = 0;
+    virtual std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const VectorDims& dims) const = 0;
 
     MemoryDescType type;
     Shape shape;

@@ -42,7 +42,7 @@ size_t MKLDNNMemory::GetSize() const {
     if (pMemDesc->getShape().isDynamic()) {
         IE_THROW() << "Can't get memory size for undefined shape";
     }
-    return GetDesc().getCurrentSize();
+    return getDesc().getCurrentMemSize();
 }
 
 void MKLDNNMemory::Create(const memory::dims& dims, memory::data_type data_type, memory::format_tag format, const void* data) {

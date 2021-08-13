@@ -490,7 +490,7 @@ public:
 
     virtual void setDynamicBatchLim(int lim);
 
-    void resolveNotAllocatedEdges();
+    void resolveInPlaceEdges();
 
     virtual void execute(mkldnn::stream strm);
     void executeDynamic(mkldnn::stream strm);
@@ -518,8 +518,7 @@ public:
         return created();
     }
 
-    virtual void resetOutputShape();
-    virtual void resetOutputShape(const std::vector<std::vector<size_t>> &newShapes);
+    void redefineOutputMemory(const std::vector<std::vector<size_t>> &newShapes);
 
     /**
      * @brief Performs Node initialization based on graph context.
@@ -834,8 +833,6 @@ protected:
     }
 
 private:
-    void redefineOutputMemory(const std::vector<std::vector<size_t>> &newShapes);
-
     bool isDynamic = false;
 
     std::vector<MKLDNNEdgeWeakPtr> parentEdges;

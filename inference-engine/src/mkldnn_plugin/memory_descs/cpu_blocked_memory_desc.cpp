@@ -98,7 +98,7 @@ size_t CpuBlockedMemoryDesc::getMemSizeImp() const {
 
 size_t CpuBlockedMemoryDesc::getMaxMemSize() const {
     if (shape.isStatic()) {
-        return getCurrentSize();
+        return getCurrentMemSize();
     }
 
     auto& maxDims = shape.getMaxDims();
@@ -107,7 +107,7 @@ size_t CpuBlockedMemoryDesc::getMaxMemSize() const {
     }
 
     auto maxDimsDesc = cloneWithNewDims(maxDims);
-    return maxDimsDesc->getCurrentSize();
+    return maxDimsDesc->getCurrentMemSize();
 }
 
 size_t CpuBlockedMemoryDesc::getOffset(const InferenceEngine::SizeVector& v) const {
@@ -228,8 +228,21 @@ std::string CpuBlockedMemoryDesc::serializeFormat() const {
     return result.str();
 }
 
-std::unique_ptr<MemoryDesc> CpuBlockedMemoryDesc::cloneWithNewDimsImp(const std::vector<size_t> &dims) const {
-    std::vector<size_t> newBlockedDims(order.size());
+std::unique_ptr<MemoryDesc> CpuBlockedMemoryDesc::cloneWithNewDimsImp(const VectorDims &dims) const {
+    if (std::any_of(dims.begin(), dims.end(), [](size_t x){ return Shape::UNDEFINED_DIM == x; })) {
+        IE_THROW() << "Can't clone desc if new dims are undefined";
+    }
+
+    // TODO [DS]: add stride recalculation for strided blobs
+    for (int i = strides.size() - 2; i >= 0 ; i--) {
+        if (strides[i] == Shape::UNDEFINED_DIM)
+            break;
+
+        if (strides[i] != strides[i + 1] * blockedDims[i + 1])
+            IE_THROW(NotImplemented) << "Can't clone desc with new dims for not dense tensor";
+    }
+
+    VectorDims newBlockedDims(order.size());
 
     for (size_t i = 0; i < dims.size(); ++i) {
         newBlockedDims[order[i]] = dims[i];
@@ -242,7 +255,7 @@ std::unique_ptr<MemoryDesc> CpuBlockedMemoryDesc::cloneWithNewDimsImp(const std:
         }
     }
 
-    std::vector<size_t> newOffsetPaddingToData;
+    VectorDims newOffsetPaddingToData;
     if (std::none_of(offsetPaddingToData.begin(), offsetPaddingToData.end(), [](size_t x){ return x == Shape::UNDEFINED_DIM;})) {
         newOffsetPaddingToData = offsetPaddingToData;
     }

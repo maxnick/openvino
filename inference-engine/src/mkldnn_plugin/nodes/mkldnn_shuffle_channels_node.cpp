@@ -127,8 +127,8 @@ void MKLDNNShuffleChannelsNode::createPrimitive() {
     if (getSelectedPrimitiveDescriptor() == nullptr)
         THROW_SHCH_ERROR << "has unidentified preferable primitive descriptor";
 
-    const bool isBlocked = getParentEdgeAt(0)->getMemory().GetDesc().hasLayoutType(LayoutType::nCsp8c) ||
-                           getParentEdgeAt(0)->getMemory().GetDesc().hasLayoutType(LayoutType::nCsp16c);
+    const bool isBlocked = getParentEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::nCsp8c) ||
+                           getParentEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::nCsp16c);
 
     int batchRank = axis_;
     int spatialRank = dataRank_ - axis_ - 1;
@@ -181,7 +181,7 @@ void MKLDNNShuffleChannelsNode::createPrimitive() {
             params.order[2] = 2;
             params.src_block_dims[2] = spatialShapeSize;
         }
-    } else if (getParentEdgeAt(0)->getMemory().GetDesc().hasLayoutType(LayoutType::nspc)) {
+    } else if (getParentEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::nspc)) {
         if (axis_ == channelDim) {  // axis on channel
             params.order[0] = 0;
             params.src_block_dims[0] = inShape_[0];

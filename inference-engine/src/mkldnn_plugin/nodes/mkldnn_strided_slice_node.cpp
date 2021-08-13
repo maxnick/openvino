@@ -276,7 +276,7 @@ void MKLDNNStridedSliceNode::createPrimitive() {
 
     if (params.parametersAreConstant) {
         size_t realNDims = params.dstDims.size();
-        if (!getParentEdgeAt(DATA_ID)->getMemory().GetDesc().hasLayoutType(LayoutType::ncsp))
+        if (!getParentEdgeAt(DATA_ID)->getMemory().getDesc().hasLayoutType(LayoutType::ncsp))
             orderParametersByLayouts();
 
         SizeVector newSrcDims, newDstDims;
@@ -289,9 +289,9 @@ void MKLDNNStridedSliceNode::createPrimitive() {
 }
 
 void MKLDNNStridedSliceNode::orderParametersByLayouts() {
-    const bool isPerChannelLayout = getParentEdgeAt(DATA_ID)->getMemory().GetDesc().hasLayoutType(LayoutType::nspc);
-    const bool isBlockedLayout = getParentEdgeAt(DATA_ID)->getMemory().GetDesc().hasLayoutType(LayoutType::nCsp8c) ||
-                                 getParentEdgeAt(DATA_ID)->getMemory().GetDesc().hasLayoutType(LayoutType::nCsp16c);
+    const bool isPerChannelLayout = getParentEdgeAt(DATA_ID)->getMemory().getDesc().hasLayoutType(LayoutType::nspc);
+    const bool isBlockedLayout = getParentEdgeAt(DATA_ID)->getMemory().getDesc().hasLayoutType(LayoutType::nCsp8c) ||
+                                 getParentEdgeAt(DATA_ID)->getMemory().getDesc().hasLayoutType(LayoutType::nCsp16c);
     auto srcOrder = getParentEdgeAt(DATA_ID)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getOrder();
 
     if (isBlockedLayout) {
@@ -580,7 +580,7 @@ void MKLDNNStridedSliceNode::execute(mkldnn::stream strm) {
         if (srcDims.size() > 3 && params.equalDims && ellipsisMaskCounter != 0)
             addHiddenDims(srcDims.size());
 
-        if (!getParentEdgeAt(DATA_ID)->getMemory().GetDesc().hasLayoutType(LayoutType::ncsp))
+        if (!getParentEdgeAt(DATA_ID)->getMemory().getDesc().hasLayoutType(LayoutType::ncsp))
             orderParametersByLayouts();
 
         SizeVector newSrcDims, newDstDims;

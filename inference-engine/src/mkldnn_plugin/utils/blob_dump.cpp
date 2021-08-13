@@ -85,7 +85,7 @@ static OnednnBlockedMemoryDesc parse_header(IEB_HEADER &header) {
 }
 
 void BlobDumper::prepare_plain_data(const MKLDNNMemoryPtr &memory, std::vector<uint8_t> &data) const {
-    const auto &desc = memory->GetDesc();
+    const auto &desc = memory->getDesc();
     size_t data_size = desc.getShape().getElementsCount();
     const auto size = data_size * desc.getPrecision().size();
     data.resize(size);
@@ -132,7 +132,7 @@ void BlobDumper::dump(std::ostream &stream) const {
     if (memory == nullptr)
         IE_THROW() << "Dumper cannot dump. Memory is not allocated.";
 
-    IEB_HEADER header = prepare_header(memory->GetDesc());
+    IEB_HEADER header = prepare_header(memory->getDesc());
     std::vector<uint8_t> data;
     prepare_plain_data(this->memory, data);
 
@@ -149,12 +149,12 @@ void BlobDumper::dumpAsTxt(std::ostream &stream) const {
     if (memory == nullptr)
         IE_THROW() << "Dumper cannot dump. Memory is not allocated.";
 
-    const auto &desc = memory->GetDesc();
+    const auto &desc = memory->getDesc();
     const auto dims = desc.getShape().getStaticDims();
     size_t data_size = desc.getShape().getElementsCount();
 
     // Header like "U8 4D shape: 2 3 224 224 ()
-    stream << memory->GetDesc().getPrecision().name() << " "
+    stream << memory->getDesc().getPrecision().name() << " "
            << dims.size() << "D "
            << "shape: ";
     for (size_t d : dims) stream << d << " ";

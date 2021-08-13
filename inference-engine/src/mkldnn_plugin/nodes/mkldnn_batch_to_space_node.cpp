@@ -224,13 +224,13 @@ void MKLDNNBatchToSpaceNode::batchToSpaceKernel() {
 }
 
 void MKLDNNBatchToSpaceNode::execute(mkldnn::stream strm) {
-    switch (getParentEdgeAt(0)->getMemory().GetDesc().getPrecision().size()) {
+    switch (getParentEdgeAt(0)->getMemory().getDesc().getPrecision().size()) {
         case 1: batchToSpaceKernel<PrecisionTrait<Precision::U8>::value_type>();  break;
         case 2: batchToSpaceKernel<PrecisionTrait<Precision::U16>::value_type>(); break;
         case 4: batchToSpaceKernel<PrecisionTrait<Precision::I32>::value_type>(); break;
         default:
             IE_THROW() << "BatchToSpace layer does not support precision '" <<
-                std::string(getParentEdgeAt(0)->getMemory().GetDesc().getPrecision().name()) << "'";
+                std::string(getParentEdgeAt(0)->getMemory().getDesc().getPrecision().name()) << "'";
     }
 }
 
