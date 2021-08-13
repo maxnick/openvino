@@ -496,7 +496,7 @@ void MKLDNNPSROIPoolingNode::executeSpecified() {
     int channelsEachClass = outputDim;
     if (!noTrans) {
         bottomTrans = reinterpret_cast<const float *>(getParentEdgeAt(2)->getMemoryPtr()->GetPtr());
-        numClasses = static_cast<int>(getParentEdgeAt(2)->getShape().getStaticDims()[1]) / 2;
+        numClasses = static_cast<int>(getInputShapeAtPort(2).getStaticDims()[1]) / 2;
         channelsEachClass /= numClasses;
     }
 

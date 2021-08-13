@@ -107,7 +107,7 @@ void MKLDNNRollNode::initSupportedPrimitiveDescriptors() {
 
     config.inConfs.push_back(createDataConfig(getInputShapeAtPort(0), dataType));
     config.inConfs.push_back(createDataConfig(getInputShapeAtPort(1), memory::data_type::s32));
-    config.inConfs.push_back(createDataConfig(getParentEdgeAt(2)->getShape(), memory::data_type::s32));
+    config.inConfs.push_back(createDataConfig(getInputShapeAtPort(2), memory::data_type::s32));
 
     config.outConfs.push_back(createDataConfig(getOutputShapeAtPort(0), dataType));
 

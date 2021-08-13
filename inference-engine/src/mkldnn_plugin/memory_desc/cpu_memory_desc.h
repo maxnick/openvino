@@ -78,6 +78,13 @@ public:
     virtual size_t getMaxMemSize() const = 0;
 
     /**
+     * @brief Check that desc has padded dims
+     *
+     * @return true if exist padded dims, otherwise false
+     */
+    virtual bool blocksExtended() const = 0;
+
+    /**
      * @brief Get minimal required memory size in bytes.
      * @return return minimal required memory size in bytes or UNDEFINED_SIZE in case undefined descriptor
      */

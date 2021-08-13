@@ -81,8 +81,8 @@ void MKLDNNROIAlignNode::getSupportedDescriptors() {
         IE_THROW() << errorPrefix << "doesn't support 1st input with rank: " << getInputShapeAtPort(1).getRank();
     }
 
-    if (getParentEdgeAt(2)->getShape().getRank() != 1) {
-        IE_THROW() << errorPrefix << "doesn't support 2nd input with rank: " << getParentEdgeAt(2)->getShape().getRank();
+    if (getInputShapeAtPort(2).getRank() != 1) {
+        IE_THROW() << errorPrefix << "doesn't support 2nd input with rank: " << getInputShapeAtPort(2).getRank();
     }
 
     if (getOutputShapeAtPort(0).getRank() != 4) {
@@ -94,10 +94,10 @@ void MKLDNNROIAlignNode::getSupportedDescriptors() {
                            << getInputShapeAtPort(1).getStaticDims()[0] << "," << getInputShapeAtPort(1).getStaticDims()[1] << "]";
     }
 
-    if (getInputShapeAtPort(1).getStaticDims()[0] != getParentEdgeAt(2)->getShape().getStaticDims()[0]) {
+    if (getInputShapeAtPort(1).getStaticDims()[0] != getInputShapeAtPort(2).getStaticDims()[0]) {
         IE_THROW() << errorPrefix << "has different sizes of inputs for proposals ("
                            << getInputShapeAtPort(1).getStaticDims()[0] << ") and indexes ("
-                           << getParentEdgeAt(2)->getShape().getStaticDims()[0] << ")";
+                           << getInputShapeAtPort(2).getStaticDims()[0] << ")";
     }
 }
 
@@ -132,7 +132,7 @@ void MKLDNNROIAlignNode::initSupportedPrimitiveDescriptors() {
         config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), inputDataType, fmts.first);
         config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(1).getStaticDims(), memory::data_type::f32,
                                                                memory::format_tag::nc);
-        config.inConfs[2].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(2)->getShape().getStaticDims(), memory::data_type::s32,
+        config.inConfs[2].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(2).getStaticDims(), memory::data_type::s32,
                                                                memory::format_tag::x);
         config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), outputDataType, fmts.second);
         supportedPrimitiveDescriptors.push_back({config, impl_desc_type::unknown});

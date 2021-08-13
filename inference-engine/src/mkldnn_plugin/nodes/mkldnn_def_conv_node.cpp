@@ -1,4 +1,3 @@
-// Copyright (C) 2018-2021 Intel Corporation
 // SPDX-License-Identifier: Apache-2.0
 //
 
@@ -14,6 +13,7 @@
 #include <mkldnn_extension_utils.h>
 #include <cpu/x64/jit_generator.hpp>
 #include "ie_parallel.hpp"
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -741,6 +741,11 @@ private:
 
 bool MKLDNNDeformableConvolutionNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
+
         const auto defConvNode = ngraph::as_type_ptr<const ngraph::op::v1::DeformableConvolution>(op);
         if (!defConvNode) {
             errorMessage = "Node is not an instance of DeformableConvolution form the operation set v1.";
@@ -793,8 +798,8 @@ void MKLDNNDeformableConvolutionNode::getSupportedDescriptors() {
         IE_THROW() << errorPrefix << "doesn't support 1st input with rank: " << getInputShapeAtPort(1).getRank();
     }
 
-    if (getParentEdgeAt(2)->getShape().getRank() != 4) {
-        IE_THROW() << errorPrefix << "doesn't support 2nd input with rank: " << getParentEdgeAt(2)->getShape().getRank();
+    if (getInputShapeAtPort(2).getRank() != 4) {
+        IE_THROW() << errorPrefix << "doesn't support 2nd input with rank: " << getInputShapeAtPort(2).getRank();
     }
 
     if (getOutputShapeAtPort(0).getRank() != 4) {
@@ -838,35 +843,17 @@ void MKLDNNDeformableConvolutionNode::initSupportedPrimitiveDescriptors() {
         auto weiFormat = group > 1 ? mayiuse(avx512_common) ? memory::format_tag::gOIhw16i16o : memory::format_tag::gOIhw8i8o
                                    : mayiuse(avx512_common) ? memory::format_tag::OIhw16i16o : memory::format_tag::OIhw8i8o;
 
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(0).getStaticDims(),
-                                                                              memory::data_type::f32, dataFormat);
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(1).getStaticDims(),
-                                                                              memory::data_type::f32, offFormat);
-        config.inConfs[2].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(2)->getShape().getStaticDims(),
-                                                                              memory::data_type::f32, weiFormat);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(),
-                                                                              memory::data_type::f32, dataFormat);
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getInputShapeAtPort(0), memory::data_type::f32, dataFormat);
+        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getInputShapeAtPort(1), memory::data_type::f32, offFormat);
+        config.inConfs[2].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getInputShapeAtPort(2), memory::data_type::f32, weiFormat);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getOutputShapeAtPort(0), memory::data_type::f32, dataFormat);
         supportedPrimitiveDescriptors.push_back({config, impl_type});
     } else {
         // reference implementation
-<<<<<<< HEAD
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), memory::data_type::f32,
-                                                               memory::format_tag::nchw);
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(1)->getShape().getStaticDims(), memory::data_type::f32,
-=======
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(0).getStaticDims(), memory::data_type::f32,
-                                                               memory::format_tag::nchw);
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getInputShapeAtPort(1).getStaticDims(), memory::data_type::f32,
->>>>>>> getShape() removing started
-                                                               memory::format_tag::nchw);
-        config.inConfs[2].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(2)->getShape().getStaticDims(), memory::data_type::f32,
-                                                               memory::format_tag::oihw);
-<<<<<<< HEAD
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), memory::data_type::f32,
-=======
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getOutputShapeAtPort(0).getStaticDims(), memory::data_type::f32,
->>>>>>> getShape() removing started
-                                                                memory::format_tag::nchw);
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getInputShapeAtPort(0), memory::data_type::f32, memory::format_tag::nchw);
+        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getInputShapeAtPort(1), memory::data_type::f32, memory::format_tag::nchw);
+        config.inConfs[2].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getInputShapeAtPort(2), memory::data_type::f32, memory::format_tag::oihw);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getOutputShapeAtPort(0), memory::data_type::f32, memory::format_tag::nchw);
         supportedPrimitiveDescriptors.push_back({config, impl_type});
     }
 }
@@ -877,9 +864,9 @@ void MKLDNNDeformableConvolutionNode::createPrimitive() {
         IE_THROW() << "CPU deformable convolution with name '" << getName() << "' doesn't have primitive descriptors.";
     auto config = selectedPrimitiveDescriptor->getConfig();
 
-    auto srcDims = getInputShapeAtPort(0).getStaticDims();
-    auto weiDims = getParentEdgeAt(2)->getShape().getStaticDims();
-    auto dstDims = getOutputShapeAtPort(0).getStaticDims();
+    auto srcDims = getParentEdgeAt(0)->getMemory().getStaticDims();
+    auto weiDims = getParentEdgeAt(2)->getMemory().getStaticDims();
+    auto dstDims = getChildEdgesAtPort(0)[0]->getMemory().getStaticDims();
 
     jcp.dg = deformable_group;
 
@@ -1078,20 +1065,20 @@ void MKLDNNDeformableConvolutionNode::execute(mkldnn::stream strm) {
     const auto *weights = reinterpret_cast<const float *>(srcMemory2.GetPtr());
     float *dst = reinterpret_cast<float *>(dstMemory.GetPtr());
 
-    auto src_block_desc = getParentEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
-    std::vector<size_t> src_strides(src_block_desc.getStrides().size());
+    auto src_block_desc = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    std::vector<size_t> src_strides(src_block_desc->getStrides().size());
     for (int i = 0; i < src_strides.size(); i++) {
-        src_strides[src_block_desc.getOrder()[i]] = src_block_desc.getStrides()[i];
+        src_strides[src_block_desc->getOrder()[i]] = src_block_desc->getStrides()[i];
     }
 
-    auto dst_block_desc = getChildEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
-    std::vector<size_t> dst_strides(dst_block_desc.getStrides().size());
+    auto dst_block_desc = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    std::vector<size_t> dst_strides(dst_block_desc->getStrides().size());
     for (int i = 0; i < dst_strides.size(); i++) {
-        dst_strides[dst_block_desc.getOrder()[i]] = dst_block_desc.getStrides()[i];
+        dst_strides[dst_block_desc->getOrder()[i]] = dst_block_desc->getStrides()[i];
     }
 
-    auto off_strides =  getParentEdgeAt(1)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
-    auto wei_strides =  getParentEdgeAt(2)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
+    auto off_strides =  getParentEdgeAt(1)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getStrides();
+    auto wei_strides =  getParentEdgeAt(2)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getStrides();
 
     if (def_conv_kernel) {
         executeOptimized(src, offsets, weights, dst, src_strides, off_strides, dst_strides);
