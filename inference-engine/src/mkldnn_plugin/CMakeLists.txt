@@ -33,7 +33,7 @@ set(LAYERS
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_lrn_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_memory_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_pad_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_transpose_node.cpp <=====
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_transpose_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_pooling_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_fake_quantize_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reorder_node.cpp
@@ -49,7 +49,7 @@ set(LAYERS
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_mvn_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_normalize_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_scatter_update_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_interpolate_node.cpp <=====
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_interpolate_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reduce_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reference_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_depth_to_space_node.cpp
