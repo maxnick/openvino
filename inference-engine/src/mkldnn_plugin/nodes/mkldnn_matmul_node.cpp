@@ -13,6 +13,7 @@
 #include "ie_parallel.hpp"
 #include "common/cpu_memcpy.h"
 #include <ngraph/opsets/opset1.hpp>
+#include "memory_descs/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -20,6 +21,11 @@ using namespace InferenceEngine;
 
 bool MKLDNNMatMulNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
+
         const auto matMul = std::dynamic_pointer_cast<const ngraph::opset1::MatMul>(op);
         if (!matMul) {
             errorMessage = "Only opset1 MatMul operation is supported";
@@ -131,24 +137,22 @@ void MKLDNNMatMulNode::initSupportedPrimitiveDescriptors() {
         }
     }
 
-    auto inputDataType0 = MKLDNNExtensionUtils::IEPrecisionToDataType(inPrec0);
-    auto inputDataType1 = MKLDNNExtensionUtils::IEPrecisionToDataType(inPrec1);
-    auto outputDataType = MKLDNNExtensionUtils::IEPrecisionToDataType(InferenceEngine::Precision::FP32);
+    auto outputPrec = InferenceEngine::Precision::FP32;
 
     NodeConfig config;
     config.dynBatchSupport = true;
 
-    auto createDataConfig = [](const std::vector<size_t>& dims, memory::data_type dataType) -> PortConfig {
+    auto createDataConfig = [](const Shape& shape, InferenceEngine::Precision dataType) -> PortConfig {
         PortConfig dataConfig;
         dataConfig.inPlace = -1;
         dataConfig.constant = false;
-        dataConfig.desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(dims, dataType, MKLDNNExtensionUtils::GetPlainFormatByRank(dims.size()));
+        dataConfig.desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(dataType, shape);
         return dataConfig;
     };
 
-    config.inConfs.push_back(createDataConfig(getInputShapeAtPort(0).getStaticDims(), inputDataType0));
-    config.inConfs.push_back(createDataConfig(getInputShapeAtPort(1).getStaticDims(), inputDataType1));
-    config.outConfs.push_back(createDataConfig(getOutputShapeAtPort(0).getStaticDims(), outputDataType));
+    config.inConfs.push_back(createDataConfig(getInputShapeAtPort(0), inPrec0));
+    config.inConfs.push_back(createDataConfig(getInputShapeAtPort(1), inPrec1));
+    config.outConfs.push_back(createDataConfig(getOutputShapeAtPort(0), outputPrec));
 
     supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::gemm_any);
 }
@@ -181,8 +185,8 @@ void MKLDNNMatMulNode::createPrimitive() {
     if (getSelectedPrimitiveDescriptor() == nullptr)
         IE_THROW()  << errorPrefix << " did not set preferable primitive descriptor";
 
-    auto inDims0 = src0MemPtr->GetDims();
-    auto outDims = dstMemPtr->GetDims();
+    auto inDims0 = src0MemPtr->getStaticDims();
+    auto outDims = dstMemPtr->getStaticDims();
 
     params.src0_mem_ptr = src0MemPtr;
     params.src1_mem_ptr = src1MemPtr;
