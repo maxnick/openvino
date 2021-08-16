@@ -43,6 +43,8 @@ public:
 
     size_t getMaxMemSize() const override;
 
+    bool blocksExtended() const override;
+
     size_t getPaddedElementsCount() const override;
 
 private:

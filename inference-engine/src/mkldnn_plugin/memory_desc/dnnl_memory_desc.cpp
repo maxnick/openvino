@@ -76,12 +76,4 @@ size_t DnnlMemoryDesc::getMaxMemSize() const {
     return getCurrentMemSize();
 }
 
-bool DnnlMemoryDesc::blocksExtended() const {
-    for (int i = 0; i < desc.data.ndims; i++) {
-        if (desc.data.dims[i] != desc.data.padded_dims[i])
-            return true;
-    }
-    return false;
-}
-
 } // namespace MKLDNNPlugin

@@ -355,8 +355,8 @@ void MKLDNNDeconvolutionNode::createPrimitive() {
 
 void MKLDNNDeconvolutionNode::createDescriptor(const std::vector<const MemoryDesc*> &inputDesc,
                                                const std::vector<const MemoryDesc*> &outputDesc) {
-    const auto in_candidate = MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0]);
-    const auto out_candidate = MemoryDescUtils::convertToDnnlMemoryDesc(*outputDesc[0]);
+    const auto in_candidate = MemoryDescUtils::convertToDnnlBlockedMemoryDesc(*inputDesc[0]);
+    const auto out_candidate = MemoryDescUtils::convertToDnnlBlockedMemoryDesc(*outputDesc[0]);
 
     // grouping and autoblicking is not compatible
     if ((withGroups && !isDW) && (in_candidate->blocksExtended() || out_candidate->blocksExtended()))

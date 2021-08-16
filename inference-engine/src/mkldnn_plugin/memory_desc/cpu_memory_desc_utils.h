@@ -27,11 +27,11 @@ public:
     static std::unique_ptr<DnnlMemoryDesc> convertToDnnlMemoryDesc(const MemoryDesc& desc);
 
     /**
-     * @brief Converts BlockedMemoryDesc to DnnlMemoryDesc
-     * @param desc BlockedMemoryDesc to be converted
-     * @return converted DnnlMemoryDesc
+     * @brief Converts MemoryDesc to DnnlBlockedMemoryDesc
+     * @param desc MemoryDesc to be converted
+     * @return converted DnnlBockedMemoryDesc
      */
-    static std::unique_ptr<DnnlMemoryDesc> convertToDnnlMemoryDesc(const CpuBlockedMemoryDesc& desc);
+    static std::unique_ptr<DnnlBlockedMemoryDesc> convertToDnnlBlockedMemoryDesc(const MemoryDesc& desc);
 
     /**
      * @brief Converts InferenceEngine::TensorDesc to DnnlBlockedMemoryDesc
