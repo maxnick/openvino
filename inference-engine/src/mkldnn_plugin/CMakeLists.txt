@@ -45,12 +45,12 @@ set(LAYERS
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_softmax_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_split_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_tensoriterator_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_tile_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_tile_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_mvn_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_normalize_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_scatter_update_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_scatter_update_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_interpolate_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reduce_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reduce_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reference_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_depth_to_space_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_space_to_depth_node.cpp
@@ -70,31 +70,31 @@ set(LAYERS
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_roll_node.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/list.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/ctc_greedy_decoder.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/ctc_greedy_decoder_seq_len.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/ctc_loss.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/detectionoutput.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/detectionoutput_onnx.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/extract_image_patches.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/gather_tree.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/grn.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/non_max_suppression.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/log_softmax.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/math.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/priorgridgenerator_onnx.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_onnx.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/range.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/reorg_yolo.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/reverse_sequence.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/roifeatureextractor_onnx.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/shuffle_channels.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/bucketize.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/topkrois_onnx.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/common/softmax.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/topk.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_imp.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/cum_sum.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_seq_len.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_loss.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detectionoutput.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detectionoutput_onnx.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_extract_image_patches.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_tree.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_grn.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_non_max_suppression.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_log_softmax.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_math.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_priorgridgenerator_onnx.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_onnx.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_range.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reorg_yolo.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reverse_sequence.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_roifeatureextractor_onnx.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_shuffle_channels.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_bucketize.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_topkrois_onnx.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_common/softmax.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_topk.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_imp.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_cum_sum.cpp
 )
 
 file(GLOB SOURCES
