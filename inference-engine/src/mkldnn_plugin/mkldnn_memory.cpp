@@ -21,6 +21,7 @@
 #include "memory_descs/dnnl_blocked_memory_desc.h"
 #include "utils/cpu_utils.hpp"
 #include "nodes/mkldnn_reorder_node.h"
+#include "memory_descs/cpu_memory_desc.h"
 
 using namespace InferenceEngine;
 using namespace mkldnn;
@@ -52,7 +53,7 @@ void MKLDNNMemory::Create(const memory::dims& dims, memory::data_type data_type,
         format = memory::format_tag::any;
     }
 
-    memory::desc desc = DnnlBlockedMemoryDesc(Shape(MKLDNNExtensionUtils::convertToSizeVector(dims)), data_type, format).getMklDesc();
+    memory::desc desc = mkldnn::memory::desc(dims, data_type, format);
 
     Create(desc, data);
 }
@@ -141,17 +142,6 @@ void *MKLDNNMemory::GetPtr() const  {
     return ptr;
 }
 
-template<>
-DnnlMemoryDescPtr MKLDNNMemory::GetDescWithType<DnnlMemoryDesc, 0, 0>() const {
-    if (pMemDesc->getType() & MemoryDescType::Mkldnn) {
-        return std::unique_ptr<DnnlMemoryDesc>(dynamic_cast<DnnlMemoryDesc *>(pMemDesc->clone().release()));
-    } else if (pMemDesc->getType() == MemoryDescType::Blocked) {
-        return MemoryDescUtils::convertToDnnlMemoryDesc(*(pMemDesc->as<BlockedMemoryDesc>()));
-    } else {
-        IE_THROW() << "Can not convert unsupported memory descriptor";
-    }
-}
-
 void MKLDNNMemory::redefineDesc(const MemoryDesc& desc) {
     redefineDesc(desc.clone());
 }
@@ -173,12 +163,13 @@ void MKLDNNMemory::redefineDesc(MemoryDescPtr desc) {
 }
 
 template<>
+DnnlMemoryDescPtr MKLDNNMemory::GetDescWithType<DnnlMemoryDesc, 0, 0>() const {
+    return MemoryDescUtils::convertToDnnlMemoryDesc(*pMemDesc);
+}
+
+template<>
 BlockedMemoryDescPtr MKLDNNMemory::GetDescWithType<BlockedMemoryDesc, 0, 0>() const {
-    if (pMemDesc->getType() & MemoryDescType::Blocked) {
-        return std::unique_ptr<BlockedMemoryDesc>(dynamic_cast<BlockedMemoryDesc *>(pMemDesc->clone().release()));
-    } else {
-        IE_THROW() << "Can not convert unsupported memory descriptor";
-    }
+    return MemoryDescUtils::convertToBlockedMemoryDesc(*pMemDesc);
 }
 
 }  // namespace MKLDNNPlugin

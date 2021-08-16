@@ -10,6 +10,7 @@
 
 namespace MKLDNNPlugin {
 
+class MemoryDesc;
 class DnnlMemoryDesc;
 class BlockedMemoryDesc;
 class DnnlBlockedMemoryDesc;
@@ -40,18 +41,25 @@ public:
     static std::unique_ptr<DnnlBlockedMemoryDesc> convertToDnnlBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc);
 
     /**
+     * @brief Converts MemoryDesc to BlockedMemoryDesc
+     * @param desc MemoryDesc to be converted
+     * @return converted BlockedMemoryDesc
+     */
+    static std::unique_ptr<BlockedMemoryDesc> convertToBlockedMemoryDesc(const MemoryDesc& desc);
+
+    /**
      * @brief Creates BlockedMemoryDesc with offsetPadding of UNDEFINED_DIM size
      * @param desc modifiable BlockedMemoryDesc
      * @return pointer to MemoryDesc
      */
-    static MemoryDescPtr applyUndefinedOffset(const MemoryDesc& desc);
+    static std::unique_ptr<MemoryDesc> applyUndefinedOffset(const MemoryDesc& desc);
 
     /**
      * @brief Creates MemoryDesc with offsetPadding of 0 size
      * @param desc modifiable MemoryDesc
      * @return pointer to MemoryDesc
      */
-    static MemoryDescPtr resetOffset(const MemoryDesc* desc);
+    static std::unique_ptr<MemoryDesc> resetOffset(const MemoryDesc* desc);
 
     /**
      * @brief Creates InferenceEngine::Blob from MemoryDesc
@@ -73,6 +81,20 @@ public:
      * @return converted InferenceEngine::TensorDesc
      */
     static InferenceEngine::TensorDesc convertToTensorDesc(const MemoryDesc& desc);
+
+    /**
+     * @brief Converts dim to string, undefined dim represented as ?
+     * @param dim Dim to be converted
+     * @return dim as string
+     */
+    static std::string dim2str(size_t dim);
+
+    /**
+     * @brief Converts dims to string, undefined dim represented as ?
+     * @param dim Dims to be converted
+     * @return dims as string
+     */
+    static std::string dims2str(const std::vector<size_t>& dims);
 };
 
 }  // namespace MKLDNNPlugin

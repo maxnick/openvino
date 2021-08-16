@@ -455,27 +455,27 @@ public:
         return &supportedPrimitiveDescriptors[selectedPrimitiveDescriptorIndex];
     }
 
-    const MemoryDesc* getOutputMemDescAtPort(size_t portNum) const {
-        if (auto primDesc = getSelectedPrimitiveDescriptor()) {
-            const auto& outConfs = primDesc->getConfig().outConfs;
-            if (outConfs.size() < portNum) {
-                return nullptr;
-            }
-            return outConfs[portNum].desc.get();
-        }
-        return nullptr;
-    }
+    /**
+     * @brief Returns input selected primitive descriptor on the specified port
+     * must be used after selectOptimalPrimitiveDescriptor stage
+     * @param portNum port number
+     * @return selected primitive descriptor with type T
+     */
+    template <typename T,
+              typename std::enable_if<!std::is_pointer<T>::value && !std::is_reference<T>::value, int>::type = 0,
+              typename std::enable_if<std::is_base_of<MemoryDesc, T>::value, int>::type = 0>
+    std::unique_ptr<T> getInputMemDescAtPort(size_t portNum) const;
 
-    const MemoryDesc* getInputMemDescAtPort(size_t portNum) const {
-        if (auto primDesc = getSelectedPrimitiveDescriptor()) {
-            const auto& inConfs = primDesc->getConfig().inConfs;
-            if (inConfs.size() < portNum) {
-                return nullptr;
-            }
-            return inConfs[portNum].desc.get();
-        }
-        return nullptr;
-    }
+    /**
+     * @brief Returns output selected primitive descriptor on the specified port
+     * must be used after selectOptimalPrimitiveDescriptor stage
+     * @param portNum port number
+     * @return selected primitive descriptor with type T
+     */
+    template <typename T,
+              typename std::enable_if<!std::is_pointer<T>::value && !std::is_reference<T>::value, int>::type = 0,
+              typename std::enable_if<std::is_base_of<MemoryDesc, T>::value, int>::type = 0>
+    std::unique_ptr<T> getOutputMemDescAtPort(size_t portNum) const;
 
     void selectPrimitiveDescriptorByIndex(int index) {
         if (index < 0 || index >= supportedPrimitiveDescriptors.size())
@@ -695,7 +695,7 @@ public:
 
 protected:
     virtual std::vector<std::vector<size_t>> shapeInfer() const {
-        IE_THROW() << "MKLDNNNode::shapeInfer is not defined for node with type: " << getTypeStr();
+        IE_THROW(NotImplemented) << "MKLDNNNode::shapeInfer is not defined for node with type: " << getTypeStr();
     }
     virtual void executeDynamicImpl(mkldnn::stream strm);
 
@@ -833,6 +833,9 @@ protected:
     }
 
 private:
+    std::unique_ptr<MemoryDesc> getInputMemDescAtPort(size_t portNum) const;
+    std::unique_ptr<MemoryDesc> getOutputMemDescAtPort(size_t portNum) const;
+
     bool isDynamic = false;
 
     std::vector<MKLDNNEdgeWeakPtr> parentEdges;

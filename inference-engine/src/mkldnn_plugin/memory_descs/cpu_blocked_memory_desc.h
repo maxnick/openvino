@@ -5,6 +5,7 @@
 #pragma once
 
 #include "blocked_memory_desc.h"
+#include "utils/general_utils.h"
 
 namespace MKLDNNPlugin {
 
@@ -87,12 +88,10 @@ private:
     bool isTailCFormat() const;
     bool isDefinedImp() const override;
     std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
-    void initializePaddedDims() const;
 
 private:
     InferenceEngine::Precision precision;
     size_t offsetPadding;
-    mutable std::vector<size_t> paddedDims;
 };
 
 } // namespace MKLDNNPlugin

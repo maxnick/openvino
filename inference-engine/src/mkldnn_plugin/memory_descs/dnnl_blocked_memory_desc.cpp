@@ -492,7 +492,7 @@ std::unique_ptr<MemoryDesc> DnnlBlockedMemoryDesc::cloneWithNewDimsImp(const Vec
     std::vector<int> innerIdxs(std::begin(blockingDesc.inner_idxs), std::begin(blockingDesc.inner_idxs) + numInnerBlks);
     auto retCode = dnnl::impl::fill_blocked(newMklDesc.data, perm, innerBlks, innerIdxs);
     if (retCode != dnnl::impl::status::success) {
-        IE_THROW() << "Can not clone DnnlBlockedMemoryDesc with dims: " << dims2str(dims);
+        IE_THROW() << "Can not clone DnnlBlockedMemoryDesc with dims: " << MemoryDescUtils::dims2str(dims);
     }
     return std::unique_ptr<DnnlBlockedMemoryDesc>(new DnnlBlockedMemoryDesc(newMklDesc));
 }

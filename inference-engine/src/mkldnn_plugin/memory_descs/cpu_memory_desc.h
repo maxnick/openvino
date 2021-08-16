@@ -7,10 +7,15 @@
 #include <ie_common.h>
 #include <ie_precision.hpp>
 #include "cpu_shape.h"
-#include "utils/general_utils.h"
 #include "cpu_types.h"
+#include "memory_descs/cpu_memory_desc_utils.h"
 
 namespace MKLDNNPlugin {
+
+class MemoryDesc;
+
+using MemoryDescPtr = std::unique_ptr<MemoryDesc>;
+using MemoryDescConstPtr = std::unique_ptr<const MemoryDesc>;
 
 enum MemoryDescType {
     Undef = 0,
@@ -43,13 +48,13 @@ public:
 
     virtual void setPrecision(InferenceEngine::Precision prc) = 0;
 
-    virtual std::unique_ptr<MemoryDesc> clone() const = 0;
+    virtual MemoryDescPtr clone() const = 0;
 
     // clone descriptor with new dims. Throws an exception if some of the new dims conflicts with the internal shape (i.e. its defined dims ,rank, upper bounds)
-    std::unique_ptr<MemoryDesc> cloneWithNewDims(const VectorDims& dims) const {
+    MemoryDescPtr cloneWithNewDims(const VectorDims& dims) const {
         if (!getShape().isCompatible(dims)) {
             IE_THROW(ParameterMismatch) << "Can not clone with new dims. Descriptor's shape: " << getShape().toString() <<
-                                        " is incompatible with provided dimensions: " << dims2str(dims) << ".";
+                                           " is incompatible with provided dimensions: " << MemoryDescUtils::dims2str(dims) << ".";
         }
 
         return cloneWithNewDimsImp(dims);
@@ -121,7 +126,7 @@ protected:
 
     virtual bool isDefinedImp() const = 0;
 
-    virtual std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const VectorDims& dims) const = 0;
+    virtual MemoryDescPtr cloneWithNewDimsImp(const VectorDims& dims) const = 0;
 
     MemoryDescType type;
     Shape shape;
@@ -136,8 +141,5 @@ protected:
     // WA: optimizedNspc2Ncsp used getElementOffset inside implementation
     friend class MKLDNNSplitNode;
 };
-
-using MemoryDescPtr = std::unique_ptr<MemoryDesc>;
-using MemoryDescConstPtr = std::unique_ptr<const MemoryDesc>;
 
 }  // namespace MKLDNNPlugin

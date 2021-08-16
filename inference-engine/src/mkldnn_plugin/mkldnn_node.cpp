@@ -505,6 +505,48 @@ void MKLDNNNode::resolveInPlaceEdges() {
     }
 }
 
+std::unique_ptr<MemoryDesc> MKLDNNNode::getInputMemDescAtPort(size_t portNum) const {
+    if (auto primDesc = getSelectedPrimitiveDescriptor()) {
+        const auto& inConfs = primDesc->getConfig().inConfs;
+        if (inConfs.size() < portNum) {
+            IE_THROW() << "Can't get input memory desc at port: " << portNum << ", incorrect port number";
+        }
+        return inConfs[portNum].desc->clone();
+    }
+    IE_THROW() << "Can't get input memory desc, primitive descriptor is not selected";
+}
+
+std::unique_ptr<MemoryDesc> MKLDNNNode::getOutputMemDescAtPort(size_t portNum) const {
+    if (auto primDesc = getSelectedPrimitiveDescriptor()) {
+        const auto& outConfs = primDesc->getConfig().outConfs;
+        if (outConfs.size() < portNum) {
+            IE_THROW() << "Can't get output memory desc at port: " << portNum << ", incorrect port number";
+        }
+        return outConfs[portNum].desc->clone();
+    }
+    IE_THROW() << "Can't get output memory desc, primitive descriptor is not selected";
+}
+
+template<>
+DnnlMemoryDescPtr MKLDNNNode::getInputMemDescAtPort<DnnlMemoryDesc, 0, 0>(size_t portNum) const {
+    return MemoryDescUtils::convertToDnnlMemoryDesc(*getInputMemDescAtPort(portNum));
+}
+
+template<>
+BlockedMemoryDescPtr MKLDNNNode::getInputMemDescAtPort<BlockedMemoryDesc, 0, 0>(size_t portNum) const {
+    return MemoryDescUtils::convertToBlockedMemoryDesc(*getInputMemDescAtPort(portNum));
+}
+
+template<>
+DnnlMemoryDescPtr MKLDNNNode::getOutputMemDescAtPort<DnnlMemoryDesc, 0, 0>(size_t portNum) const {
+    return MemoryDescUtils::convertToDnnlMemoryDesc(*getOutputMemDescAtPort(portNum));
+}
+
+template<>
+BlockedMemoryDescPtr MKLDNNNode::getOutputMemDescAtPort<BlockedMemoryDesc, 0, 0>(size_t portNum) const {
+    return MemoryDescUtils::convertToBlockedMemoryDesc(*getOutputMemDescAtPort(portNum));
+}
+
 std::string MKLDNNNode::getPrimitiveDescriptorType() {
     auto selectedPrimitiveDesc = getSelectedPrimitiveDescriptor();
 

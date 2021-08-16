@@ -42,6 +42,14 @@ std::unique_ptr<DnnlBlockedMemoryDesc> MemoryDescUtils::convertToDnnlBlockedMemo
                                                                                 blkDesc.getOffsetPaddingToData(), blkDesc.getStrides()));
 }
 
+std::unique_ptr<BlockedMemoryDesc> MemoryDescUtils::convertToBlockedMemoryDesc(const MemoryDesc& desc) {
+    if (desc.getType() & MemoryDescType::Blocked) {
+        return std::unique_ptr<BlockedMemoryDesc>(dynamic_cast<BlockedMemoryDesc *>(desc.clone().release()));
+    } else {
+        IE_THROW() << "Can not convert unsupported memory descriptor";
+    }
+}
+
 MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const MemoryDesc& desc) {
     if (desc.getType() == MemoryDescType::Mkldnn) {
         IE_THROW() << "Can't apply undefined offset for mkldnn memory desc";
@@ -108,6 +116,23 @@ InferenceEngine::TensorDesc MemoryDescUtils::convertToTensorDesc(const MemoryDes
     } else {
         IE_THROW() << "Cannot convert MemoryDesc to InferenceEngine::TensorDesc";
     }
+}
+
+std::string MemoryDescUtils::dim2str(size_t dim) {
+    return dim == Shape::UNDEFINED_DIM ? "?" : std::to_string(dim);
+}
+
+std::string MemoryDescUtils::dims2str(const std::vector<size_t>& dims) {
+    std::stringstream output;
+    output << "{";
+
+    auto itr = dims.begin();
+    do {
+        output << dim2str(*itr);
+    } while (++itr != dims.end() && output << ", ");
+
+    output << "}";
+    return output.str();
 }
 
 } // namespace MKLDNNPlugin
