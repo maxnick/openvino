@@ -120,4 +120,7 @@ private:
     mutable VectorDims paddedDims;
 };
 
+using CpuBlockedMemoryDescPtr = std::unique_ptr<CpuBlockedMemoryDesc>;
+using CpuBlockedMemoryDescCPtr = std::unique_ptr<const CpuBlockedMemoryDesc>;
+
 } // namespace MKLDNNPlugin

@@ -69,4 +69,7 @@ private:
     friend class MemoryDescUtils;
 };
 
+using DnnlBlockedMemoryDescPtr = std::unique_ptr<DnnlBlockedMemoryDesc>;
+using DnnlBlockedMemoryDescCPtr = std::unique_ptr<const DnnlBlockedMemoryDesc>;
+
 } // namespace MKLDNNPlugin

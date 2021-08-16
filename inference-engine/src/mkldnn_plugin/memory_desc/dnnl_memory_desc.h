@@ -27,6 +27,7 @@ namespace MKLDNNPlugin {
 class DnnlMemoryDesc;
 
 using DnnlMemoryDescPtr = std::unique_ptr<DnnlMemoryDesc>;
+using DnnlMemoryDescCPtr = std::unique_ptr<const DnnlMemoryDesc>;
 
 class DnnlMemoryDesc : public virtual MemoryDesc {
 public:
