@@ -32,9 +32,9 @@ set(LAYERS
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_input_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_lrn_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_memory_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_pad_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_pad_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_transpose_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_pooling_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_pooling_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_fake_quantize_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reorder_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reshape_node.cpp
