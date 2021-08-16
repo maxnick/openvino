@@ -11,6 +11,7 @@
 #include "ie_parallel.hpp"
 #include "utils/bfloat16.hpp"
 #include <utils/general_utils.h>
+#include "utils/ngraph_utils.hpp"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;

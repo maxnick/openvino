@@ -22,7 +22,7 @@ using MatrixNmsIEInternal = ngraph::op::internal::NmsStaticShapeIE<ngraph::op::v
 using ngNmsSortResultType = ngraph::op::util::NmsBase::SortResultType;
 using ngNmseDcayFunction = ngraph::op::v8::MatrixNms::DecayFunction;
 
-bool MKLDNNMatrixNmsNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
+bool MKLDNNMatrixNmsNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
         const auto nms = std::dynamic_pointer_cast<const MatrixNmsIEInternal>(op);
         if (!nms) {

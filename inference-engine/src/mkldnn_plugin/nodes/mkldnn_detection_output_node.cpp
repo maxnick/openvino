@@ -24,7 +24,7 @@ bool SortScorePairDescend<std::pair<int, int>>(const std::pair<float, std::pair<
     return (pair1.first > pair2.first) || (pair1.first == pair2.first && pair1.second.second < pair2.second.second);
 }
 
-bool MKLDNNDetectionOutputNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
+bool MKLDNNDetectionOutputNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
         const auto doOp = ngraph::as_type_ptr<const ngraph::op::v0::DetectionOutput>(op);
         if (!doOp) {

@@ -24,7 +24,7 @@ using namespace InferenceEngine;
 using ngNmsSortResultType = ngraph::op::util::NmsBase::SortResultType;
 using MulticlassNmsIEInternal = ngraph::op::internal::NmsStaticShapeIE<ngraph::op::v8::MulticlassNms>;
 
-bool MKLDNNMultiClassNmsNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
+bool MKLDNNMultiClassNmsNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
         const auto nms = std::dynamic_pointer_cast<const MulticlassNmsIEInternal>(op);
         if (!nms) {

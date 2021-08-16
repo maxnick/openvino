@@ -11,6 +11,7 @@
 #include <ie_ngraph_utils.hpp>
 #include <utils/general_utils.h>
 #include "common/blocked_desc_creator.h"
+#include "utils/ngraph_utils.hpp"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;

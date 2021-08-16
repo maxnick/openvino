@@ -215,7 +215,7 @@ static void nms_cf(const float* conf_data,
     detections = (post_nms_topn == -1 ? detections : (std::min)(post_nms_topn, detections));
 }
 
-bool MKLDNNExperimentalDetectronDetectionOutputNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
+bool MKLDNNExperimentalDetectronDetectionOutputNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
         const auto doOp = ngraph::as_type_ptr<const ngraph::op::v6::ExperimentalDetectronDetectionOutput>(op);
         if (!doOp) {

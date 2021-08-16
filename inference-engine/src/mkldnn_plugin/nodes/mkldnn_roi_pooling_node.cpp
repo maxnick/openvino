@@ -306,7 +306,7 @@ private:
     }
 };
 
-bool MKLDNNROIPoolingNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
+bool MKLDNNROIPoolingNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
         const auto roiPooling = std::dynamic_pointer_cast<const ngraph::opset2::ROIPooling>(op);
         if (!roiPooling) {

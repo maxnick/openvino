@@ -23,7 +23,7 @@ using namespace InferenceEngine;
 using namespace mkldnn::impl;
 using namespace mkldnn::impl::cpu::x64;
 
-bool MKLDNNShuffleChannelsNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
+bool MKLDNNShuffleChannelsNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
         const auto shuffleChannels = std::dynamic_pointer_cast<const ngraph::op::v0::ShuffleChannels>(op);
         if (!shuffleChannels) {

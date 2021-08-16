@@ -23,7 +23,7 @@ using namespace mkldnn::impl::cpu::x64;
 
 using ngPoolingMode = ngraph::op::v3::ROIAlign::PoolingMode;
 
-bool MKLDNNROIAlignNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
+bool MKLDNNROIAlignNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
         const auto roiAlign = std::dynamic_pointer_cast<const ngraph::opset3::ROIAlign>(op);
         if (!roiAlign) {

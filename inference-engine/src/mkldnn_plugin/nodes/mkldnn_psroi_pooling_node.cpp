@@ -21,7 +21,7 @@ using namespace mkldnn::impl;
 using namespace mkldnn::impl::cpu::x64;
 using namespace mkldnn::impl::utils;
 
-bool MKLDNNPSROIPoolingNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
+bool MKLDNNPSROIPoolingNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
         const auto psroi = std::dynamic_pointer_cast<const ngraph::opset1::PSROIPooling>(op);
         const auto defPsroi = std::dynamic_pointer_cast<const ngraph::opset1::DeformablePSROIPooling>(op);

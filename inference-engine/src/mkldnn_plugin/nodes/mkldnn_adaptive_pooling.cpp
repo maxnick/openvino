@@ -21,7 +21,7 @@ using namespace InferenceEngine;
 using namespace mkldnn;
 using namespace mkldnn::impl::cpu::x64;
 
-bool MKLDNNAdaptivePoolingNode::isSupportedOperation(const std::shared_ptr<ngraph::Node>& op, std::string& errorMessage) noexcept {
+bool MKLDNNAdaptivePoolingNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
         if (one_of(op->get_type_info(), ngraph::op::v8::AdaptiveAvgPool::type_info)) {
             auto adaPool = std::dynamic_pointer_cast<ngraph::opset8::AdaptiveAvgPool>(op);
