@@ -13,6 +13,10 @@ using namespace InferenceEngine;
 
 bool MKLDNNEmbeddingSegmentsSumNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
         const auto embBagSegSumOp = ngraph::as_type_ptr<const ngraph::op::v3::EmbeddingSegmentsSum>(op);
         if (!embBagSegSumOp) {
             errorMessage = "Node is not an instance of the EmbeddingSegmentsSum operation from opset v3.";
@@ -76,7 +80,7 @@ void MKLDNNEmbeddingSegmentsSumNode::initSupportedPrimitiveDescriptors() {
 
 void MKLDNNEmbeddingSegmentsSumNode::initFromInputs() {
     indices_ = reinterpret_cast<const int *>(getParentEdgeAt(INDICES_IDX)->getMemoryPtr()->GetPtr());
-    indicesSize_ = getParentEdgeAt(INDICES_IDX)->getShape().getElementsCount();
+    indicesSize_ = getParentEdgeAt(INDICES_IDX)->getMemory().GetShape().getElementsCount();
 
     segmentIds_ = reinterpret_cast<const int *>(getParentEdgeAt(SEGMENT_ID_IDX)->getMemoryPtr()->GetPtr());
 
@@ -124,8 +128,9 @@ void MKLDNNEmbeddingSegmentsSumNode::execute(mkldnn::stream strm) {
     if (_withWeights)
         weightsData = reinterpret_cast<const uint8_t *>(getParentEdgeAt(PER_SAMPLE_WEIGHTS_IDX)->getMemoryPtr()->GetPtr());
 
-    MKLDNNEmbeddingBagSumNode::execute(srcData, weightsData, dstData, getParentEdgeAt(0)->getMemory().GetDesc().getPrecision(),
-                                       getInputShapeAtPort(0).getStaticDims(), getOutputShapeAtPort(0).getStaticDims());
+    const auto &mem = getParentEdgeAt(0)->getMemory();
+    MKLDNNEmbeddingBagSumNode::execute(srcData, weightsData, dstData, mem.getDesc().getPrecision(),
+                                       mem.getStaticDims(), getChildEdgesAtPort(0)[0]->getMemory().GetShape().getStaticDims());
 }
 
 bool MKLDNNEmbeddingSegmentsSumNode::created() const {

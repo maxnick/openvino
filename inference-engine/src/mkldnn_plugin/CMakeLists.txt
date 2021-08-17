@@ -57,44 +57,44 @@ set(LAYERS
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_batch_to_space_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_space_to_batch_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_broadcast_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_sum_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_offset_sum_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_packed_sum_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_segments_sum_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_elements_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_nd_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_sum_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_offset_sum_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_bag_packed_sum_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_embedding_segments_sum_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_elements_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_nd_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_one_hot_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_region_yolo_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_select_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_roll_node.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/list.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_seq_len.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_loss.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detectionoutput.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detectionoutput_onnx.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_extract_image_patches.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_tree.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_grn.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_non_max_suppression.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_log_softmax.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_math.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_priorgridgenerator_onnx.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_onnx.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_range.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reorg_yolo.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reverse_sequence.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_roifeatureextractor_onnx.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_shuffle_channels.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_bucketize.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_topkrois_onnx.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_common/softmax.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_topk.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_imp.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_cum_sum.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_seq_len_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_loss_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detectionoutput_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detectionoutput_onnx_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_extract_image_patches_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_tree_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_grn_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_non_max_suppression_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_log_softmax_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_math_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_priorgridgenerator_onnx_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_onnx_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_range_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reorg_yolo_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reverse_sequence_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_roifeatureextractor_onnx_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_shuffle_channels_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_bucketize_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_topkrois_onnx_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_common/softmax_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_topk_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_imp_node.cpp
+    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_cum_sum_node.cpp
 )
 
 file(GLOB SOURCES
