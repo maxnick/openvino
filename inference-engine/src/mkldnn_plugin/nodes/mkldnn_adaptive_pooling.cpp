@@ -23,14 +23,18 @@ using namespace mkldnn::impl::cpu::x64;
 
 bool MKLDNNAdaptivePoolingNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
         if (one_of(op->get_type_info(), ngraph::op::v8::AdaptiveAvgPool::type_info)) {
-            auto adaPool = std::dynamic_pointer_cast<ngraph::opset8::AdaptiveAvgPool>(op);
+            auto adaPool = std::dynamic_pointer_cast<const ngraph::opset8::AdaptiveAvgPool>(op);
             if (!adaPool) {
                 errorMessage = "Only opset8 AdaptiveAvgPooling operation is supported";
                 return false;
             }
         } else if (one_of(op->get_type_info(), ngraph::op::v8::AdaptiveMaxPool::type_info)) {
-            auto adaPool = std::dynamic_pointer_cast<ngraph::opset8::AdaptiveMaxPool>(op);
+            auto adaPool = std::dynamic_pointer_cast<const ngraph::opset8::AdaptiveMaxPool>(op);
             if (!adaPool) {
                 errorMessage = "Only opset8 AdaptiveMaxPooling operation is supported";
                 return false;
@@ -118,8 +122,8 @@ void MKLDNNAdaptivePoolingNode::initSupportedPrimitiveDescriptors() {
 }
 
 void MKLDNNAdaptivePoolingNode::execute(mkldnn::stream strm) {
-    auto inputPrec = getParentEdgeAt(0)->getMemory().GetDescriptor().data.data_type;
-    auto outputPrec = getChildEdgeAt(0)->getMemory().GetDescriptor().data.data_type;
+    auto inputPrec = getParentEdgeAt(0)->getMemory().GetDataType();
+    auto outputPrec = getChildEdgeAt(0)->getMemory().GetDataType();
     if (!(inputPrec == mkldnn_f32 && outputPrec == mkldnn_f32))
         IE_THROW() << errorPrefix << "doesn't support demanded precisions";
 
@@ -131,11 +135,12 @@ void MKLDNNAdaptivePoolingNode::execute(mkldnn::stream strm) {
         indexDst = reinterpret_cast<int *>(getChildEdgeAt(1)->getMemoryPtr()->GetPtr());
     }
 
-    auto srcBlockDesc = srcMemory0.GetDescriptor().data.format_desc.blocking;
-
-    int blockSize = srcBlockDesc.inner_nblks > 0 ? srcBlockDesc.inner_blks[0] : 1;
     auto isPlainFmt = srcMemory0.getDesc().hasLayoutType(LayoutType::ncsp);
     auto isTailCFmt = srcMemory0.getDesc().hasLayoutType(LayoutType::nspc);
+    auto isBlkFmt = srcMemory0.getDesc().hasLayoutType(LayoutType::nCsp16c) || srcMemory0.getDesc().hasLayoutType(LayoutType::nCsp8c);
+
+    auto srcBlockDesc = srcMemory0.GetDescWithType<BlockedMemoryDesc>();
+    int blockSize = isBlkFmt ? srcBlockDesc->getBlockDims().back() : 1;
 
     const auto *src = reinterpret_cast<const float *>(getParentEdgeAt(0)->getMemoryPtr()->GetPtr());
     const auto *srcPooledSpatialShapes = reinterpret_cast<const int *>(getParentEdgeAt(1)->getMemoryPtr()->GetPtr());
@@ -145,7 +150,7 @@ void MKLDNNAdaptivePoolingNode::execute(mkldnn::stream strm) {
         IE_THROW() << errorPrefix << "has input spatial dimension (" << srcMemory1.GetShape().getElementsCount()
                    << ") inconsistent with pooling vector size (" << spatialDimsCount << ")";
 
-    auto inputDimVector = srcMemory0.GetDims();
+    auto inputDimVector = srcMemory0.getStaticDims();
     const int N = static_cast<int>(inputDimVector[0]);
     const int C = static_cast<int>(inputDimVector[1]);
     const int ID = static_cast<int>(spatialDimsCount == 3 ? inputDimVector[2] : 1);
@@ -159,14 +164,14 @@ void MKLDNNAdaptivePoolingNode::execute(mkldnn::stream strm) {
     const int iHW = IH * IW;
     const int oDHW = OD * OH * OW, oHW = OH * OW;
 
-    const int chPadding = srcMemory0.GetDescriptor().data.padded_dims[1];
+    const int chPadding = blockSize * srcBlockDesc->getBlockDims()[1];;
     const int blockCount = (isTailCFmt ? 1 :  chPadding / blockSize);
     auto selectedPrimitiveDescriptor = getSelectedPrimitiveDescriptor();
     if (!selectedPrimitiveDescriptor)
         IE_THROW() << errorPrefix << "doesn't have primitive descriptors.";
     auto config = selectedPrimitiveDescriptor->getConfig();
-    auto srcStrides = getParentEdgesAtPort(0)[0]->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
-    auto dstStrides = getChildEdgesAtPort(0)[0]->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
+    auto srcStrides = srcBlockDesc->getStrides();
+    auto dstStrides = getChildEdgesAtPort(0)[0]->getMemory().GetDescWithType<BlockedMemoryDesc>()->getStrides();
 
     // unified strides array
     const size_t tailDimsOffset = (isTailCFmt ? -1 : 0);
