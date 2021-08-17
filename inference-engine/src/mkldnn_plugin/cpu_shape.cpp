@@ -4,7 +4,7 @@
 
 #include "cpu_shape.h"
 #include "utils/general_utils.h"
-#include "memory_descs/cpu_memory_desc_utils.h"
+#include "memory_desc/cpu_memory_desc_utils.h"
 
 using namespace MKLDNNPlugin;
 

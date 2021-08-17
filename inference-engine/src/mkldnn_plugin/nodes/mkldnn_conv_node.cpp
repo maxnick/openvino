@@ -18,8 +18,8 @@
 #include <ngraph/ops.hpp>
 #include <cpu/x64/jit_generator.hpp>
 #include "common/cpu_convert.h"
-#include <memory_descs/cpu_memory_desc_utils.h>
-#include "memory_descs/dnnl_blocked_memory_desc.h"
+#include <memory_desc/cpu_memory_desc_utils.h>
+#include "memory_desc/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -484,8 +484,8 @@ bool MKLDNNConvolutionNode::created() const {
 
 void MKLDNNConvolutionNode::createDescriptor(const std::vector<const MemoryDesc*>& inputDesc,
                                              const std::vector<const MemoryDesc*>& outputDesc) {
-    const auto inDesc = MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0])->getMklDesc();
-    const auto outDesc = MemoryDescUtils::convertToDnnlMemoryDesc(*outputDesc[0])->getMklDesc();
+    const auto inDesc = MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0])->getDnnlDesc();
+    const auto outDesc = MemoryDescUtils::convertToDnnlMemoryDesc(*outputDesc[0])->getDnnlDesc();
 
     memory::data_type wdt = static_cast<memory::data_type>(inDesc.data.data_type);
     memory::data_type bdt = memory::data_type::f32;

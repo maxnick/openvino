@@ -10,12 +10,12 @@
 namespace MKLDNNPlugin {
 
 DnnlMemoryDesc::DnnlMemoryDesc(const mkldnn::memory::desc& desc) :
-    MemoryDesc(Shape(MKLDNNExtensionUtils::convertToSizeVector(desc.dims())), Mkldnn), desc(desc) {
+    MemoryDesc(Shape(MKLDNNExtensionUtils::convertToVectorDims(desc.dims())), Mkldnn), desc(desc) {
     if (desc.data.format_kind == dnnl::impl::format_kind::any)
         IE_THROW(Unexpected) << "Memory format any is prohibited!";
 }
 
-size_t DnnlMemoryDesc::getMemSizeImp() const {
+size_t DnnlMemoryDesc::getCurrentMemSizeImp() const {
     return desc.get_size();
 }
 
@@ -32,6 +32,7 @@ bool DnnlMemoryDesc::isCompatible(const MemoryDesc &rhs) const {
     }
 }
 
+// TODO: add serialization for packed format
 std::string DnnlMemoryDesc::serializeFormat() const {
     if (desc.data.format_kind == dnnl_format_kind_wino) {
         switch (desc.data.format_desc.wino_desc.wino_format) {

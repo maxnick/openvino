@@ -18,10 +18,10 @@
 #include "nodes/common/cpu_convert.h"
 #include "mkldnn/ie_mkldnn.h"
 #include "cpu_shape.h"
-#include "memory_descs/dnnl_blocked_memory_desc.h"
+#include "memory_desc/dnnl_blocked_memory_desc.h"
 #include "utils/cpu_utils.hpp"
 #include "nodes/mkldnn_reorder_node.h"
-#include "memory_descs/cpu_memory_desc.h"
+#include "memory_desc/cpu_memory_desc.h"
 
 using namespace InferenceEngine;
 using namespace mkldnn;
@@ -101,13 +101,13 @@ void MKLDNNMemory::Create(MemoryDescPtr desc, const void* data, bool pads_zeroin
     }
 
     if (pMemDesc->isDefined()) {
-        Create(MemoryDescUtils::convertToDnnlMemoryDesc(*pMemDesc)->getMklDesc(), data, pads_zeroing);
+        Create(MemoryDescUtils::convertToDnnlMemoryDesc(*pMemDesc)->getDnnlDesc(), data, pads_zeroing);
     } else {
         //delayed dynamic allocation
         size_t maxMemSize = pMemDesc->getMaxMemSize();
         VectorDims dummySize{MemoryDesc::UNDEFINED_SIZE == maxMemSize ? 1 : maxMemSize};
         DnnlBlockedMemoryDesc dummyDesc(InferenceEngine::Precision::U8, Shape(dummySize));
-        Create(dummyDesc.getMklDesc(), data, false);  // no pads zeroing
+        Create(dummyDesc.getDnnlDesc(), data, false);  // no pads zeroing
     }
     size_t newUpperBound = prim->get_desc().get_size();
     if (newUpperBound > memUpperBound) {

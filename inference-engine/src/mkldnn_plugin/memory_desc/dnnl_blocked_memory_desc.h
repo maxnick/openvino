@@ -12,6 +12,7 @@ namespace MKLDNNPlugin {
 
 class DnnlBlockedMemoryDesc : public BlockedMemoryDesc, public DnnlMemoryDesc {
 public:
+    // Creates planar DnnlBlockedMemoryDesc
     DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape);
 
     DnnlBlockedMemoryDesc(const Shape& shape, mkldnn::memory::data_type dataType, mkldnn::memory::format_tag format);
@@ -21,7 +22,6 @@ public:
     }
 
     bool isCompatible(const MemoryDesc& rhs) const override;
-    bool isCompatible(const BlockedMemoryDesc &rhs) const override;
     bool isCompatible(const DnnlBlockedMemoryDesc& rhs) const;
     bool isCompatible(const CpuBlockedMemoryDesc& rhs) const;
 

@@ -22,7 +22,7 @@ public:
     }
 
     bool isCompatible(const MemoryDesc& rhs) const override;
-    bool isCompatible(const BlockedMemoryDesc &rhs) const override;
+    bool isCompatible(const CpuBlockedMemoryDesc &rhs) const;
 
     InferenceEngine::Precision getPrecision() const override {
         return precision;
@@ -81,7 +81,7 @@ public:
 
 private:
     size_t getElementOffset(size_t elemNumber) const override;
-    size_t getMemSizeImp() const override;
+    size_t getCurrentMemSizeImp() const override;
     size_t getOffset(const InferenceEngine::SizeVector& v) const;
     bool isPlainFormat() const;
     bool isBlockedCFormat(size_t blk_size) const;

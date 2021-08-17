@@ -52,14 +52,15 @@ public:
 
     size_t getMaxMemSize() const override;
 
-    // TODO [DS] phase 2: rename -> ?
-    mkldnn::memory::desc getMklDesc() const {
+    mkldnn::memory::desc getDnnlDesc() const {
         return desc;
     }
 
     bool hasLayoutType(LayoutType layoutType) const override { return false; }
 
     virtual bool isSame(mkldnn::memory::format_tag fmt) const { return false; }
+
+    bool isEmpltyExtraData() { return desc.data.extra.flags == dnnl_memory_extra_flag_none; }
 
 protected:
     DnnlMemoryDesc() {}
@@ -72,7 +73,7 @@ private:
 
     size_t getElementOffset(size_t elemNumber) const override;
 
-    size_t getMemSizeImp() const override;
+    size_t getCurrentMemSizeImp() const override;
     bool isDefinedImp() const override;
     std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
 

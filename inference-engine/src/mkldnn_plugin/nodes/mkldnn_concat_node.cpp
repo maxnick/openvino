@@ -22,7 +22,7 @@
 #include <limits>
 #include "common/cpu_memcpy.h"
 #include "common/blocked_desc_creator.h"
-#include <memory_descs/cpu_memory_desc_utils.h>
+#include <memory_desc/cpu_memory_desc_utils.h>
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -348,7 +348,7 @@ void MKLDNNConcatNode::createPrimitive() {
                                << getName() << ".";
         }
 
-        auto desc = srcMemPtr->GetDescWithType<DnnlMemoryDesc>()->getMklDesc();
+        auto desc = srcMemPtr->GetDescWithType<DnnlMemoryDesc>()->getDnnlDesc();
         auto& dims = getParentEdgeAt(i)->getShape().getStaticDims();
         for (size_t j = 0; j < dims.size(); j++) {
             desc.data.dims[j] = dims[j];
@@ -357,7 +357,7 @@ void MKLDNNConcatNode::createPrimitive() {
         srcs_d.emplace_back(desc);
     }
 
-    auto desc = getChildEdgeAt(0)->getMemory().GetDescWithType<DnnlMemoryDesc>()->getMklDesc();
+    auto desc = getChildEdgeAt(0)->getMemory().GetDescWithType<DnnlMemoryDesc>()->getDnnlDesc();
     auto& dims = getChildEdgeAt(0)->getShape().getStaticDims();
     for (size_t i = 0; i < dims.size(); i++) {
         desc.data.dims[i] = dims[i];

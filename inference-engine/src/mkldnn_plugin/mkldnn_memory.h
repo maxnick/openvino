@@ -6,14 +6,14 @@
 
 #include "ie_layouts.h"
 #include "mkldnn_dims.h"
-#include "memory_descs/cpu_memory_desc.h"
+#include "memory_desc/cpu_memory_desc.h"
 #include "mkldnn_extension_utils.h"
-#include "memory_descs/cpu_memory_desc_utils.h"
+#include "memory_desc/cpu_memory_desc_utils.h"
 #include <mkldnn.hpp>
 #include <mkldnn_types.h>
 #include <cpu_shape.h>
 
-#include "memory_descs/dnnl_memory_desc.h"
+#include "memory_desc/dnnl_memory_desc.h"
 
 #include <string>
 #include <functional>

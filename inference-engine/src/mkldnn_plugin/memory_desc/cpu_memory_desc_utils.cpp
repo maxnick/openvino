@@ -3,9 +3,9 @@
 //
 
 #include "cpu_memory_desc.h"
-#include "memory_descs/cpu_memory_desc_utils.h"
+#include "memory_desc/cpu_memory_desc_utils.h"
 #include "mkldnn_memory.h"
-#include "memory_descs/dnnl_blocked_memory_desc.h"
+#include "memory_desc/dnnl_blocked_memory_desc.h"
 #include "utils/general_utils.h"
 #include "utils/cpu_utils.hpp"
 #include <limits>
@@ -66,7 +66,7 @@ MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const MemoryDesc& desc) {
     if (blkMemDesc->getType() == MemoryDescType::Blocked) {
         return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(blkMemDesc->getPrecision(), blkMemDesc->getShape(), blkMemDesc->getBlockDims(),
                                                                blkMemDesc->getOrder(), offsetPadding, offsetPaddingToData, strides);
-    } else if (blkMemDesc->getType() == MemoryDescType::OneDnnBlocked) {
+    } else if (blkMemDesc->getType() == MemoryDescType::DnnlBlocked) {
         return std::unique_ptr<DnnlBlockedMemoryDesc>(new DnnlBlockedMemoryDesc(blkMemDesc->getPrecision(), blkMemDesc->getShape(),
                                                                                     blkMemDesc->getBlockDims(), blkMemDesc->getOrder(),
                                                                                     offsetPadding, offsetPaddingToData, strides));
@@ -81,7 +81,7 @@ MemoryDescPtr MemoryDescUtils::resetOffset(const MemoryDesc* desc) {
     if (MemoryDescType::Blocked == desc->getType()) {
         return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(blkMemDesc->getPrecision(), blkMemDesc->getShape(),
                                                                blkMemDesc->getBlockDims(), blkMemDesc->getOrder());
-    } else if (MemoryDescType::OneDnnBlocked == desc->getType()) {
+    } else if (MemoryDescType::DnnlBlocked == desc->getType()) {
         return std::unique_ptr<DnnlBlockedMemoryDesc>(new DnnlBlockedMemoryDesc(blkMemDesc->getPrecision(), blkMemDesc->getShape(),
                                                                   blkMemDesc->getBlockDims(), blkMemDesc->getOrder()));
     } else {

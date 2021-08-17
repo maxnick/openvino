@@ -37,7 +37,7 @@
 #include <cmath>
 #include <map>
 #include <functional>
-#include "memory_descs/dnnl_blocked_memory_desc.h"
+#include "memory_desc/dnnl_blocked_memory_desc.h"
 
 using namespace MKLDNNPlugin;
 using namespace InferenceEngine;

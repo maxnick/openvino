@@ -21,7 +21,7 @@
 #include <mkldnn_selective_build.h>
 
 #include <ngraph/opsets/opset1.hpp>
-#include "memory_descs/dnnl_blocked_memory_desc.h"
+#include "memory_desc/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;

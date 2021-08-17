@@ -5,7 +5,7 @@
 #include "mkldnn_extension_utils.h"
 #include "utils/general_utils.h"
 #include <vector>
-#include "memory_descs/dnnl_blocked_memory_desc.h"
+#include "memory_desc/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -76,7 +76,7 @@ InferenceEngine::Precision MKLDNNExtensionUtils::DataTypeToIEPrecision(memory::d
     }
 }
 
-VectorDims MKLDNNExtensionUtils::convertToSizeVector(const memory::dims& dims) {
+VectorDims MKLDNNExtensionUtils::convertToVectorDims(const memory::dims& dims) {
     std::vector<size_t> vecResult;
     vecResult.reserve(dims.size());
     std::back_insert_iterator<std::vector<size_t>> itr(vecResult);

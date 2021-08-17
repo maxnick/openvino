@@ -39,7 +39,7 @@
 #include "utils/node_dumper.h"
 #include "utils/ngraph_utils.hpp"
 #include "utils/cpu_utils.hpp"
-#include "memory_descs/cpu_memory_desc_utils.h"
+#include "memory_desc/cpu_memory_desc_utils.h"
 
 #include <ngraph/node.hpp>
 #include <ngraph/function.hpp>
@@ -47,7 +47,7 @@
 #include <ngraph/ops.hpp>
 #include <transformations/utils/utils.hpp>
 #include <low_precision/low_precision.hpp>
-#include "memory_descs/dnnl_blocked_memory_desc.h"
+#include "memory_desc/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -440,8 +440,8 @@ void MKLDNNGraph::ExecuteConstantNodesOnly() {
 }
 
 static bool isReorderAvailable(const MemoryDesc& parentDesc, const MemoryDesc& childDesc, const mkldnn::engine& eng) {
-    memory::desc dstMemDesc = MemoryDescUtils::convertToDnnlMemoryDesc(childDesc)->getMklDesc();
-    memory::desc srcMemDesc = MemoryDescUtils::convertToDnnlMemoryDesc(parentDesc)->getMklDesc();
+    memory::desc dstMemDesc = MemoryDescUtils::convertToDnnlMemoryDesc(childDesc)->getDnnlDesc();
+    memory::desc srcMemDesc = MemoryDescUtils::convertToDnnlMemoryDesc(parentDesc)->getDnnlDesc();
     mkldnn::primitive_attr attr;
 
     dnnl_primitive_desc_t result = nullptr;

@@ -69,9 +69,16 @@ void MKLDNNConvertNode::initSupportedPrimitiveDescriptors() {
 
     config.dynBatchSupport = false;
 
-    // if input and output pointers are not null, then the inp/output tensor descriptors were set using setDescs method, so
+    bool canInitExternalDesc = true;
+    canInitExternalDesc &= (input && output);
+    if (input->getType() & MemoryDescType::Mkldnn)
+        canInitExternalDesc &= input->as<DnnlMemoryDesc>()->isEmpltyExtraData();
+    if (output->getType() & MemoryDescType::Mkldnn)
+        canInitExternalDesc &= output->as<DnnlMemoryDesc>()->isEmpltyExtraData();
+
+    // if input and output pointers are not null and not contain extra data, then the inp/output tensor descriptors were set using setDescs method, so
     // they should be used as the actual descriptors.
-    if (input && output) {
+    if (canInitExternalDesc) {
         dataIn.desc = input->clone();
         config.inConfs.push_back(dataIn);
 

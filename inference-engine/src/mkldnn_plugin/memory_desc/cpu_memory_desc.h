@@ -8,7 +8,7 @@
 #include <ie_precision.hpp>
 #include "cpu_shape.h"
 #include "cpu_types.h"
-#include "memory_descs/cpu_memory_desc_utils.h"
+#include "memory_desc/cpu_memory_desc_utils.h"
 
 namespace MKLDNNPlugin {
 
@@ -22,7 +22,7 @@ enum MemoryDescType {
     Blocked = 1,
     Mkldnn = 1 << 1,
 
-    OneDnnBlocked = Blocked | Mkldnn
+    DnnlBlocked = Blocked | Mkldnn
 };
 
 enum class LayoutType : unsigned {
@@ -84,7 +84,7 @@ public:
     size_t getCurrentMemSize() const {
         size_t retVal = UNDEFINED_SIZE;
         if (isDefined()) {
-            retVal = getMemSizeImp();
+            retVal = getCurrentMemSizeImp();
         }
         return retVal;
     }
@@ -119,7 +119,7 @@ protected:
     MemoryDesc(const VectorDims& dims, MemoryDescType type)
             : shape(dims), type(type) {}
 
-    virtual size_t getMemSizeImp() const = 0;
+    virtual size_t getCurrentMemSizeImp() const = 0;
 
     // Get offset to the n'th element. Returns physical index of the element by the logical one considering padding, layout, blocking etc.
     virtual size_t getElementOffset(size_t elemNumber) const = 0;

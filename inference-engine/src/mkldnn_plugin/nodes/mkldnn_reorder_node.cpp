@@ -99,8 +99,8 @@ void MKLDNNReorderNode::createPrimitive() {
             // oneDNN doesn't provide JIT reorder impl for non-avx2 targets so we fallback on simple c++ implementation which shows better perf
             canUseOptimizedNcsp2Nspc = true;
         } else {
-            createReorderPrimitive(srcMemPtr->GetDescWithType<DnnlMemoryDesc>()->getMklDesc(), srcMemPtr->GetPrimitive().get_data_handle(),
-                                   dstMemPtr->GetDescWithType<DnnlMemoryDesc>()->getMklDesc(), dstMemPtr->GetPrimitive().get_data_handle());
+            createReorderPrimitive(srcMemPtr->GetDescWithType<DnnlMemoryDesc>()->getDnnlDesc(), srcMemPtr->GetPrimitive().get_data_handle(),
+                                   dstMemPtr->GetDescWithType<DnnlMemoryDesc>()->getDnnlDesc(), dstMemPtr->GetPrimitive().get_data_handle());
         }
     }
 }
@@ -249,8 +249,8 @@ void MKLDNNReorderNode::setDynamicBatchLim(int lim) {
     if (prim) {
         auto &dstMemPtr = getChildEdgeAt(0)->getMemoryPtr();
         auto &srcMemPtr = getParentEdgeAt(0)->getMemoryPtr();
-        memory::desc src_d = srcMemPtr->GetDescWithType<DnnlMemoryDesc>()->getMklDesc();
-        memory::desc dst_d = dstMemPtr->GetDescWithType<DnnlMemoryDesc>()->getMklDesc();
+        memory::desc src_d = srcMemPtr->GetDescWithType<DnnlMemoryDesc>()->getDnnlDesc();
+        memory::desc dst_d = dstMemPtr->GetDescWithType<DnnlMemoryDesc>()->getDnnlDesc();
         void *src_data_hdl = srcMemPtr->GetPrimitive().get_data_handle();
         void *dst_data_hdl = dstMemPtr->GetPrimitive().get_data_handle();
 

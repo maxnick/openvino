@@ -12,8 +12,6 @@ class BlockedMemoryDesc : public virtual MemoryDesc {
 public:
     BlockedMemoryDesc() {}
 
-    virtual bool isCompatible(const BlockedMemoryDesc &rhs) const = 0;
-
     /**
      * @brief Returns the blocked dimensions
      *
@@ -57,6 +55,15 @@ public:
     virtual bool blocksExtended() const = 0;
 
 protected:
+    /**
+     * @brief Check descs on compatibility
+     * WARNING: Check only BlockedMemoryDesc specific attributes like: strides, order etc.
+     * Don't performs type check for descs
+     * Don't performs descs specific attributes check
+     * @return true if exist padded dims, otherwise false
+     */
+    bool isCompatible(const BlockedMemoryDesc &rhs) const;
+
     mutable std::vector<size_t> blockedDims;
     mutable std::vector<size_t> strides;
     mutable std::vector<size_t> order;

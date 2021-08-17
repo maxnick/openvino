@@ -6,7 +6,7 @@
 
 #include <functional>
 #include "cpu_shape.h"
-#include "memory_descs/cpu_blocked_memory_desc.h"
+#include "memory_desc/cpu_blocked_memory_desc.h"
 
 namespace MKLDNNPlugin {
 

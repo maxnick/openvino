@@ -4,6 +4,7 @@
 
 #include "cpu_blocked_memory_desc.h"
 #include "mkldnn_memory.h"
+#include "dnnl_blocked_memory_desc.h"
 
 using namespace MKLDNNPlugin;
 
@@ -78,40 +79,20 @@ bool CpuBlockedMemoryDesc::isDefinedImp() const {
 
 bool CpuBlockedMemoryDesc::isCompatible(const MemoryDesc& rhs) const {
     const MemoryDesc* pRhs = &rhs;
-    if (auto blockingDesc = dynamic_cast<const BlockedMemoryDesc*>(pRhs)) {
-        return isCompatible(*blockingDesc);
+    if (auto cpuBlkDesc = dynamic_cast<const CpuBlockedMemoryDesc*>(pRhs)) {
+        return isCompatible(*cpuBlkDesc);
+    } else if (auto dnnlBlkDesc = dynamic_cast<const DnnlBlockedMemoryDesc*>(pRhs)) {
+        return dnnlBlkDesc->isCompatible(*this);
     } else {
         return false;
     }
 }
 
-bool CpuBlockedMemoryDesc::isCompatible(const BlockedMemoryDesc &rhs) const {
-    if (this->getShape() != rhs.getShape() || this->getPrecision() != rhs.getPrecision())
-        return false;
-
-    if (!dimsEqualWeak(this->getBlockDims(), rhs.getBlockDims())) {
-        return false;
-    }
-
-    if (!dimsEqualWeak(this->getOffsetPaddingToData(), rhs.getOffsetPaddingToData())) {
-        return false;
-    }
-
-    // this check needed to avoid inserting unnecessary reorders if the memory is used in place and the batch size is equal to 1
-    size_t skipAxis = this->getShape().getRank() > 0 && this->getShape().getDims().front() == 1 ? 0 :
-            Shape::UNDEFINED_DIM; //ignore batch axis if batch size == 1
-    if (!dimsEqualWeak(this->getStrides(), rhs.getStrides(), skipAxis)) {
-        return false;
-    }
-
-    if (!dimsEqualWeak(this->getOrder(), rhs.getOrder())) {
-        return false;
-    }
-
-    return dimsEqualWeak(this->getOffsetPadding(), rhs.getOffsetPadding());
+bool CpuBlockedMemoryDesc::isCompatible(const CpuBlockedMemoryDesc &rhs) const {
+    return BlockedMemoryDesc::isCompatible(rhs);
 }
 
-size_t CpuBlockedMemoryDesc::getMemSizeImp() const {
+size_t CpuBlockedMemoryDesc::getCurrentMemSizeImp() const {
     int64_t e_size = getOffsetPadding() + 1;  // size in bytes (from begin of data to last element)
     for (int j = 0; j < getBlockDims().size(); j++)
         e_size += (getBlockDims()[j] - 1) * getStrides()[j];
@@ -290,8 +271,14 @@ std::unique_ptr<MemoryDesc> CpuBlockedMemoryDesc::cloneWithNewDimsImp(const Vect
 }
 
 bool CpuBlockedMemoryDesc::blocksExtended() const {
-    if (isBlockedCFormat(8) || isBlockedCFormat(16)) {
-        return blockedDims.back() * blockedDims[1] != shape.getStaticDims()[1];
+    std::vector<size_t> paddedDims(getShape().getRank(), 1);
+    for (size_t i = 0; i < order.size(); i++) {
+        auto idx = order[i];
+        if (paddedDims[idx] != Shape::UNDEFINED_DIM && blockedDims[i] != Shape::UNDEFINED_DIM) {
+            paddedDims[idx] *= blockedDims[i];
+        } else {
+            paddedDims[idx] = Shape::UNDEFINED_DIM;
+        }
     }
-    return false;
+    return paddedDims != shape.getDims();
 }
