@@ -15,6 +15,10 @@ using namespace InferenceEngine;
 
 bool MKLDNNBucketizeNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
         const auto bucketsize = std::dynamic_pointer_cast<const ngraph::opset3::Bucketize>(op);
         if (!bucketsize) {
             errorMessage = "Only opset3 Bucketize operation is supported";

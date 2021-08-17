@@ -73,6 +73,10 @@ using namespace InferenceEngine;
 
 bool MKLDNNProposalNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
         const auto proposal0Op = ngraph::as_type_ptr<const ngraph::op::v0::Proposal>(op);
         const auto proposal4Op = ngraph::as_type_ptr<const ngraph::op::v4::Proposal>(op);
         if (!proposal0Op && !proposal4Op) {
@@ -165,8 +169,8 @@ void MKLDNNProposalNode::execute(mkldnn::stream strm) {
         if (store_prob)
             outProbData = reinterpret_cast <float *>(getChildEdgesAtPort(PROBABILITIES_OUT_IDX)[0]->getMemoryPtr()->GetPtr());
 
-        auto inProbDims = getInputShapeAtPort(0).getStaticDims();
-        const size_t imgInfoSize = getInputShapeAtPort(2).getStaticDims()[0];
+        auto inProbDims = getParentEdgeAt(0)->getMemory().getStaticDims();
+        const size_t imgInfoSize = getParentEdgeAt(2)->getMemory().getStaticDims()[0];
 
         // input image height & width
         const float imgHeight = imgInfoData[0];

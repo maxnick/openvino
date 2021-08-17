@@ -88,13 +88,13 @@ set(LAYERS
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_reverse_sequence_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_roifeatureextractor_onnx_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_shuffle_channels_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_bucketize_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_topkrois_onnx_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/common/softmax_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_topk_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_imp_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_cum_sum_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_bucketize_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_experimental_detectron_topkrois_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/common/softmax_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_topk_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_proposal_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/proposal_imp.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_cum_sum_node.cpp
 )
 
 file(GLOB SOURCES
