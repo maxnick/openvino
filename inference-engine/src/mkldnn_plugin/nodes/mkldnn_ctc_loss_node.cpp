@@ -13,6 +13,10 @@ using namespace InferenceEngine;
 
 bool MKLDNNCTCLossNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
         const auto ctcLossOp = ngraph::as_type_ptr<const ngraph::op::v4::CTCLoss>(op);
         if (!ctcLossOp) {
             errorMessage = "Node is not an instance of the CTCLoss operation from operation set v4.";
@@ -66,9 +70,10 @@ void MKLDNNCTCLossNode::execute(mkldnn::stream strm) {
     const int* labelsLength = reinterpret_cast<const int *>(getParentEdgeAt(3)->getMemoryPtr()->GetPtr());
     float* dstData = reinterpret_cast<float *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
 
-    const size_t batchNum = getInputShapeAtPort(0).getStaticDims()[0];
-    const size_t maxTime = getInputShapeAtPort(0).getStaticDims()[1];
-    const size_t classesNum = getInputShapeAtPort(0).getStaticDims()[2];
+    const auto &inDims = getParentEdgeAt(0)->getMemory().getStaticDims();
+    const size_t batchNum = inDims[0];
+    const size_t maxTime = inDims[1];
+    const size_t classesNum = inDims[2];
 
     int blankIndex = classesNum - 1;
     if (inputShapes.size() > 4) {

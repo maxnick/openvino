@@ -70,12 +70,12 @@ set(LAYERS
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_roll_node.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/list.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_seq_len_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_loss_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detectionoutput_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detectionoutput_onnx_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_extract_image_patches_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_seq_len_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_loss_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_detection_output_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_experimental_detectron_detection_output_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_extract_image_patches_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_tree_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_grn_node.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_non_max_suppression_node.cpp
