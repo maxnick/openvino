@@ -34,7 +34,7 @@ std::unique_ptr<DnnlMemoryDesc> MemoryDescUtils::convertToDnnlMemoryDesc(const M
 }
 
 std::unique_ptr<DnnlBlockedMemoryDesc> MemoryDescUtils::convertToDnnlBlockedMemoryDesc(const MemoryDesc& desc) {
-    if (MemoryDescType::OneDnnBlocked == desc.getType()) {
+    if (MemoryDescType::DnnlBlocked == desc.getType()) {
         return std::unique_ptr<DnnlBlockedMemoryDesc>(dynamic_cast<DnnlBlockedMemoryDesc *>(desc.clone().release()));
     } else if (MemoryDescType::Blocked == desc.getType()) {
         const auto cpuDesc = desc.as<CpuBlockedMemoryDesc>();

@@ -132,7 +132,7 @@ void MKLDNNLrnNode::createDescriptor(const std::vector<const MemoryDesc*> &input
                                      const std::vector<const MemoryDesc*> &outputDesc) {
     mkldnn::algorithm alg = isAcrossMaps ? mkldnn::algorithm::lrn_across_channels : mkldnn::algorithm::lrn_within_channel;
     MKLDNNDescriptor desc(std::shared_ptr<mkldnn::lrn_forward::desc>(
-            new mkldnn::lrn_forward::desc(mkldnn::prop_kind::forward_scoring, alg, MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0])->getMklDesc(),
+            new mkldnn::lrn_forward::desc(mkldnn::prop_kind::forward_scoring, alg, MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0])->getDnnlDesc(),
                                           size, alpha, beta, k)));
     descs.push_back(desc);
 }

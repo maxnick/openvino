@@ -613,51 +613,51 @@ void MKLDNNRNN::createDescriptor(const std::vector<const MemoryDesc*> &inputDesc
         case mkldnn::algorithm::vanilla_rnn: {
             MKLDNNDescriptor desc(std::shared_ptr<vanilla_rnn_forward::desc>(
                     new vanilla_rnn_forward::desc(prop_kind::forward_scoring, cell_act, direction,
-                            /* In Data       */ in_data_d[RNNInOutKind::Layer].getMklDesc(),
-                            /* In State      */ in_data_d[RNNInOutKind::HiddenState].getMklDesc(),
-                            /* Weights data  */ w_data_d->getMklDesc(),
-                            /* Weights state */ w_state_d->getMklDesc(),
-                            /* Bias          */ w_bias_d->getMklDesc(),
-                            /* Out Data      */ out_data_d[RNNInOutKind::Layer].getMklDesc(),
-                            /* Out State     */ out_data_d[RNNInOutKind::HiddenState].getMklDesc())));
+                            /* In Data       */ in_data_d[RNNInOutKind::Layer].getDnnlDesc(),
+                            /* In State      */ in_data_d[RNNInOutKind::HiddenState].getDnnlDesc(),
+                            /* Weights data  */ w_data_d->getDnnlDesc(),
+                            /* Weights state */ w_state_d->getDnnlDesc(),
+                            /* Bias          */ w_bias_d->getDnnlDesc(),
+                            /* Out Data      */ out_data_d[RNNInOutKind::Layer].getDnnlDesc(),
+                            /* Out State     */ out_data_d[RNNInOutKind::HiddenState].getDnnlDesc())));
             descs.push_back(desc);
         } break;
         case mkldnn::algorithm::vanilla_gru: {
             MKLDNNDescriptor desc(std::shared_ptr<gru_forward::desc>(
                     new gru_forward::desc(prop_kind::forward_scoring, direction,
-                            /* In Data       */ in_data_d[RNNInOutKind::Layer].getMklDesc(),
-                            /* In State      */ in_data_d[RNNInOutKind::HiddenState].getMklDesc(),
-                            /* Weights data  */ w_data_d->getMklDesc(),
-                            /* Weights state */ w_state_d->getMklDesc(),
-                            /* Bias          */ w_bias_d->getMklDesc(),
-                            /* Out Data      */ out_data_d[RNNInOutKind::Layer].getMklDesc(),
-                            /* Out State     */ out_data_d[RNNInOutKind::HiddenState].getMklDesc())));
+                            /* In Data       */ in_data_d[RNNInOutKind::Layer].getDnnlDesc(),
+                            /* In State      */ in_data_d[RNNInOutKind::HiddenState].getDnnlDesc(),
+                            /* Weights data  */ w_data_d->getDnnlDesc(),
+                            /* Weights state */ w_state_d->getDnnlDesc(),
+                            /* Bias          */ w_bias_d->getDnnlDesc(),
+                            /* Out Data      */ out_data_d[RNNInOutKind::Layer].getDnnlDesc(),
+                            /* Out State     */ out_data_d[RNNInOutKind::HiddenState].getDnnlDesc())));
             descs.push_back(desc);
         } break;
         case mkldnn::algorithm::lbr_gru: {
             MKLDNNDescriptor desc(std::shared_ptr<lbr_gru_forward::desc>(
                     new lbr_gru_forward::desc(prop_kind::forward_scoring, direction,
-                            /* In Data       */ in_data_d[RNNInOutKind::Layer].getMklDesc(),
-                            /* In State      */ in_data_d[RNNInOutKind::HiddenState].getMklDesc(),
-                            /* Weights data  */ w_data_d->getMklDesc(),
-                            /* Weights state */ w_state_d->getMklDesc(),
-                            /* Bias          */ w_bias_d->getMklDesc(),
-                            /* Out Data      */ out_data_d[RNNInOutKind::Layer].getMklDesc(),
-                            /* Out State     */ out_data_d[RNNInOutKind::HiddenState].getMklDesc())));
+                            /* In Data       */ in_data_d[RNNInOutKind::Layer].getDnnlDesc(),
+                            /* In State      */ in_data_d[RNNInOutKind::HiddenState].getDnnlDesc(),
+                            /* Weights data  */ w_data_d->getDnnlDesc(),
+                            /* Weights state */ w_state_d->getDnnlDesc(),
+                            /* Bias          */ w_bias_d->getDnnlDesc(),
+                            /* Out Data      */ out_data_d[RNNInOutKind::Layer].getDnnlDesc(),
+                            /* Out State     */ out_data_d[RNNInOutKind::HiddenState].getDnnlDesc())));
             descs.push_back(desc);
         } break;
         case mkldnn::algorithm::vanilla_lstm: {
             MKLDNNDescriptor desc(std::shared_ptr<lstm_forward::desc>(
                     new lstm_forward::desc(prop_kind::forward_scoring, direction,
-                            /* In Data       */ in_data_d[RNNInOutKind::Layer].getMklDesc(),
-                            /* In State      */ in_data_d[RNNInOutKind::HiddenState].getMklDesc(),
-                            /* In State C    */ in_data_d[RNNInOutKind::CellState].getMklDesc(),
-                            /* Weights data  */ w_data_d->getMklDesc(),
-                            /* Weights state */ w_state_d->getMklDesc(),
-                            /* Bias          */ w_bias_d->getMklDesc(),
-                            /* Out Data      */ out_data_d[RNNInOutKind::Layer].getMklDesc(),
-                            /* Out State     */ out_data_d[RNNInOutKind::HiddenState].getMklDesc(),
-                            /* Out State C   */ out_data_d[RNNInOutKind::CellState].getMklDesc())));
+                            /* In Data       */ in_data_d[RNNInOutKind::Layer].getDnnlDesc(),
+                            /* In State      */ in_data_d[RNNInOutKind::HiddenState].getDnnlDesc(),
+                            /* In State C    */ in_data_d[RNNInOutKind::CellState].getDnnlDesc(),
+                            /* Weights data  */ w_data_d->getDnnlDesc(),
+                            /* Weights state */ w_state_d->getDnnlDesc(),
+                            /* Bias          */ w_bias_d->getDnnlDesc(),
+                            /* Out Data      */ out_data_d[RNNInOutKind::Layer].getDnnlDesc(),
+                            /* Out State     */ out_data_d[RNNInOutKind::HiddenState].getDnnlDesc(),
+                            /* Out State C   */ out_data_d[RNNInOutKind::CellState].getDnnlDesc())));
             descs.push_back(desc);
         } break;
         default:

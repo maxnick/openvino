@@ -200,8 +200,8 @@ bool MKLDNNPoolingNode::created() const {
 
 void MKLDNNPoolingNode::createDescriptor(const std::vector<const MemoryDesc*> &inputDesc,
                                          const std::vector<const MemoryDesc*> &outputDesc) {
-    auto in_candidate =  MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0])->getMklDesc();
-    auto out_candidate = MemoryDescUtils::convertToDnnlMemoryDesc(*outputDesc[0])->getMklDesc();
+    auto in_candidate =  MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0])->getDnnlDesc();
+    auto out_candidate = MemoryDescUtils::convertToDnnlMemoryDesc(*outputDesc[0])->getDnnlDesc();
 
     mkldnn::algorithm alg;
     if (algorithm == PoolingAvg) {

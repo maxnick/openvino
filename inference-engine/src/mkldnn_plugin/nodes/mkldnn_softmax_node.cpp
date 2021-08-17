@@ -7,9 +7,9 @@
 #include <string>
 #include <mkldnn_types.h>
 #include <mkldnn_extension_utils.h>
-#include <memory_descs/cpu_memory_desc_utils.h>
+#include <memory_desc/cpu_memory_desc_utils.h>
 #include <ngraph/opsets/opset1.hpp>
-#include "memory_descs/dnnl_blocked_memory_desc.h"
+#include "memory_desc/dnnl_blocked_memory_desc.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -74,7 +74,7 @@ void MKLDNNSoftMaxNode::createPrimitive() {
     if (prim)
         return;
 
-    auto in_candidate = getParentEdgeAt(0)->getMemory().GetDescWithType<DnnlMemoryDesc>()->getMklDesc();
+    auto in_candidate = getParentEdgeAt(0)->getMemory().GetDescWithType<DnnlMemoryDesc>()->getDnnlDesc();
     MKLDNNDescriptor desc(std::shared_ptr<softmax_forward::desc>(
             new softmax_forward::desc(prop_kind::forward_scoring, in_candidate, axis)));
     descs[0] = desc;
@@ -136,7 +136,7 @@ void MKLDNNSoftMaxNode::initOptimalPrimitiveDescriptor() {
 
 void MKLDNNSoftMaxNode::createDescriptor(const std::vector<const MemoryDesc*> &inputDesc,
                                          const std::vector<const MemoryDesc*> &outputDesc) {
-    auto in_candidate = MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0])->getMklDesc();
+    auto in_candidate = MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0])->getDnnlDesc();
 
     MKLDNNDescriptor desc(std::shared_ptr<softmax_forward::desc>(
             new softmax_forward::desc(prop_kind::forward_scoring, in_candidate, axis)));

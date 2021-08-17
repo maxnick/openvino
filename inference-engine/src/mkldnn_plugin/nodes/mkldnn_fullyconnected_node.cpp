@@ -291,8 +291,8 @@ void MKLDNNFullyConnectedNode::createDescriptorInternal(const mkldnn::memory::de
 
 void MKLDNNFullyConnectedNode::createDescriptor(const std::vector<const MemoryDesc*> &inputDesc,
                                                 const std::vector<const MemoryDesc*> &outputDesc) {
-    createDescriptorInternal(MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0])->getMklDesc(),
-                             MemoryDescUtils::convertToDnnlMemoryDesc(*outputDesc[0])->getMklDesc());
+    createDescriptorInternal(MemoryDescUtils::convertToDnnlMemoryDesc(*inputDesc[0])->getDnnlDesc(),
+                             MemoryDescUtils::convertToDnnlMemoryDesc(*outputDesc[0])->getDnnlDesc());
 }
 
 std::unique_ptr<MemoryDesc> MKLDNNFullyConnectedNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
