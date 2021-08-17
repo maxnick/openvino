@@ -19,9 +19,17 @@ using namespace InferenceEngine;
 
 bool MKLDNNNonMaxSuppressionNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (op->is_dynamic()) {
+            errorMessage = "Doesn't support op with dynamic input shapes";
+            return false;
+        }
         const auto nms = std::dynamic_pointer_cast<const ngraph::op::v5::NonMaxSuppression>(op);
         if (!nms) {
             errorMessage = "Only NonMaxSuppression v5 is supported";
+            return false;
+        }
+        if (op->get_input_size() > 2 && !dynamic_cast<ngraph::op::v0::Constant *>(op->get_input_node_ptr(2))) {
+            errorMessage = "Doesn't support NonMaxSuppression v5 with undefined max_output_boxes_per_class";
             return false;
         }
     } catch (...) {
@@ -50,7 +58,7 @@ MKLDNNNonMaxSuppressionNode::MKLDNNNonMaxSuppressionNode(const std::shared_ptr<n
 
         sort_result_descending = nms->get_sort_result_descending();
 
-        const SizeVector &boxes_dims = op->get_input_partial_shape(NMS_BOXES).get_shape();
+        const auto &boxes_dims = getInputShapeAtPort(NMS_BOXES).getStaticDims();
         num_batches = boxes_dims[0];
         num_boxes = boxes_dims[1];
         if (boxes_dims.size() != 3)
@@ -58,7 +66,7 @@ MKLDNNNonMaxSuppressionNode::MKLDNNNonMaxSuppressionNode(const std::shared_ptr<n
         if (boxes_dims[2] != 4)
             IE_THROW() << errorPrefix << "has unsupported 'boxes' input 3rd dimension size: " << boxes_dims[2];
 
-        const SizeVector &scores_dims = op->get_input_partial_shape(NMS_SCORES).get_shape();
+        const auto &scores_dims = getInputShapeAtPort(NMS_SCORES).getStaticDims();
         num_classes = scores_dims[1];
         if (scores_dims.size() != 3)
             IE_THROW() << errorPrefix << "has unsupported 'scores' input rank: " << scores_dims.size();
@@ -72,17 +80,7 @@ MKLDNNNonMaxSuppressionNode::MKLDNNNonMaxSuppressionNode(const std::shared_ptr<n
         for (auto & i : numFiltBox)
             i.resize(num_classes);
 
-        inputShape_MAXOUTPUTBOXESPERCLASS = Shape(op->get_input_partial_shape(NMS_MAXOUTPUTBOXESPERCLASS));
-        inputShape_IOUTHRESHOLD = Shape(op->get_input_partial_shape(NMS_IOUTHRESHOLD));
-        inputShape_SCORETHRESHOLD = Shape(op->get_input_partial_shape(NMS_SCORETHRESHOLD));
-        if (getOriginalInputsNumber() > NMS_SOFTNMSSIGMA) {
-            inputShape_SOFTNMSSIGMA = Shape(op->get_input_partial_shape(NMS_SOFTNMSSIGMA));
-        }
-
-        outputShape_SELECTEDINDICES = Shape(op->get_output_partial_shape(NMS_SELECTEDINDICES));
-        outputShape_SELECTEDSCORES = Shape(op->get_output_partial_shape(NMS_SELECTEDSCORES));
-
-        const Shape valid_outputs_shape = Shape(op->get_output_partial_shape(NMS_VALIDOUTPUTS));
+        const Shape valid_outputs_shape = getOutputShapeAtPort(NMS_VALIDOUTPUTS);
         if (valid_outputs_shape.getRank() != 1)
             IE_THROW() << errorPrefix << "has unsupported 'valid_outputs' output rank: " << valid_outputs_shape.getRank();
         if (valid_outputs_shape.getDims()[0] != 1)
@@ -98,21 +96,22 @@ void MKLDNNNonMaxSuppressionNode::initSupportedPrimitiveDescriptors() {
 
     checkPrecision(getOriginalInputPrecisionAtPort(NMS_BOXES), supportedFloatPrecision, "boxes", inType);
     checkPrecision(getOriginalInputPrecisionAtPort(NMS_SCORES), supportedFloatPrecision, "scores", inType);
-    checkPrecision(getOriginalInputPrecisionAtPort(NMS_VALIDOUTPUTS), supportedIntOutputPrecision, "valid_outputs", outType);
+    checkPrecision(getOriginalOutputPrecisionAtPort(NMS_VALIDOUTPUTS), supportedIntOutputPrecision, "valid_outputs", outType);
 
     const std::vector<Precision> supportedPrecision = {Precision::I16, Precision::U8, Precision::I8, Precision::U16, Precision::I32,
                                                        Precision::U32, Precision::I64, Precision::U64};
 
-    check1DInput(inputShape_MAXOUTPUTBOXESPERCLASS, supportedPrecision, "max_output_boxes_per_class", NMS_MAXOUTPUTBOXESPERCLASS);
-    check1DInput(inputShape_IOUTHRESHOLD, supportedFloatPrecision, "iou_threshold", NMS_IOUTHRESHOLD);
-    check1DInput(inputShape_SCORETHRESHOLD, supportedFloatPrecision, "score_threshold", NMS_SCORETHRESHOLD);
+    if (getOriginalInputsNumber() > NMS_MAXOUTPUTBOXESPERCLASS)
+        check1DInput(getInputShapeAtPort(NMS_MAXOUTPUTBOXESPERCLASS), supportedPrecision, "max_output_boxes_per_class", NMS_MAXOUTPUTBOXESPERCLASS);
+    if (getOriginalInputsNumber() > NMS_IOUTHRESHOLD)
+        check1DInput(getInputShapeAtPort(NMS_IOUTHRESHOLD), supportedFloatPrecision, "iou_threshold", NMS_IOUTHRESHOLD);
+    if (getOriginalInputsNumber() > NMS_SCORETHRESHOLD)
+        check1DInput(getInputShapeAtPort(NMS_SCORETHRESHOLD), supportedFloatPrecision, "score_threshold", NMS_SCORETHRESHOLD);
+    if (getOriginalInputsNumber() > NMS_SOFTNMSSIGMA)
+        check1DInput(getInputShapeAtPort(NMS_SCORETHRESHOLD), supportedFloatPrecision, "soft_nms_sigma", NMS_SCORETHRESHOLD);
 
-    if (getOriginalInputsNumber() > NMS_SOFTNMSSIGMA) {
-        check1DInput(inputShape_SOFTNMSSIGMA, supportedFloatPrecision, "soft_nms_sigma", NMS_SOFTNMSSIGMA);
-    }
-
-    checkOutput(outputShape_SELECTEDINDICES, supportedIntOutputPrecision, "selected_indices", NMS_SELECTEDINDICES);
-    checkOutput(outputShape_SELECTEDSCORES, supportedFloatPrecision, "selected_scores", NMS_SELECTEDSCORES);
+    checkOutput(getOutputShapeAtPort(NMS_SELECTEDINDICES), supportedIntOutputPrecision, "selected_indices", NMS_SELECTEDINDICES);
+    checkOutput(getOutputShapeAtPort(NMS_SELECTEDSCORES), supportedFloatPrecision, "selected_scores", NMS_SELECTEDSCORES);
 
     std::vector<PortConfigurator> inDataConf;
     inDataConf.reserve(getOriginalInputsNumber());
@@ -135,7 +134,6 @@ void MKLDNNNonMaxSuppressionNode::execute(mkldnn::stream strm) {
     const float *boxes = reinterpret_cast<const float *>(getParentEdgeAt(NMS_BOXES)->getMemoryPtr()->GetPtr());
     const float *scores = reinterpret_cast<const float *>(getParentEdgeAt(NMS_SCORES)->getMemoryPtr()->GetPtr());
 
-    max_output_boxes_per_class = outputShapes.size() > NMS_SELECTEDSCORES ? 0 : num_boxes;
     if (inputShapes.size() > NMS_MAXOUTPUTBOXESPERCLASS) {
         max_output_boxes_per_class = reinterpret_cast<int *>(getParentEdgeAt(NMS_MAXOUTPUTBOXESPERCLASS)->getMemoryPtr()->GetPtr())[0];
     }
@@ -143,15 +141,12 @@ void MKLDNNNonMaxSuppressionNode::execute(mkldnn::stream strm) {
     if (max_output_boxes_per_class == 0)
         return;
 
-    iou_threshold = outputShapes.size() > NMS_SELECTEDSCORES ? 0.0f : 1.0f;
     if (inputShapes.size() > NMS_IOUTHRESHOLD)
         iou_threshold = reinterpret_cast<float *>(getParentEdgeAt(NMS_IOUTHRESHOLD)->getMemoryPtr()->GetPtr())[0];
 
-    score_threshold = 0.0f;
     if (inputShapes.size() > NMS_SCORETHRESHOLD)
         score_threshold = reinterpret_cast<float *>(getParentEdgeAt(NMS_SCORETHRESHOLD)->getMemoryPtr()->GetPtr())[0];
 
-    soft_nms_sigma = 0.0f;
     if (inputShapes.size() > NMS_SOFTNMSSIGMA)
         soft_nms_sigma = reinterpret_cast<float *>(getParentEdgeAt(NMS_SOFTNMSSIGMA)->getMemoryPtr()->GetPtr())[0];
     scale = 0.0f;
@@ -159,10 +154,11 @@ void MKLDNNNonMaxSuppressionNode::execute(mkldnn::stream strm) {
         scale = -0.5f / soft_nms_sigma;
     }
 
-    auto boxesStrides = getParentEdgeAt(NMS_BOXES)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
-    auto scoresStrides = getParentEdgeAt(NMS_SCORES)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
+    auto boxesStrides = getParentEdgeAt(NMS_BOXES)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getStrides();
+    auto scoresStrides = getParentEdgeAt(NMS_SCORES)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getStrides();
 
-    std::vector<filteredBoxes> filtBoxes(max_output_boxes_per_class * num_batches * num_classes);
+    const auto maxNumberOfBoxes = max_output_boxes_per_class * num_batches * num_classes;
+    std::vector<filteredBoxes> filtBoxes(maxNumberOfBoxes);
 
     if (soft_nms_sigma == 0.0f) {
         nmsWithoutSoftSigma(boxes, scores, boxesStrides, scoresStrides, filtBoxes);
@@ -197,22 +193,18 @@ void MKLDNNNonMaxSuppressionNode::execute(mkldnn::stream strm) {
 
     auto indicesMemPtr = getChildEdgesAtPort(NMS_SELECTEDINDICES)[0]->getMemoryPtr();
     auto scoresMemPtr =  getChildEdgesAtPort(NMS_SELECTEDSCORES)[0]->getMemoryPtr();
-    auto& maxOutputDims = indicesMemPtr->getDesc().getShape().getMaxDims();
-    const size_t selectedBoxesNum = maxOutputDims[0];
-    const size_t validOutputs = std::min(filtBoxes.size(), selectedBoxesNum);
+    const size_t validOutputs = std::min(filtBoxes.size(), maxNumberOfBoxes);
+    VectorDims newDims{validOutputs, 3};
 
-    SizeVector newDims = {validOutputs, maxOutputDims[1]};
+    indicesMemPtr->redefineDesc(getOutputMemDescAtPort<BlockedMemoryDesc>(NMS_SELECTEDINDICES)->cloneWithNewDims(newDims));
+    scoresMemPtr->redefineDesc(getOutputMemDescAtPort<BlockedMemoryDesc>(NMS_SELECTEDSCORES)->cloneWithNewDims(newDims));
 
-    indicesMemPtr->redefineDesc(getOutputMemDescAtPort(NMS_SELECTEDINDICES)->cloneWithNewDims(newDims));
-    scoresMemPtr->redefineDesc(getOutputMemDescAtPort(NMS_SELECTEDSCORES)->cloneWithNewDims(newDims));
-
-    int selectedIndicesStride = indicesMemPtr->GetDescWithType<CpuBlockedMemoryDesc>().getStrides()[0];
+    int selectedIndicesStride = indicesMemPtr->GetDescWithType<BlockedMemoryDesc>()->getStrides()[0];
 
     int *selectedIndicesPtr = reinterpret_cast<int *>(indicesMemPtr->GetPtr());
     float *selectedScoresPtr = reinterpret_cast<float *>(scoresMemPtr->GetPtr());
 
-    size_t idx = 0lu;
-    for (; idx < validOutputs; idx++) {
+    for (size_t idx = 0lu; idx < validOutputs; idx++) {
         selectedIndicesPtr[0] = filtBoxes[idx].batch_index;
         selectedIndicesPtr[1] = filtBoxes[idx].class_index;
         selectedIndicesPtr[2] = filtBoxes[idx].box_index;
@@ -267,8 +259,8 @@ float MKLDNNNonMaxSuppressionNode::intersectionOverUnion(const float *boxesI, co
     return intersection_area / (areaI + areaJ - intersection_area);
 }
 
-void MKLDNNNonMaxSuppressionNode::nmsWithSoftSigma(const float *boxes, const float *scores, const SizeVector &boxesStrides,
-                                                             const SizeVector &scoresStrides, std::vector<filteredBoxes> &filtBoxes) {
+void MKLDNNNonMaxSuppressionNode::nmsWithSoftSigma(const float *boxes, const float *scores, const VectorDims &boxesStrides,
+                                                             const VectorDims &scoresStrides, std::vector<filteredBoxes> &filtBoxes) {
     auto less = [](const boxInfo& l, const boxInfo& r) {
         return l.score < r.score || ((l.score == r.score) && (l.idx > r.idx));
     };
@@ -328,8 +320,8 @@ void MKLDNNNonMaxSuppressionNode::nmsWithSoftSigma(const float *boxes, const flo
     });
 }
 
-void MKLDNNNonMaxSuppressionNode::nmsWithoutSoftSigma(const float *boxes, const float *scores, const SizeVector &boxesStrides,
-                                                                const SizeVector &scoresStrides, std::vector<filteredBoxes> &filtBoxes) {
+void MKLDNNNonMaxSuppressionNode::nmsWithoutSoftSigma(const float *boxes, const float *scores, const VectorDims &boxesStrides,
+                                                                const VectorDims &scoresStrides, std::vector<filteredBoxes> &filtBoxes) {
     int max_out_box = static_cast<int>(max_output_boxes_per_class);
     parallel_for2d(num_batches, num_classes, [&](int batch_idx, int class_idx) {
         const float *boxesPtr = boxes + batch_idx * boxesStrides[0];
@@ -384,8 +376,7 @@ void MKLDNNNonMaxSuppressionNode::check1DInput(const Shape& shape, const std::ve
         IE_THROW() << errorPrefix << "has unsupported '" << name << "' input rank: " << shape.getRank();
     if (shape.getRank() == 1)
         if (shape.getDims()[0] != 1)
-            IE_THROW() << errorPrefix << "has unsupported '" << name << "' input 1st dimension size: " <<
-            (shape.getDims()[0] == Shape::UNDEFINED_DIM ? "undef" : std::to_string(shape.getDims()[0]));
+            IE_THROW() << errorPrefix << "has unsupported '" << name << "' input 1st dimension size: " << MemoryDescUtils::dim2str(shape.getDims()[0]);
 }
 
 void MKLDNNNonMaxSuppressionNode::checkOutput(const Shape& shape, const std::vector<Precision>& precList,
@@ -395,8 +386,7 @@ void MKLDNNNonMaxSuppressionNode::checkOutput(const Shape& shape, const std::vec
     if (shape.getRank() != 2)
         IE_THROW() << errorPrefix << "has unsupported '" << name << "' output rank: " << shape.getRank();
     if (shape.getDims()[1] != 3)
-        IE_THROW() << errorPrefix << "has unsupported '" << name << "' output 2nd dimension size: " <<
-        (shape.getDims()[1] == Shape::UNDEFINED_DIM ? "undef" : std::to_string(shape.getDims()[1]));
+        IE_THROW() << errorPrefix << "has unsupported '" << name << "' output 2nd dimension size: " << MemoryDescUtils::dim2str(shape.getDims()[1]);
 }
 
 

@@ -692,7 +692,7 @@ void MKLDNNNode::executeDynamicImpl(mkldnn::stream strm) {
     IE_THROW() << "[DS] executeDynamicImpl not implemented for node with type: " << getTypeStr();
 }
 
-void MKLDNNNode::redefineOutputMemory(const std::vector<std::vector<size_t>> &newShapes) {
+void MKLDNNNode::redefineOutputMemory(const std::vector<VectorDims> &newShapes) {
     if (newShapes.size() != getOriginalOutputsNumber()) {
         IE_THROW() << "Number shapes mismatch with real outputs number for node with name: " << getName();
     }

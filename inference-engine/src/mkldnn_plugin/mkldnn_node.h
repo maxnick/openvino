@@ -492,7 +492,7 @@ public:
     void resolveInPlaceEdges();
 
     virtual void execute(mkldnn::stream strm);
-    void executeDynamic(mkldnn::stream strm);
+    virtual void executeDynamic(mkldnn::stream strm);
 
     virtual void initSupportedPrimitiveDescriptors();
 
@@ -517,7 +517,7 @@ public:
         return created();
     }
 
-    void redefineOutputMemory(const std::vector<std::vector<size_t>> &newShapes);
+    void redefineOutputMemory(const std::vector<VectorDims> &newShapes);
 
     /**
      * @brief Performs Node initialization based on graph context.
