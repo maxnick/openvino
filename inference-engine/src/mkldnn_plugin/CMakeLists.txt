@@ -64,10 +64,10 @@ set(LAYERS
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_elements_node.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_gather_nd_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_one_hot_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_region_yolo_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_select_node.cpp
-    # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_roll_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_one_hot_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_region_yolo_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_select_node.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_roll_node.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/nodes/list.cpp
     # ${CMAKE_CURRENT_SOURCE_DIR}/nodes/mkldnn_ctc_greedy_decoder_node.cpp

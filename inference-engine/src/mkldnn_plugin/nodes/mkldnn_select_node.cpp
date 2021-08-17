@@ -17,6 +17,10 @@ using namespace InferenceEngine;
 
 bool MKLDNNSelectNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
         const auto select = std::dynamic_pointer_cast<const ngraph::opset1::Select>(op);
         if (!select) {
             errorMessage = "Only opset1 Select operation is supported";
