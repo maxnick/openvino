@@ -400,7 +400,7 @@ void MKLDNNConvolutionNode::initSupportedPrimitiveDescriptors() {
                 if (desc->getType() == MemoryDescType::Mkldnn || isGrouped) {
                     dataConfig.desc = std::move(desc);
                 } else {
-                    dataConfig.desc = MemoryDescUtils::applyUndefinedOffset(*desc);
+                    dataConfig.desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(*desc);
                 }
 
                 config.inConfs.push_back(dataConfig);
@@ -434,7 +434,7 @@ void MKLDNNConvolutionNode::initSupportedPrimitiveDescriptors() {
                 if (desc->getType() == MemoryDescType::Mkldnn || isGrouped) {
                     dataConfig.desc = std::move(desc);
                 } else {
-                    dataConfig.desc = MemoryDescUtils::applyUndefinedOffset(*desc);
+                    dataConfig.desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(*desc);
                 }
 
                 config.outConfs.push_back(dataConfig);

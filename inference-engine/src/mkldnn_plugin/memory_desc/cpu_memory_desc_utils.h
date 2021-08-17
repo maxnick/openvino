@@ -52,7 +52,7 @@ public:
      * @param desc modifiable BlockedMemoryDesc
      * @return pointer to MemoryDesc
      */
-    static std::unique_ptr<MemoryDesc> applyUndefinedOffset(const MemoryDesc& desc);
+    static std::unique_ptr<MemoryDesc> cloneWithUndefStridesAndOffset(const MemoryDesc& desc);
 
     /**
      * @brief Creates MemoryDesc with offsetPadding of 0 size

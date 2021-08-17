@@ -50,7 +50,7 @@ std::unique_ptr<BlockedMemoryDesc> MemoryDescUtils::convertToBlockedMemoryDesc(c
     }
 }
 
-MemoryDescPtr MemoryDescUtils::applyUndefinedOffset(const MemoryDesc& desc) {
+MemoryDescPtr MemoryDescUtils::cloneWithUndefStridesAndOffset(const MemoryDesc& desc) {
     if (desc.getType() == MemoryDescType::Mkldnn) {
         IE_THROW() << "Can't apply undefined offset for mkldnn memory desc";
     }

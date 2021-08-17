@@ -719,7 +719,7 @@ void MKLDNNNode::initSupportedPrimitiveDescriptors() {
                 if (desc->getType() == MemoryDescType::Mkldnn) {
                     portConfig.desc = std::move(desc);
                 } else {
-                    portConfig.desc = MemoryDescUtils::applyUndefinedOffset(*desc);
+                    portConfig.desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(*desc);
                 }
                 config.inConfs.push_back(portConfig);
             }
@@ -732,7 +732,7 @@ void MKLDNNNode::initSupportedPrimitiveDescriptors() {
                 if (desc->getType() == MemoryDescType::Mkldnn) {
                     portConfig.desc = std::move(desc);
                 } else {
-                    portConfig.desc = MemoryDescUtils::applyUndefinedOffset(*desc);
+                    portConfig.desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(*desc);
                 }
                 config.outConfs.push_back(portConfig);
             }
