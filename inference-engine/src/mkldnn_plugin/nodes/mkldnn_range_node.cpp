@@ -14,6 +14,10 @@ using namespace InferenceEngine;
 
 bool MKLDNNRangeNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
         if (!MKLDNNPlugin::one_of(op->get_type_info(), ngraph::op::v0::Range::type_info, ngraph::op::v4::Range::type_info)) {
             errorMessage = "Only opset1 and opset4 Range operation is supported";
             return false;
@@ -110,7 +114,7 @@ void MKLDNNRangeNode::execute(mkldnn::stream strm) {
 
 template <typename data_t>
 InferenceEngine::StatusCode MKLDNNRangeNode::rangeKernel() noexcept {
-    size_t dst_size = (getOutputShapeAtPort(0).getStaticDims())[0];
+    size_t dst_size = getChildEdgesAtPort(0)[0]->getMemory().getStaticDims()[0];
     data_t* dst_data = reinterpret_cast<data_t *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
     data_t start = reinterpret_cast<const data_t *>(getParentEdgeAt(RANGE_START)->getMemoryPtr()->GetPtr())[0];
     data_t limit = reinterpret_cast<const data_t *>(getParentEdgeAt(RANGE_LIMIT)->getMemoryPtr()->GetPtr())[0];

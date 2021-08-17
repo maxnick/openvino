@@ -14,6 +14,10 @@ using namespace InferenceEngine;
 
 bool MKLDNNReverseSequenceNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
         const auto revSeq = std::dynamic_pointer_cast<const ngraph::opset1::ReverseSequence>(op);
         if (!revSeq) {
             errorMessage = "Only opset1 ReverseSequence operation is supported";

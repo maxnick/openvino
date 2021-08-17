@@ -13,6 +13,10 @@ using namespace InferenceEngine;
 
 bool MKLDNNReorgYoloNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
     try {
+        if (isDynamicNgraphNode(op)) {
+            errorMessage = "Doesn't support op with dynamic shapes";
+            return false;
+        }
         const auto reorgYolo = std::dynamic_pointer_cast<const ngraph::opset2::ReorgYolo>(op);
         if (!reorgYolo) {
             errorMessage = "Only opset2 ReorgYolo operation is supported";
@@ -55,10 +59,11 @@ void MKLDNNReorgYoloNode::execute(mkldnn::stream strm) {
     const auto *src_data = reinterpret_cast<const float *>(getParentEdgeAt(0)->getMemoryPtr()->GetPtr());
     auto *dst_data = reinterpret_cast<float *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
 
-    int IW = (getInputShapeAtPort(0).getRank() > 3) ? getInputShapeAtPort(0).getStaticDims()[3] : 1;
-    int IH = (getInputShapeAtPort(0).getRank() > 2) ? getInputShapeAtPort(0).getStaticDims()[2] : 1;
-    int IC = (getInputShapeAtPort(0).getRank() > 1) ? getInputShapeAtPort(0).getStaticDims()[1] : 1;
-    int B  = (getInputShapeAtPort(0).getRank() > 0) ? getInputShapeAtPort(0).getStaticDims()[0] : 1;
+    const auto &inDims = getParentEdgeAt(0)->getMemory().getStaticDims();
+    int IW = (inDims.size() > 3) ? inDims[3] : 1;
+    int IH = (inDims.size() > 2) ? inDims[2] : 1;
+    int IC = (inDims.size() > 1) ? inDims[1] : 1;
+    int B  = (inDims.size() > 0) ? inDims[0] : 1;
 
     int ic_off = IC / (stride * stride);
     int ih_off = IH * stride;
