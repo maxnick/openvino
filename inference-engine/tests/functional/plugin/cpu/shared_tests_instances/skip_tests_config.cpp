@@ -77,11 +77,14 @@ std::vector<std::string> disabledTestPatterns() {
         // need to implement Export / Import
         R"(.*IEClassImportExportTestP.*)",
         // azure is failing after #6199
-        R"(.*/NmsLayerTest.*)"
+        R"(.*/NmsLayerTest.*)",
 
 
 
         // #################################  DYNAMIC SHAPE ####################################
+        // R"(.*InferRequestDynamicTests.*)"
+
+
 
     };
 #ifdef __APPLE__

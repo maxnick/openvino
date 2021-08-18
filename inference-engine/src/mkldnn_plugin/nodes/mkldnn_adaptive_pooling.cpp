@@ -164,7 +164,7 @@ void MKLDNNAdaptivePoolingNode::execute(mkldnn::stream strm) {
     const int iHW = IH * IW;
     const int oDHW = OD * OH * OW, oHW = OH * OW;
 
-    const int chPadding = blockSize * srcBlockDesc->getBlockDims()[1];;
+    const int chPadding = blockSize * (isBlkFmt ? srcBlockDesc->getBlockDims()[1] : srcMemory0.GetShape().getStaticDims()[1]);
     const int blockCount = (isTailCFmt ? 1 :  chPadding / blockSize);
     auto selectedPrimitiveDescriptor = getSelectedPrimitiveDescriptor();
     if (!selectedPrimitiveDescriptor)
@@ -238,20 +238,20 @@ void MKLDNNAdaptivePoolingNode::execute(mkldnn::stream strm) {
         [&](int n, int blkIdx, int od, int oh, int ow) {
         auto srcData = src + n * inStrides[0] + blkIdx * inStrides[1];
         auto dstData = dst + n * outStrides[0] + blkIdx * outStrides[1] +
-                      od * outStrides[2] + oh * outStrides[3] + ow * outStrides[4];
+                       od * outStrides[2] + oh * outStrides[3] + ow * outStrides[4];
         int cStart = 0, cEnd = C, inResidual = 0, outResidual = 0;
         if (!isTailCFmt) {
-           cStart = blkIdx * blockSize;
-           cEnd = (blkIdx == blockCount - 1 ? C : cStart + blockSize);
+            cStart = blkIdx * blockSize;
+            cEnd = (blkIdx == blockCount - 1 ? C : cStart + blockSize);
         }
         for (int c = cStart; c < cEnd; c++) {
-           if (isTailCFmt) {
-               inResidual = c * inStrides[1];
-               outResidual = c * outStrides[1];
-           } else if (!isPlainFmt) {
-               inResidual = outResidual = c % blockSize;
-           }
-           pool(srcData + inResidual, dstData + outResidual, od, oh, ow, n * C + c);
+            if (isTailCFmt) {
+                inResidual = c * inStrides[1];
+                outResidual = c * outStrides[1];
+            } else if (!isPlainFmt) {
+                inResidual = outResidual = c % blockSize;
+            }
+            pool(srcData + inResidual, dstData + outResidual, od, oh, ow, n * C + c);
         }});
 }
 

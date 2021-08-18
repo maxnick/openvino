@@ -23,7 +23,8 @@ static NodeConfig make_plain_config(const std::shared_ptr<ngraph::Node>& op) {
     NodeConfig config;
 
     for (size_t i = 0; i < op->get_input_size(); i++) {
-        const auto& dims = op->get_input_shape(i);
+        const auto &shape = op->get_input_shape(i);
+        const auto& dims = ngraph::is_scalar(shape) ? ngraph::Shape{1} : shape;
         const auto prec = InferenceEngine::details::convertPrecision(op->get_input_element_type(i));
 
         PortConfig data_conf {};
@@ -33,7 +34,8 @@ static NodeConfig make_plain_config(const std::shared_ptr<ngraph::Node>& op) {
     }
 
     for (size_t i = 0; i < op->get_output_size(); i++) {
-        const auto& dims = op->get_output_shape(i);
+        const auto &shape = op->get_output_shape(i);
+        const auto& dims = ngraph::is_scalar(shape) ? ngraph::Shape{1} : shape;
         const auto prec = InferenceEngine::details::convertPrecision(op->get_output_element_type(i));
 
         PortConfig data_conf {};
@@ -168,7 +170,8 @@ class asIntCheck : public PortChecker {
 public:
     asIntCheck(const MKLDNNMemoryPtr &mem) {
         IE_ASSERT(mem->GetDataType() == memory::data_type::s32);
-        IE_ASSERT(mem->GetShape() == Shape(InferenceEngine::SizeVector{1}));
+        const auto a = Shape(InferenceEngine::SizeVector{1});
+        IE_ASSERT(mem->GetShape() == a);
         mem_holder = mem->GetPrimitive();
     }
 

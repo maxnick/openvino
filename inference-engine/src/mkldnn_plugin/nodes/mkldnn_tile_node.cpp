@@ -90,7 +90,7 @@ void MKLDNNTileNode::initSupportedPrimitiveDescriptors() {
         IE_THROW() << errorPrefix << " has unsupported input precision: " << precision;
     }
 
-    bool inPlace = noTiling ? 0 : -1;
+    int inPlace = noTiling ? 0 : -1;
     addSupportedPrimDesc({{LayoutType::ncsp, precision},
                            {LayoutType::ncsp, Precision::I32}},
                           {{LayoutType::ncsp, precision, false, inPlace}},

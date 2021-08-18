@@ -992,8 +992,8 @@ void MKLDNNGraphOptimizer::FuseConvolutionSumAndConvolutionSumActivation(MKLDNNG
         if (!isSutableNode)
             continue;
 
-        auto parent1 = graphNode->getParentEdgeAt(0)->getParent();
-        auto parent2 = graphNode->getParentEdgeAt(1)->getParent();
+        auto parent1 = graphNode->getParentEdgesAtPort(0)[0]->getParent();
+        auto parent2 = graphNode->getParentEdgesAtPort(1)[0]->getParent();
 
         bool isSutableParent1 = parent1->getType() == Convolution || parent1->getType() == BinaryConvolution;
         bool isSutableParent2 = parent2->getType() == Convolution || parent2->getType() == BinaryConvolution;
@@ -1064,7 +1064,7 @@ void MKLDNNGraphOptimizer::FuseConvolutionSumAndConvolutionSumActivation(MKLDNNG
 
         bool fuse_allowed = mergedConv->getChildEdges().size() == 1;
         for (size_t j = 0; fuse_allowed && j < mergedConv->getParentEdges().size(); j++)
-            if (mergedConv->getParentEdgeAt(j)->getParent() == peerNode)
+            if (mergedConv->getParentEdgesAtPort(j)[0]->getParent() == peerNode)
                 fuse_allowed = false;
 
         // Fused Conv+Sum prim will be used inplace. That's mean that input blob will
@@ -1416,10 +1416,10 @@ void MKLDNNGraphOptimizer::DropDoubleReorders(MKLDNNGraph &graph) {
             if (nn == nullptr)
                 IE_THROW() << "Cannot get reorder layer " << nextNode->getName();
 
-            MKLDNNNodePtr p = n->getParentEdgeAt(0)->getParent();
-            MKLDNNNodePtr c = nn->getChildEdgeAt(0)->getChild();
+            MKLDNNNodePtr p = n->getParentEdgesAtPort(0)[0]->getParent();
+            MKLDNNNodePtr c = nn->getChildEdgesAtPort(0)[0]->getChild();
 
-            auto oldEdgeNum = n->getParentEdgeAt(0)->getInputNum();
+            auto oldEdgeNum = n->getParentEdgesAtPort(0)[0]->getInputNum();
 
             graph.DropNode(node);
             graph.DropNode(nextNode);
@@ -1459,7 +1459,7 @@ void MKLDNNGraphOptimizer::FuseBroadcastAndEltwise(MKLDNNGraph &graph) {
 
         auto& edges = graph.GetEdges();
         for (size_t i = 1lu; i < broadcastNode->getParentEdges().size(); i++) {
-            auto constParent = broadcastNode->getParentEdgeAt(i)->getParent();
+            auto constParent = broadcastNode->getParentEdgesAtPort(i)[0]->getParent();
             for (auto it = edges.begin(); it != edges.end(); it++) {
                 if ((*it) == constParent->getChildEdgeAt(0)) {
                     edges.erase(it);
@@ -1525,9 +1525,9 @@ void MKLDNNGraphOptimizer::FusePerformedAsScaleShiftAndFakeQuantize(MKLDNNGraph 
     auto& graphNodes = graph.GetNodes();
 
     auto getConstPort = [](const MKLDNNNodePtr node) -> int {
-        if (node->getParentEdgeAt(0)->getParent()->getType() == Input && node->getParentEdgeAt(0)->getParent()->isConstant()) {
+        if (node->getParentEdgesAtPort(0)[0]->getParent()->getType() == Input && node->getParentEdgesAtPort(0)[0]->getParent()->isConstant()) {
             return 0;
-        } else if (node->getParentEdgeAt(1)->getParent()->getType() == Input && node->getParentEdgeAt(1)->getParent()->isConstant()) {
+        } else if (node->getParentEdgesAtPort(1)[0]->getParent()->getType() == Input && node->getParentEdgesAtPort(1)[0]->getParent()->isConstant()) {
            return 1;
         } else {
             return -1;
@@ -1542,7 +1542,7 @@ void MKLDNNGraphOptimizer::FusePerformedAsScaleShiftAndFakeQuantize(MKLDNNGraph 
                 if (constPort == -1) {
                     return false;
                 }
-                parent = node->getParentEdgeAt(1 - constPort)->getParent().get();
+                parent = node->getParentEdgesAtPort(1 - constPort)[0]->getParent().get();
             }
             return node->getType() == Eltwise && node->getChildEdges().size() == 1 && node->canBePerformedAsScaleShift(parent);
         }
@@ -1560,7 +1560,7 @@ void MKLDNNGraphOptimizer::FusePerformedAsScaleShiftAndFakeQuantize(MKLDNNGraph 
 
         std::vector<float> scalesBuffer;
         std::vector<float> shiftsBuffer;
-        parent->fillScalesAndShifts(parent->getParentEdgeAt(1 - getConstPort(parent))->getParent().get(), scalesBuffer, shiftsBuffer, 1);
+        parent->fillScalesAndShifts(parent->getParentEdgesAtPort(1 - getConstPort(parent))[0]->getParent().get(), scalesBuffer, shiftsBuffer, 1);
 
         for (int i = 0; i < scalesBuffer.size(); i++)
             if (scalesBuffer[i] == 0.f)

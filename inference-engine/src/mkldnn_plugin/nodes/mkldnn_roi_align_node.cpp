@@ -198,12 +198,13 @@ void MKLDNNROIAlignNode::executeSpecified() {
 
     const int binCount = pooledH * pooledW;
 
+    const size_t tailDimsOffset = (isNhwcFmt ? -1 : 0);
     const auto &srcStrides = srcBlockDesc->getStrides();
     const auto &dstStrides = dstBlockDesc->getStrides();
-    const int hInputStride = srcStrides[2];
-    const int wInputStride = srcStrides[3];
-    const int hOutputStride = dstStrides[2];
-    const int wOutputStride = dstStrides[3];
+    const int hInputStride = srcStrides[2 + tailDimsOffset];
+    const int wInputStride = srcStrides[3 + tailDimsOffset];
+    const int hOutputStride = dstStrides[2 + tailDimsOffset];
+    const int wOutputStride = dstStrides[3 + tailDimsOffset];
     const int chPadding = blockSize * srcBlockDesc->getBlockDims()[1];
     const int blockCount = chPadding / blockSize;
 
