@@ -271,14 +271,21 @@ std::unique_ptr<MemoryDesc> CpuBlockedMemoryDesc::cloneWithNewDimsImp(const Vect
 }
 
 bool CpuBlockedMemoryDesc::blocksExtended() const {
-    std::vector<size_t> paddedDims(getShape().getRank(), 1);
-    for (size_t i = 0; i < order.size(); i++) {
-        auto idx = order[i];
-        if (paddedDims[idx] != Shape::UNDEFINED_DIM && blockedDims[i] != Shape::UNDEFINED_DIM) {
-            paddedDims[idx] *= blockedDims[i];
-        } else {
-            paddedDims[idx] = Shape::UNDEFINED_DIM;
+    const size_t rank = shape.getRank();
+    for (size_t i = rank; i < order.size(); i++) {
+        size_t idx = order[i];
+        Dim paddedDim = 1;
+        for (size_t j = rank; j < order.size(); j++) {
+            if (order[j] == idx)
+                paddedDim *= blockedDims[j];
         }
+        if (blockedDims[idx] == Shape::UNDEFINED_DIM) {
+            paddedDim = Shape::UNDEFINED_DIM;
+        } else {
+            paddedDim *= blockedDims[idx];
+        }
+        if (paddedDim != shape.getDims()[idx])
+            return true;
     }
-    return paddedDims != shape.getDims();
+    return false;
 }

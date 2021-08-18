@@ -69,12 +69,14 @@ void MKLDNNConvertNode::initSupportedPrimitiveDescriptors() {
 
     config.dynBatchSupport = false;
 
-    bool canInitExternalDesc = true;
-    canInitExternalDesc &= (input && output);
-    if (input->getType() & MemoryDescType::Mkldnn)
-        canInitExternalDesc &= input->as<DnnlMemoryDesc>()->isEmpltyExtraData();
-    if (output->getType() & MemoryDescType::Mkldnn)
-        canInitExternalDesc &= output->as<DnnlMemoryDesc>()->isEmpltyExtraData();
+    bool canInitExternalDesc = false;
+    if (input && output && input->getType() & MemoryDescType::Blocked && output->getType() & MemoryDescType::Blocked) {
+        canInitExternalDesc = true;
+        if (input->getType() == MemoryDescType::DnnlBlocked)
+            canInitExternalDesc &= input->as<DnnlMemoryDesc>()->hasEmptyExtraData();
+        if (output->getType() == MemoryDescType::DnnlBlocked)
+            canInitExternalDesc &= output->as<DnnlMemoryDesc>()->hasEmptyExtraData();
+    }
 
     // if input and output pointers are not null and not contain extra data, then the inp/output tensor descriptors were set using setDescs method, so
     // they should be used as the actual descriptors.

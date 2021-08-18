@@ -327,7 +327,7 @@ void MKLDNNSplitNode::initOptimalPrimitiveDescriptor() {
         }
 
         // reset undefined offsets
-        config.inConfs[i].desc = MemoryDescUtils::resetOffset(config.inConfs[i].desc.get());
+        config.inConfs[i].desc = MemoryDescUtils::cloneWithDefaultStridesAndOffset(config.inConfs[i].desc.get());
     }
     if (config.outConfs.size() != outputShapes.size())
         THROW_ERROR << "has invalid config";

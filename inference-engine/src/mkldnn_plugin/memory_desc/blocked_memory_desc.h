@@ -60,7 +60,7 @@ protected:
      * WARNING: Check only BlockedMemoryDesc specific attributes like: strides, order etc.
      * Don't performs type check for descs
      * Don't performs descs specific attributes check
-     * @return true if exist padded dims, otherwise false
+     * @return true if compatible, otherwise false
      */
     bool isCompatible(const BlockedMemoryDesc &rhs) const;
 

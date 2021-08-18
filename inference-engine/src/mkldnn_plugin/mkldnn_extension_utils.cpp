@@ -76,13 +76,18 @@ InferenceEngine::Precision MKLDNNExtensionUtils::DataTypeToIEPrecision(memory::d
     }
 }
 
+Dim MKLDNNExtensionUtils::convertToDim(const dnnl::memory::dim &dim) {
+    return dim == DNNL_RUNTIME_DIM_VAL ?  Shape::UNDEFINED_DIM : static_cast<size_t>(dim);
+}
+dnnl::memory::dim MKLDNNExtensionUtils::convertToDnnlDim(const Dim &dim) {
+    return dim == Shape::UNDEFINED_DIM ? DNNL_RUNTIME_DIM_VAL : static_cast<mkldnn::memory::dim>(dim);
+}
+
 VectorDims MKLDNNExtensionUtils::convertToVectorDims(const memory::dims& dims) {
     std::vector<size_t> vecResult;
     vecResult.reserve(dims.size());
     std::back_insert_iterator<std::vector<size_t>> itr(vecResult);
-    std::transform(dims.begin(), dims.end(), itr, [](memory::dim x) {
-        return x == DNNL_RUNTIME_DIM_VAL ?  Shape::UNDEFINED_DIM : static_cast<size_t>(x);
-    });
+    std::transform(dims.begin(), dims.end(), itr, convertToDim);
     return vecResult;
 }
 
@@ -90,9 +95,7 @@ memory::dims MKLDNNExtensionUtils::convertToDnnlDims(const VectorDims& dims) {
     memory::dims vecResult;
     vecResult.reserve(dims.size());
     std::back_insert_iterator<memory::dims> itr(vecResult);
-    std::transform(dims.begin(), dims.end(), itr, [](size_t x) {
-        return x == Shape::UNDEFINED_DIM ? DNNL_RUNTIME_DIM_VAL : static_cast<mkldnn::memory::dim>(x);
-    });
+    std::transform(dims.begin(), dims.end(), itr, convertToDnnlDim);
     return vecResult;
 }
 
@@ -122,4 +125,14 @@ DnnlMemoryDescPtr MKLDNNExtensionUtils::makeDescriptor(const mkldnn::memory::des
     } else {
         return std::unique_ptr<DnnlMemoryDesc>(new DnnlMemoryDesc(desc));
     }
+}
+
+size_t MKLDNNExtensionUtils::getMemSizeForOneDnnDesc(mkldnn::memory::desc desc) {
+    const auto offset0 = desc.data.offset0;
+    desc.data.offset0 = 0;
+    size_t size = desc.get_size();
+    if (size == DNNL_RUNTIME_SIZE_VAL)
+        return MemoryDesc::UNDEFINED_SIZE;
+    size += (offset0 + 1) * sizeOfDataType(desc.data_type());
+    return size;
 }

@@ -58,8 +58,6 @@ private:
     bool isBlockedCFormat(size_t blk_size = UNREACHABLE_DIM) const;
     bool isTailCFormat() const;
 
-    bool isDefinedImp() const override;
-
     /**
      * Try to define original format tag use on creation
      *

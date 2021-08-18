@@ -22,6 +22,8 @@ public:
     static uint8_t sizeOfDataType(mkldnn::memory::data_type dataType);
     static mkldnn::memory::data_type IEPrecisionToDataType(const InferenceEngine::Precision& prec);
     static InferenceEngine::Precision DataTypeToIEPrecision(mkldnn::memory::data_type dataType);
+    static Dim convertToDim(const dnnl::memory::dim &dim);
+    static dnnl::memory::dim convertToDnnlDim(const Dim &dim);
     static VectorDims convertToVectorDims(const mkldnn::memory::dims& dims);
     static std::vector<dnnl::memory::dim> convertToDnnlDims(const VectorDims& dims);
     static mkldnn::memory::format_tag GetPlainFormatByRank(size_t rank);
@@ -32,6 +34,7 @@ public:
      * @return pointer to DnnlBlockedMemoryDesc or DnnlMemoryDesc
      */
     static std::unique_ptr<DnnlMemoryDesc> makeDescriptor(const mkldnn::memory::desc &desc);
+    static size_t getMemSizeForOneDnnDesc(mkldnn::memory::desc desc);
 };
 
 }  // namespace MKLDNNPlugin

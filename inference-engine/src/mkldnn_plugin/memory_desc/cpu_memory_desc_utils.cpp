@@ -75,7 +75,7 @@ MemoryDescPtr MemoryDescUtils::cloneWithUndefStridesAndOffset(const MemoryDesc& 
     }
 }
 
-MemoryDescPtr MemoryDescUtils::resetOffset(const MemoryDesc* desc) {
+MemoryDescPtr MemoryDescUtils::cloneWithDefaultStridesAndOffset(const MemoryDesc* desc) {
     const auto blkMemDesc = desc->as<BlockedMemoryDesc>();
 
     if (MemoryDescType::Blocked == desc->getType()) {
@@ -85,7 +85,7 @@ MemoryDescPtr MemoryDescUtils::resetOffset(const MemoryDesc* desc) {
         return std::unique_ptr<DnnlBlockedMemoryDesc>(new DnnlBlockedMemoryDesc(blkMemDesc->getPrecision(), blkMemDesc->getShape(),
                                                                   blkMemDesc->getBlockDims(), blkMemDesc->getOrder()));
     } else {
-        IE_THROW() << "resetOffset supports Blocked descriptors only";
+        IE_THROW() << "cloneWithDefaultStridesAndOffset supports Blocked descriptors only";
     }
 }
 

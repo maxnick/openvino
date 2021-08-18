@@ -16,7 +16,7 @@ DnnlMemoryDesc::DnnlMemoryDesc(const mkldnn::memory::desc& desc) :
 }
 
 size_t DnnlMemoryDesc::getCurrentMemSizeImp() const {
-    return desc.get_size();
+    return MKLDNNExtensionUtils::getMemSizeForOneDnnDesc(desc);
 }
 
 size_t DnnlMemoryDesc::getElementOffset(size_t elemNumber) const {
@@ -53,7 +53,7 @@ bool DnnlMemoryDesc::isDefinedImp() const {
         return false;
     }
 
-    return true;
+    return wrappedThis.offset0() != DNNL_RUNTIME_DIM_VAL;
 }
 
 InferenceEngine::Precision DnnlMemoryDesc::getPrecision() const {

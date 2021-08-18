@@ -1049,7 +1049,7 @@ std::unique_ptr<MemoryDesc> MKLDNNNode::getDefinedInputDesc(const NodeConfig &co
         }
     }
 
-    return MemoryDescUtils::resetOffset(config.inConfs[idx].desc.get());
+    return MemoryDescUtils::cloneWithDefaultStridesAndOffset(config.inConfs[idx].desc.get());
 }
 
 std::unique_ptr<MemoryDesc> MKLDNNNode::getDefinedOutputDesc(const NodeConfig &config, size_t idx) const {
@@ -1077,7 +1077,7 @@ std::unique_ptr<MemoryDesc> MKLDNNNode::getDefinedOutputDesc(const NodeConfig &c
         }
     }
 
-    return MemoryDescUtils::resetOffset(config.outConfs[idx].desc.get());
+    return MemoryDescUtils::cloneWithDefaultStridesAndOffset(config.outConfs[idx].desc.get());
 }
 
 void MKLDNNNode::initOptimalPrimitiveDescriptor() {

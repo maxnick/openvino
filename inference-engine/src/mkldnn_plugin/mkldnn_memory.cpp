@@ -109,7 +109,7 @@ void MKLDNNMemory::Create(MemoryDescPtr desc, const void* data, bool pads_zeroin
         DnnlBlockedMemoryDesc dummyDesc(InferenceEngine::Precision::U8, Shape(dummySize));
         Create(dummyDesc.getDnnlDesc(), data, false);  // no pads zeroing
     }
-    size_t newUpperBound = prim->get_desc().get_size();
+    size_t newUpperBound = MKLDNNExtensionUtils::getMemSizeForOneDnnDesc(prim->get_desc());
     if (newUpperBound > memUpperBound) {
         memUpperBound = newUpperBound;
     }

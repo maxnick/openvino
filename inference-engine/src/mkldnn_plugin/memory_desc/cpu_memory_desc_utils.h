@@ -59,7 +59,7 @@ public:
      * @param desc modifiable MemoryDesc
      * @return pointer to MemoryDesc
      */
-    static std::unique_ptr<MemoryDesc> resetOffset(const MemoryDesc* desc);
+    static std::unique_ptr<MemoryDesc> cloneWithDefaultStridesAndOffset(const MemoryDesc* desc);
 
     /**
      * @brief Creates InferenceEngine::Blob from MemoryDesc

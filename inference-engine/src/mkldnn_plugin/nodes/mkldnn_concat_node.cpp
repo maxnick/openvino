@@ -426,7 +426,7 @@ void MKLDNNConcatNode::initOptimalPrimitiveDescriptor() {
         }
 
         // reset undefined offsets
-        config.outConfs[i].desc = MemoryDescUtils::resetOffset(config.outConfs[i].desc.get());
+        config.outConfs[i].desc = MemoryDescUtils::cloneWithDefaultStridesAndOffset(config.outConfs[i].desc.get());
     }
     auto firstOutBlockingDesc = config.outConfs[0].desc->as<BlockedMemoryDesc>();
     size_t offset = 0;

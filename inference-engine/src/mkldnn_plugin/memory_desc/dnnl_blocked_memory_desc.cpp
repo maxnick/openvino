@@ -60,7 +60,7 @@ DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, con
         desc.data.padded_dims[0] = 1;
         desc.data.format_desc.blocking.strides[0] = 1;
         desc.data.padded_offsets[0] = 0;
-        desc.data.offset0 = offsetPadding == Shape::UNDEFINED_DIM ? DNNL_RUNTIME_DIM_VAL : static_cast<mkldnn::memory::dim>(offsetPadding);
+        desc.data.offset0 = MKLDNNExtensionUtils::convertToDnnlDim(offsetPadding);
         return;
     }
 
@@ -126,7 +126,7 @@ DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, con
     desc.data.extra.flags = 0;
     desc.data.data_type = memory::convert_to_c(MKLDNNExtensionUtils::IEPrecisionToDataType(prc));
     desc.data.ndims = dims.size();
-    desc.data.offset0 = offsetPadding == Shape::UNDEFINED_DIM ? DNNL_RUNTIME_DIM_VAL : static_cast<mkldnn::memory::dim>(offsetPadding);
+    desc.data.offset0 = MKLDNNExtensionUtils::convertToDnnlDim(offsetPadding);
     std::copy(dims.begin(), dims.end(), desc.data.dims);
 
     if (!offsetPaddingToData.empty()) {
@@ -285,7 +285,7 @@ const std::vector<size_t>& DnnlBlockedMemoryDesc::getOffsetPaddingToData() const
 }
 
 size_t DnnlBlockedMemoryDesc::getOffsetPadding() const {
-    return desc.data.offset0 == DNNL_RUNTIME_DIM_VAL ? Shape::UNDEFINED_DIM : static_cast<Dim>(desc.data.offset0);
+    return desc.data.offset0 == MKLDNNExtensionUtils::convertToDim(desc.data.offset0);
 }
 
 bool DnnlBlockedMemoryDesc::isCompatible(const MemoryDesc& rhs) const {
@@ -320,12 +320,10 @@ bool DnnlBlockedMemoryDesc::isCompatible(const DnnlBlockedMemoryDesc& rhs) const
 
     int stride_start = wrappedThis.ndims() > 0 && wrappedThis.dims()[0] == 1 ? 1 : 0;  // ignore batch axis stride if batch size == 1
 
-    const auto isSameExtraData = [](const dnnl_memory_extra_desc_t &lhs, const dnnl_memory_extra_desc_t &rhs) {
-        return lhs.flags == rhs.flags && lhs.compensation_mask == rhs.compensation_mask && lhs.scale_adjust == rhs.scale_adjust;
-    };
-
-    return this->getOrder() == rhs.getOrder() && isSameExtraData(this->desc.data.extra, rhs.desc.data.extra) &&
-           wrappedThis.similar_to(wrappedRhs, true, true, 0, stride_start, true, true);
+    const auto thisExtra = this->desc.data.extra;
+    const auto rhsExtra = rhs.desc.data.extra;
+    return this->getOrder() == rhs.getOrder() && (thisExtra.flags == rhsExtra.flags && thisExtra.compensation_mask == rhsExtra.compensation_mask &&
+           thisExtra.scale_adjust == rhsExtra.scale_adjust) && wrappedThis.similar_to(wrappedRhs, true, true, 0, stride_start, true, true);
 }
 
 DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(const mkldnn::memory::desc& mdesc) :
@@ -453,6 +451,17 @@ bool DnnlBlockedMemoryDesc::isTailCFormat() const {
 std::unique_ptr<MemoryDesc> DnnlBlockedMemoryDesc::cloneWithNewDimsImp(const VectorDims &dims) const {
     if (std::any_of(dims.begin(), dims.end(), [](size_t x){ return Shape::UNDEFINED_DIM == x; })) {
         IE_THROW() << "Can't clone desc if new dims are undefined";
+    }
+
+    // TODO [DS]: add stride recalculation for strided blobs
+    getStrides();
+    getBlockDims();
+    for (int i = strides.size() - 2; i >= 0 ; i--) {
+        if (strides[i] == Shape::UNDEFINED_DIM)
+            break;
+
+        if (strides[i] != strides[i + 1] * blockedDims[i + 1])
+            IE_THROW(NotImplemented) << "Can't clone desc with new dims for not dense tensor";
     }
 
     using namespace dnnl::impl::utils;
@@ -788,14 +797,4 @@ size_t DnnlBlockedMemoryDesc::getMaxMemSize() const {
 
     auto maxDimsDesc = cloneWithNewDims(maxDims);
     return maxDimsDesc->getCurrentMemSize();
-}
-
-bool DnnlBlockedMemoryDesc::isDefinedImp() const {
-    mkldnn::impl::memory_desc_wrapper wrappedThis(desc.data);
-
-    if (wrappedThis.has_runtime_dims_or_strides()) {
-        return false;
-    }
-
-    return wrappedThis.offset0() != DNNL_RUNTIME_DIM_VAL;
 }
