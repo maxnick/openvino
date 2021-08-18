@@ -285,7 +285,7 @@ const std::vector<size_t>& DnnlBlockedMemoryDesc::getOffsetPaddingToData() const
 }
 
 size_t DnnlBlockedMemoryDesc::getOffsetPadding() const {
-    return desc.data.offset0 == MKLDNNExtensionUtils::convertToDim(desc.data.offset0);
+    return MKLDNNExtensionUtils::convertToDim(desc.data.offset0);
 }
 
 bool DnnlBlockedMemoryDesc::isCompatible(const MemoryDesc& rhs) const {

@@ -133,6 +133,6 @@ size_t MKLDNNExtensionUtils::getMemSizeForOneDnnDesc(mkldnn::memory::desc desc) 
     size_t size = desc.get_size();
     if (size == DNNL_RUNTIME_SIZE_VAL)
         return MemoryDesc::UNDEFINED_SIZE;
-    size += (offset0 + 1) * sizeOfDataType(desc.data_type());
+    size += offset0 * sizeOfDataType(desc.data_type());
     return size;
 }
