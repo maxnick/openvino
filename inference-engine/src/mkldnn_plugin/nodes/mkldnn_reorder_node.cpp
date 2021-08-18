@@ -13,6 +13,7 @@
 #include <cpu/x64/cpu_isa_traits.hpp>
 #include "nodes/common/cpu_memcpy.h"
 #include "nodes/common/cpu_convert.h"
+#include "mkldnn_convert_node.h"
 
 using namespace mkldnn;
 using namespace MKLDNNPlugin;
@@ -83,8 +84,8 @@ void MKLDNNReorderNode::createPrimitive() {
         if (MKLDNNPlugin::one_of(inDims.size(), 4, 5) &&
                 inDims[1] <= 64 &&
                 inDims[1] >= 16 &&
-                (parentMem.GetSize() / parentMem.getDesc().getPrecision().size() / inDims[1]) >= 128 &&
-                parentMem.getDesc().hasLayoutType(LayoutType::nspc) &&
+                (parentMem.getDesc().hasLayoutType(LayoutType::nspc) &&
+                parentMem.GetDescWithType<BlockedMemoryDesc>()->getPaddedElementsCount() / inDims[1]) >= 128 &&
                 getChildEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::ncsp) &&
                 parentMem.getDesc().getPrecision() == Precision::FP32 &&
                 getChildEdgeAt(0)->getMemory().getDesc().getPrecision() == Precision::FP32) {
@@ -298,7 +299,8 @@ void MKLDNNReorderNode::reorderData(const MKLDNNMemory &input, const MKLDNNMemor
             srcMemoryPtr = input.GetPrimitivePtr();
         }
         catch (const mkldnn::error& err) {
-            if (mkldnn_unimplemented == err.status && output.GetDataType() != input.GetDataType()) {
+            if (mkldnn_unimplemented == err.status && output.GetDataType() != input.GetDataType() && MKLDNNConvertNode::isSupportedDesc(input.getDesc()) &&
+                    MKLDNNConvertNode::isSupportedDesc(output.getDesc())) {
                 //we probably could not make the reorder because there is no one supporting this precision conversion
                 //lets try to convert data first using cpu_convert
                 auto data = static_cast<const uint8_t *>(input.GetPtr());

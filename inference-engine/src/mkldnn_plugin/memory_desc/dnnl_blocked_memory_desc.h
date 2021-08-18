@@ -45,6 +45,8 @@ public:
 
     size_t getMaxMemSize() const override;
 
+    size_t getPaddedElementsCount() const override;
+
 private:
     DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
                             const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},

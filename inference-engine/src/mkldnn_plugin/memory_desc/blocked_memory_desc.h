@@ -54,6 +54,13 @@ public:
      */
     virtual bool blocksExtended() const = 0;
 
+    /**
+     * @brief Compute number of elements taking into account padded dims
+     *
+     * @return number of elements taking into account padded dims
+     */
+    virtual size_t getPaddedElementsCount() const = 0;
+
 protected:
     /**
      * @brief Check descs on compatibility

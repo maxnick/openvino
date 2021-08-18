@@ -60,7 +60,7 @@ public:
 
     virtual bool isSame(mkldnn::memory::format_tag fmt) const { return false; }
 
-    bool hasEmptyExtraData() { return desc.data.extra.flags == dnnl_memory_extra_flag_none; }
+    bool hasEmptyExtraData() const { return desc.data.extra.flags == dnnl_memory_extra_flag_none; }
 
 protected:
     DnnlMemoryDesc() {}

@@ -59,6 +59,13 @@ void MKLDNNConvertNode::getSupportedDescriptors() {
         IE_THROW() << errorPrefix << " has incorrect number of output edges";
 }
 
+bool MKLDNNConvertNode::isSupportedDesc(const MemoryDesc &desc) {
+    bool isSupported = desc.getType() & MemoryDescType::Blocked;
+    if (desc.getType() == MemoryDescType::DnnlBlocked)
+        isSupported &= desc.as<const DnnlMemoryDesc>()->hasEmptyExtraData();
+    return isSupported;
+}
+
 void MKLDNNConvertNode::initSupportedPrimitiveDescriptors() {
     if (!supportedPrimitiveDescriptors.empty())
         return;
@@ -70,12 +77,10 @@ void MKLDNNConvertNode::initSupportedPrimitiveDescriptors() {
     config.dynBatchSupport = false;
 
     bool canInitExternalDesc = false;
-    if (input && output && input->getType() & MemoryDescType::Blocked && output->getType() & MemoryDescType::Blocked) {
+    if (input && output) {
         canInitExternalDesc = true;
-        if (input->getType() == MemoryDescType::DnnlBlocked)
-            canInitExternalDesc &= input->as<DnnlMemoryDesc>()->hasEmptyExtraData();
-        if (output->getType() == MemoryDescType::DnnlBlocked)
-            canInitExternalDesc &= output->as<DnnlMemoryDesc>()->hasEmptyExtraData();
+        canInitExternalDesc &= isSupportedDesc(*input);
+        canInitExternalDesc &= isSupportedDesc(*output);
     }
 
     // if input and output pointers are not null and not contain extra data, then the inp/output tensor descriptors were set using setDescs method, so
@@ -127,8 +132,8 @@ void MKLDNNConvertNode::execute(mkldnn::stream strm) {
     auto& parentMem = getParentEdgeAt(0)->getMemory();
     auto& childMem = getChildEdgeAt(0)->getMemory();
 
-    const auto parentPaddElemCount = parentMem.GetSize() / parentMem.getDesc().getPrecision().size();
-    const auto childPaddElemCount = childMem.GetSize() / childMem.getDesc().getPrecision().size();
+    const auto parentPaddElemCount = parentMem.GetDescWithType<BlockedMemoryDesc>()->getPaddedElementsCount();
+    const auto childPaddElemCount = childMem.GetDescWithType<BlockedMemoryDesc>()->getPaddedElementsCount();
 
     if (parentPaddElemCount != childPaddElemCount)
         IE_THROW() << errorPrefix << " has different elements number in input and output buffers";

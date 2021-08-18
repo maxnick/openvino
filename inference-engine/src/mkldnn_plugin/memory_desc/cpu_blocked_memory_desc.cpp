@@ -289,3 +289,18 @@ bool CpuBlockedMemoryDesc::blocksExtended() const {
     }
     return false;
 }
+
+size_t CpuBlockedMemoryDesc::getPaddedElementsCount() const {
+    if (paddedDims.empty()) {
+        for (size_t i = 0; i < blockedDims.size(); i++) {
+            if (blockedDims[i] == Shape::UNDEFINED_DIM)
+                IE_THROW() << "Can't compute padded elements count for non undefined blocked dims";
+        }
+
+        paddedDims.resize(getShape().getRank(), 1);
+        for (size_t i = 0; i < order.size(); i++) {
+            paddedDims[order[i]] *= blockedDims[i];
+        }
+    }
+    return std::accumulate(paddedDims.begin(), paddedDims.end(), size_t{1}, std::multiplies<size_t>());
+}

@@ -798,3 +798,8 @@ size_t DnnlBlockedMemoryDesc::getMaxMemSize() const {
     auto maxDimsDesc = cloneWithNewDims(maxDims);
     return maxDimsDesc->getCurrentMemSize();
 }
+
+size_t DnnlBlockedMemoryDesc::getPaddedElementsCount() const {
+    return std::accumulate(std::begin(desc.data.padded_dims), std::begin(desc.data.padded_dims) + desc.data.ndims, size_t{1},
+                           std::multiplies<int64_t>());
+}

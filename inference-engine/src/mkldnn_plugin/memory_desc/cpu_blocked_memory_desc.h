@@ -79,6 +79,8 @@ public:
 
     size_t getMaxMemSize() const override;
 
+    size_t getPaddedElementsCount() const override;
+
 private:
     size_t getElementOffset(size_t elemNumber) const override;
     size_t getCurrentMemSizeImp() const override;
@@ -92,6 +94,7 @@ private:
 private:
     InferenceEngine::Precision precision;
     size_t offsetPadding;
+    mutable VectorDims paddedDims;
 };
 
 } // namespace MKLDNNPlugin
