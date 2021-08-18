@@ -148,26 +148,7 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
         for (size_t i = 0; i < getParentEdges().size(); ++i) {
             config.inConfs[i].inPlace = -1;
             config.inConfs[i].constant = false;
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-            config.inConfs[i].desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(itr->second->createDesc(
-                                        inputPrecision, getParentEdgeAt(i)->getShape().getStaticDims()));
-=======
-            config.inConfs[i].desc = MemoryDescUtils::applyUndefinedOffset(itr->second->createDesc(
-                                        inputPrecision, getInputShapeAtPort(i).getStaticDims()));
->>>>>>> getShape() removing started
-=======
-            std::cout << "SIZE 3.1: " << dstDims.size() << std::endl;
-            config.inConfs[i].desc = MemoryDescUtils::applyUndefinedOffset(itr->second->createDesc(
-                                        inputPrecision, getInputShapeAtPort(i).getStaticDims()));
-            std::cout << "SIZE 3.2: " << dstDims.size() << std::endl;
-            std::cout << "INPUT" << std::endl;
-            config.inConfs[i].desc->as<CpuBlockedMemoryDesc>()->print();
->>>>>>> first wave nodes
-=======
-            config.inConfs[i].desc = MemoryDescUtils::applyUndefinedOffset(itr->second->createDesc(inputPrecision, getInputShapeAtPort(i)));
->>>>>>> small changes
+            config.inConfs[i].desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(itr->second->createDesc(inputPrecision, getInputShapeAtPort(i)));
         }
         supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::ref);
         if (itr->first != LayoutType::nspc) {

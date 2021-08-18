@@ -48,14 +48,14 @@ public:
     static std::unique_ptr<BlockedMemoryDesc> convertToBlockedMemoryDesc(const MemoryDesc& desc);
 
     /**
-     * @brief Creates BlockedMemoryDesc with offsetPadding of UNDEFINED_DIM size
+     * @brief Creates BlockedMemoryDesc with offsetPadding of UNDEFINED_DIM size and strides == UNDEFINED_DIM
      * @param desc modifiable BlockedMemoryDesc
      * @return pointer to MemoryDesc
      */
     static std::unique_ptr<MemoryDesc> cloneWithUndefStridesAndOffset(const MemoryDesc& desc);
 
     /**
-     * @brief Creates MemoryDesc with offsetPadding of 0 size
+     * @brief Creates MemoryDesc with offsetPadding of 0 size and default strides
      * @param desc modifiable MemoryDesc
      * @return pointer to MemoryDesc
      */
