@@ -83,7 +83,7 @@ public:
 
     size_t GetSize() const;
 
-    Shape GetShape() const {
+    const Shape& GetShape() const {
         return getDesc().getShape();
     }
 

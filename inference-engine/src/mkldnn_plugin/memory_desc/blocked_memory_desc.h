@@ -65,13 +65,13 @@ protected:
     /**
      * @brief Check descs on compatibility
      * WARNING: Check only BlockedMemoryDesc specific attributes like: strides, order etc.
-     * Don't performs type check for descs
-     * Don't performs descs specific attributes check
+     * Doesn't perform type check for descs
+     * Doesn't perform descs specific attributes check
      * @return true if compatible, otherwise false
      */
     bool isCompatible(const BlockedMemoryDesc &rhs) const;
 
-    mutable std::vector<size_t> blockedDims;
+    mutable VectorDims blockedDims;
     mutable std::vector<size_t> strides;
     mutable std::vector<size_t> order;
     mutable std::vector<size_t> offsetPaddingToData;

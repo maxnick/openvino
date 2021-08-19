@@ -23,6 +23,7 @@ public:
 
     bool isCompatible(const MemoryDesc& rhs) const override;
     bool isCompatible(const CpuBlockedMemoryDesc &rhs) const;
+    bool isCompatible(const DnnlBlockedMemoryDesc &rhs) const;
 
     InferenceEngine::Precision getPrecision() const override {
         return precision;

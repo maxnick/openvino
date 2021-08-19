@@ -63,17 +63,17 @@ TEST(MemDescTest, UndefinedStateConversion) {
         ASSERT_FALSE(mkldnnDesc.isDefined());
 
         auto blockedDesc = MemoryDescUtils::convertToBlockedMemoryDesc(mkldnnDesc);
-        CpuBlockedMemoryDesc cpu_blockedDesc = CpuBlockedMemoryDesc(blockedDesc->getPrecision(), blockedDesc->getShape(), blockedDesc->getBlockDims(),
+        CpuBlockedMemoryDesc cpuBlockedDesc = CpuBlockedMemoryDesc(blockedDesc->getPrecision(), blockedDesc->getShape(), blockedDesc->getBlockDims(),
                                                                     blockedDesc->getOrder(), blockedDesc->getOffsetPadding(),
                                                                     blockedDesc->getOffsetPaddingToData(), blockedDesc->getStrides());
 
-        ASSERT_TRUE(mkldnnDesc.isCompatible(cpu_blockedDesc));
-        ASSERT_TRUE(cpu_blockedDesc.isCompatible(mkldnnDesc));
+        ASSERT_TRUE(mkldnnDesc.isCompatible(cpuBlockedDesc));
+        ASSERT_TRUE(cpuBlockedDesc.isCompatible(mkldnnDesc));
 
-        auto reconstructedDesc = MemoryDescUtils::convertToDnnlMemoryDesc(cpu_blockedDesc);
+        auto reconstructedDesc = MemoryDescUtils::convertToDnnlMemoryDesc(cpuBlockedDesc);
 
         ASSERT_TRUE(mkldnnDesc.isCompatible(*reconstructedDesc));
-        ASSERT_TRUE(cpu_blockedDesc.isCompatible(*reconstructedDesc));
+        ASSERT_TRUE(cpuBlockedDesc.isCompatible(*reconstructedDesc));
 
         mkldnn::memory::desc dnnlDesc = mkldnnDesc.getDnnlDesc();
         mkldnn::memory::desc reconstDnnlDesc = reconstructedDesc->getDnnlDesc();

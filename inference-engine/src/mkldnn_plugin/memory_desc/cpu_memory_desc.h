@@ -10,6 +10,16 @@
 #include "cpu_types.h"
 #include "memory_desc/cpu_memory_desc_utils.h"
 
+/**
+ * @brief
+ *
+ * MemoryDesc - the descriptor of tensor representation in memory. Describes all required information
+ * for proper allocation and handling tensor in some buffer. The real memory is not present, just description.
+ * This object answers on question how and where data with logical index [x1, x2, .. xN] placed in real buffer.
+ * In the simplest case it describe a mapping between "logical offset" and "real offset".
+ *
+ */
+
 namespace MKLDNNPlugin {
 
 class MemoryDesc;
