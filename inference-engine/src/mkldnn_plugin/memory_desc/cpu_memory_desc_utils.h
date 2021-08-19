@@ -27,11 +27,11 @@ public:
     static std::unique_ptr<DnnlMemoryDesc> convertToDnnlMemoryDesc(const MemoryDesc& desc);
 
     /**
-     * @brief Converts MemoryDesc to DnnlBlockedMemoryDesc
-     * @param desc MemoryDesc to be converted
-     * @return converted DnnlBockedMemoryDesc
+     * @brief Converts BlockedMemoryDesc to DnnlMemoryDesc
+     * @param desc BlockedMemoryDesc to be converted
+     * @return converted DnnlMemoryDesc
      */
-    static std::unique_ptr<DnnlBlockedMemoryDesc> convertToDnnlBlockedMemoryDesc(const MemoryDesc& desc);
+    static std::unique_ptr<DnnlMemoryDesc> convertToDnnlMemoryDesc(const CpuBlockedMemoryDesc& desc);
 
     /**
      * @brief Converts InferenceEngine::TensorDesc to DnnlBlockedMemoryDesc
@@ -48,16 +48,16 @@ public:
     static std::unique_ptr<BlockedMemoryDesc> convertToBlockedMemoryDesc(const MemoryDesc& desc);
 
     /**
-     * @brief Creates BlockedMemoryDesc with offsetPadding of UNDEFINED_DIM size and strides == UNDEFINED_DIM
-     * @param desc modifiable BlockedMemoryDesc
-     * @return pointer to MemoryDesc
+     * @brief Creates BlockedMemoryDesc with offsetPadding and strides of UNDEFINED_DIM size
+     * @param desc is the MemoryDesc to be cloned
+     * @return pointer to the new MemoryDesc
      */
     static std::unique_ptr<MemoryDesc> cloneWithUndefStridesAndOffset(const MemoryDesc& desc);
 
     /**
      * @brief Creates MemoryDesc with offsetPadding of 0 size and default strides
-     * @param desc modifiable MemoryDesc
-     * @return pointer to MemoryDesc
+     * @param desc is the MemoryDesc to be cloned
+     * @return pointer to the new MemoryDesc
      */
     static std::unique_ptr<MemoryDesc> cloneWithDefaultStridesAndOffset(const MemoryDesc* desc);
 

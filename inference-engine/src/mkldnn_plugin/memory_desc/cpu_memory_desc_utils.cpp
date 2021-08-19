@@ -22,10 +22,7 @@ namespace MKLDNNPlugin {
 
 std::unique_ptr<DnnlMemoryDesc> MemoryDescUtils::convertToDnnlMemoryDesc(const MemoryDesc& desc) {
     if (MemoryDescType::Blocked == desc.getType()) {
-        const auto cpuDesc = desc.as<CpuBlockedMemoryDesc>();
-        return std::unique_ptr<DnnlBlockedMemoryDesc>(new DnnlBlockedMemoryDesc(cpuDesc->getPrecision(), cpuDesc->getShape(), cpuDesc->getBlockDims(),
-                                                                                cpuDesc->getOrder(), cpuDesc->getOffsetPadding(),
-                                                                                cpuDesc->getOffsetPaddingToData(), cpuDesc->getStrides()));
+        return convertToDnnlMemoryDesc(*(desc.as<CpuBlockedMemoryDesc>()));
     } else if (MemoryDescType::Mkldnn & desc.getType()) {
         return std::unique_ptr<DnnlMemoryDesc>(dynamic_cast<DnnlMemoryDesc *>(desc.clone().release()));
     } else {
@@ -33,17 +30,9 @@ std::unique_ptr<DnnlMemoryDesc> MemoryDescUtils::convertToDnnlMemoryDesc(const M
     }
 }
 
-std::unique_ptr<DnnlBlockedMemoryDesc> MemoryDescUtils::convertToDnnlBlockedMemoryDesc(const MemoryDesc& desc) {
-    if (MemoryDescType::DnnlBlocked == desc.getType()) {
-        return std::unique_ptr<DnnlBlockedMemoryDesc>(dynamic_cast<DnnlBlockedMemoryDesc *>(desc.clone().release()));
-    } else if (MemoryDescType::Blocked == desc.getType()) {
-        const auto cpuDesc = desc.as<CpuBlockedMemoryDesc>();
-        return std::unique_ptr<DnnlBlockedMemoryDesc>(new DnnlBlockedMemoryDesc(cpuDesc->getPrecision(), cpuDesc->getShape(), cpuDesc->getBlockDims(),
-                                                                                cpuDesc->getOrder(), cpuDesc->getOffsetPadding(),
-                                                                                cpuDesc->getOffsetPaddingToData(), cpuDesc->getStrides()));
-    } else {
-        IE_THROW() << "Cannot convert MemoryDesc to DnnlMemoryDesc";
-    }
+std::unique_ptr<DnnlMemoryDesc> MemoryDescUtils::convertToDnnlMemoryDesc(const CpuBlockedMemoryDesc& desc) {
+    return std::unique_ptr<DnnlBlockedMemoryDesc>(new DnnlBlockedMemoryDesc(desc.getPrecision(), desc.getShape(), desc.getBlockDims(),
+                                                              desc.getOrder(), desc.getOffsetPadding(), desc.getOffsetPaddingToData(), desc.getStrides()));
 }
 
 std::unique_ptr<DnnlBlockedMemoryDesc> MemoryDescUtils::convertToDnnlBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc) {

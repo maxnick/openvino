@@ -11,29 +11,6 @@ namespace MKLDNNPlugin {
 
 class CpuBlockedMemoryDesc : public BlockedMemoryDesc {
 public:
-    void print() {
-        std::cout << "blockedDims" << std::endl;
-        for (size_t i = 0; i < blockedDims.size(); i++) {
-            std::cout << blockedDims[i] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "strides" << std::endl;
-        for (size_t i = 0; i < strides.size(); i++) {
-            std::cout << strides[i] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "order" << std::endl;
-        for (size_t i = 0; i < order.size(); i++) {
-            std::cout << order[i] << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "offsetPaddingToData" << std::endl;
-        for (size_t i = 0; i < offsetPaddingToData.size(); i++) {
-            std::cout << offsetPaddingToData[i] << " ";
-        }
-        std::cout << std::endl << "*****************************************" << std::endl;;
-    }
-
     CpuBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape);
 
     CpuBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
@@ -46,6 +23,7 @@ public:
 
     bool isCompatible(const MemoryDesc& rhs) const override;
     bool isCompatible(const CpuBlockedMemoryDesc &rhs) const;
+    bool isCompatible(const DnnlBlockedMemoryDesc &rhs) const;
 
     InferenceEngine::Precision getPrecision() const override {
         return precision;
@@ -119,8 +97,5 @@ private:
     size_t offsetPadding;
     mutable VectorDims paddedDims;
 };
-
-using CpuBlockedMemoryDescPtr = std::unique_ptr<CpuBlockedMemoryDesc>;
-using CpuBlockedMemoryDescCPtr = std::unique_ptr<const CpuBlockedMemoryDesc>;
 
 } // namespace MKLDNNPlugin

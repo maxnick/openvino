@@ -832,8 +832,8 @@ protected:
     }
 
 private:
-    std::unique_ptr<MemoryDesc> getInputMemDescAtPort(size_t portNum) const;
-    std::unique_ptr<MemoryDesc> getOutputMemDescAtPort(size_t portNum) const;
+    std::unique_ptr<MemoryDesc> getBaseMemDescAtInputPort(size_t portNum) const;
+    std::unique_ptr<MemoryDesc> getBaseMemDescAtOutputPort(size_t portNum) const;
 
     bool isDynamic = false;
 

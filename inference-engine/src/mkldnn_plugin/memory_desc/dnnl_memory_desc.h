@@ -7,22 +7,7 @@
 #include "cpu_blocked_memory_desc.h"
 #include "mkldnn_extension_utils.h"
 
-/**
- * @brief
- *
- * DnnlMemoryDesc - the descriptor of tensor representation in memory. Describes all required information
- * for proper allocation and handling tensor in some buffer. The real memory is not present, just description.
- * This object answers on question how and where data with logical index [x1, x2, .. xN] placed in real buffer.
- * In the simplest case it describe a mapping between "logical offset" and "real offset".
- *
- */
-
 namespace MKLDNNPlugin {
-
-/**
- * Represent internal plugin abstraction of tensor description
- *
- */
 
 class DnnlMemoryDesc;
 
@@ -53,7 +38,7 @@ public:
 
     size_t getMaxMemSize() const override;
 
-    mkldnn::memory::desc getDnnlDesc() const {
+    const mkldnn::memory::desc& getDnnlDesc() const {
         return desc;
     }
 

@@ -82,7 +82,7 @@ bool CpuBlockedMemoryDesc::isCompatible(const MemoryDesc& rhs) const {
     if (auto cpuBlkDesc = dynamic_cast<const CpuBlockedMemoryDesc*>(pRhs)) {
         return isCompatible(*cpuBlkDesc);
     } else if (auto dnnlBlkDesc = dynamic_cast<const DnnlBlockedMemoryDesc*>(pRhs)) {
-        return dnnlBlkDesc->isCompatible(*this);
+        return isCompatible(*dnnlBlkDesc);
     } else {
         return false;
     }
@@ -90,6 +90,10 @@ bool CpuBlockedMemoryDesc::isCompatible(const MemoryDesc& rhs) const {
 
 bool CpuBlockedMemoryDesc::isCompatible(const CpuBlockedMemoryDesc &rhs) const {
     return BlockedMemoryDesc::isCompatible(rhs);
+}
+
+bool CpuBlockedMemoryDesc::isCompatible(const DnnlBlockedMemoryDesc &rhs) const {
+    return rhs.isCompatible(*this);
 }
 
 size_t CpuBlockedMemoryDesc::getCurrentMemSizeImp() const {
@@ -291,16 +295,7 @@ bool CpuBlockedMemoryDesc::blocksExtended() const {
 }
 
 size_t CpuBlockedMemoryDesc::getPaddedElementsCount() const {
-    if (paddedDims.empty()) {
-        for (size_t i = 0; i < blockedDims.size(); i++) {
-            if (blockedDims[i] == Shape::UNDEFINED_DIM)
-                IE_THROW() << "Can't compute padded elements count for non undefined blocked dims";
-        }
-
-        paddedDims.resize(getShape().getRank(), 1);
-        for (size_t i = 0; i < order.size(); i++) {
-            paddedDims[order[i]] *= blockedDims[i];
-        }
-    }
-    return std::accumulate(paddedDims.begin(), paddedDims.end(), size_t{1}, std::multiplies<size_t>());
+    if (std::any_of(blockedDims.begin(), blockedDims.end(), [](Dim dim) { return dim == Shape::UNDEFINED_DIM; }))
+        IE_THROW() << "Can't compute padded elements count for non undefined blocked dims";
+    return std::accumulate(blockedDims.begin(), blockedDims.end(), size_t{1}, std::multiplies<size_t>());
 }

@@ -505,7 +505,7 @@ void MKLDNNNode::resolveInPlaceEdges() {
     }
 }
 
-std::unique_ptr<MemoryDesc> MKLDNNNode::getInputMemDescAtPort(size_t portNum) const {
+std::unique_ptr<MemoryDesc> MKLDNNNode::getBaseMemDescAtInputPort(size_t portNum) const {
     if (auto primDesc = getSelectedPrimitiveDescriptor()) {
         const auto& inConfs = primDesc->getConfig().inConfs;
         if (inConfs.size() < portNum) {
@@ -516,7 +516,7 @@ std::unique_ptr<MemoryDesc> MKLDNNNode::getInputMemDescAtPort(size_t portNum) co
     IE_THROW() << "Can't get input memory desc, primitive descriptor is not selected";
 }
 
-std::unique_ptr<MemoryDesc> MKLDNNNode::getOutputMemDescAtPort(size_t portNum) const {
+std::unique_ptr<MemoryDesc> MKLDNNNode::getBaseMemDescAtOutputPort(size_t portNum) const {
     if (auto primDesc = getSelectedPrimitiveDescriptor()) {
         const auto& outConfs = primDesc->getConfig().outConfs;
         if (outConfs.size() < portNum) {
@@ -529,22 +529,22 @@ std::unique_ptr<MemoryDesc> MKLDNNNode::getOutputMemDescAtPort(size_t portNum) c
 
 template<>
 DnnlMemoryDescPtr MKLDNNNode::getInputMemDescAtPort<DnnlMemoryDesc, 0, 0>(size_t portNum) const {
-    return MemoryDescUtils::convertToDnnlMemoryDesc(*getInputMemDescAtPort(portNum));
+    return MemoryDescUtils::convertToDnnlMemoryDesc(*getBaseMemDescAtInputPort(portNum));
 }
 
 template<>
 BlockedMemoryDescPtr MKLDNNNode::getInputMemDescAtPort<BlockedMemoryDesc, 0, 0>(size_t portNum) const {
-    return MemoryDescUtils::convertToBlockedMemoryDesc(*getInputMemDescAtPort(portNum));
+    return MemoryDescUtils::convertToBlockedMemoryDesc(*getBaseMemDescAtInputPort(portNum));
 }
 
 template<>
 DnnlMemoryDescPtr MKLDNNNode::getOutputMemDescAtPort<DnnlMemoryDesc, 0, 0>(size_t portNum) const {
-    return MemoryDescUtils::convertToDnnlMemoryDesc(*getOutputMemDescAtPort(portNum));
+    return MemoryDescUtils::convertToDnnlMemoryDesc(*getBaseMemDescAtInputPort(portNum));
 }
 
 template<>
 BlockedMemoryDescPtr MKLDNNNode::getOutputMemDescAtPort<BlockedMemoryDesc, 0, 0>(size_t portNum) const {
-    return MemoryDescUtils::convertToBlockedMemoryDesc(*getOutputMemDescAtPort(portNum));
+    return MemoryDescUtils::convertToBlockedMemoryDesc(*getBaseMemDescAtInputPort(portNum));
 }
 
 std::string MKLDNNNode::getPrimitiveDescriptorType() {
@@ -697,7 +697,7 @@ void MKLDNNNode::redefineOutputMemory(const std::vector<VectorDims> &newShapes) 
         IE_THROW() << "Number shapes mismatch with real outputs number for node with name: " << getName();
     }
     for (size_t i = 0; i < getOriginalOutputsNumber(); i++) {
-        getChildEdgesAtPort(i)[0]->getMemoryPtr()->redefineDesc(getOutputMemDescAtPort(i)->cloneWithNewDims(newShapes[i]));
+        getChildEdgesAtPort(i)[0]->getMemoryPtr()->redefineDesc(getBaseMemDescAtOutputPort(i)->cloneWithNewDims(newShapes[i]));
     }
 }
 
@@ -716,10 +716,10 @@ void MKLDNNNode::initSupportedPrimitiveDescriptors() {
                 portConfig.inPlace = -1;
                 portConfig.constant = false;
                 auto desc = getSrcMemDesc(itpd, i);
-                if (desc->getType() == MemoryDescType::Mkldnn) {
-                    portConfig.desc = std::move(desc);
-                } else {
+                if (desc->getType() & MemoryDescType::Blocked) {
                     portConfig.desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(*desc);
+                } else {
+                    portConfig.desc = std::move(desc);
                 }
                 config.inConfs.push_back(portConfig);
             }
@@ -729,10 +729,10 @@ void MKLDNNNode::initSupportedPrimitiveDescriptors() {
                 portConfig.inPlace = canBeInPlace() ? 0 : -1;
                 portConfig.constant = false;
                 auto desc = getDstMemDesc(itpd, i);
-                if (desc->getType() == MemoryDescType::Mkldnn) {
-                    portConfig.desc = std::move(desc);
-                } else {
+                if (desc->getType() & MemoryDescType::Blocked) {
                     portConfig.desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(*desc);
+                } else {
+                    portConfig.desc = std::move(desc);
                 }
                 config.outConfs.push_back(portConfig);
             }

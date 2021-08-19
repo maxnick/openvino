@@ -170,8 +170,7 @@ class asIntCheck : public PortChecker {
 public:
     asIntCheck(const MKLDNNMemoryPtr &mem) {
         IE_ASSERT(mem->GetDataType() == memory::data_type::s32);
-        const auto a = Shape(InferenceEngine::SizeVector{1});
-        IE_ASSERT(mem->GetShape() == a);
+        IE_ASSERT(mem->GetShape() == Shape(InferenceEngine::SizeVector{1}));
         mem_holder = mem->GetPrimitive();
     }
 

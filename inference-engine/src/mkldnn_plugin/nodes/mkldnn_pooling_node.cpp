@@ -273,10 +273,10 @@ void MKLDNNPoolingNode::initSupportedPrimitiveDescriptors() {
                 dataConfig.inPlace = -1;
                 dataConfig.constant = false;
                 auto desc = getSrcMemDesc(itpd, i);
-                if (desc->getType() == MemoryDescType::Mkldnn) {
-                    dataConfig.desc = std::move(desc);
-                } else {
+                if (desc->getType() & MemoryDescType::Blocked) {
                     dataConfig.desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(*desc);
+                } else {
+                    dataConfig.desc = std::move(desc);
                 }
                 config.inConfs.push_back(dataConfig);
             }
@@ -286,10 +286,10 @@ void MKLDNNPoolingNode::initSupportedPrimitiveDescriptors() {
                 dataConfig.inPlace = canBeInPlace() ? 0 : -1;
                 dataConfig.constant = false;
                 auto desc = getDstMemDesc(itpd, i);
-                if (desc->getType() == MemoryDescType::Mkldnn) {
-                    dataConfig.desc = std::move(desc);
-                } else {
+                if (desc->getType() & MemoryDescType::Blocked) {
                     dataConfig.desc = MemoryDescUtils::cloneWithUndefStridesAndOffset(*desc);
+                } else {
+                    dataConfig.desc = std::move(desc);
                 }
                 config.outConfs.push_back(dataConfig);
             }

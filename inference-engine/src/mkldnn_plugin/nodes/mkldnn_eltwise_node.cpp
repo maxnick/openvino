@@ -1114,8 +1114,13 @@ void MKLDNNEltwiseNode::initSupportedPrimitiveDescriptors() {
                     blocks[i] = dims[order[i]];
                 }
 
+<<<<<<< HEAD
                 return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(prc, shape, blocks, order, offset);
             } else if (lt == Blocked && shape.getRank() != 1 && shape.getStaticDims()[1] != 1) {
+=======
+                return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(prc, edge->getShape(), blocks, order, offset);
+            } else if (lt == Blocked && edge->getShape().getRank() != 1 && edge->getShape().getStaticDims()[1] != 1) {
+>>>>>>> mkutakov/feature/cpu_dynamic_plugin
                 size_t blockSize = mayiuse(x64::avx512_common) ? 16 : 8;
 
                 std::vector<size_t> blocks = shape.getStaticDims();
@@ -1126,13 +1131,21 @@ void MKLDNNEltwiseNode::initSupportedPrimitiveDescriptors() {
                 blocks.push_back(blockSize);
                 order.push_back(1);
 
+<<<<<<< HEAD
                 return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(prc, shape, blocks, order, offset);
+=======
+                return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(prc, edge->getShape(), blocks, order, offset);
+>>>>>>> mkutakov/feature/cpu_dynamic_plugin
             } else {
                 std::vector<size_t> blocks = shape.getStaticDims();
                 std::vector<size_t> order(blocks.size());
                 std::iota(order.begin(), order.end(), 0);
 
+<<<<<<< HEAD
                 return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(prc, shape, blocks, order, offset);
+=======
+                return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(prc, edge->getShape(), blocks, order, offset);
+>>>>>>> mkutakov/feature/cpu_dynamic_plugin
             }
         };
 
