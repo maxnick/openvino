@@ -838,24 +838,24 @@ void MKLDNNDeformableConvolutionNode::initSupportedPrimitiveDescriptors() {
         auto weiFormat = group > 1 ? mayiuse(avx512_common) ? memory::format_tag::gOIhw16i16o : memory::format_tag::gOIhw8i8o
                                    : mayiuse(avx512_common) ? memory::format_tag::OIhw16i16o : memory::format_tag::OIhw8i8o;
 
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(),
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(),
                                                                               memory::data_type::f32, dataFormat);
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(1)->getShape().getStaticDims(),
+        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(1)->getShape().getStaticDims(),
                                                                               memory::data_type::f32, offFormat);
-        config.inConfs[2].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(2)->getShape().getStaticDims(),
+        config.inConfs[2].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(2)->getShape().getStaticDims(),
                                                                               memory::data_type::f32, weiFormat);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(),
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(),
                                                                               memory::data_type::f32, dataFormat);
         supportedPrimitiveDescriptors.push_back({config, impl_type});
     } else {
         // reference implementation
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), memory::data_type::f32,
+        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(0)->getShape().getStaticDims(), memory::data_type::f32,
                                                                memory::format_tag::nchw);
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(1)->getShape().getStaticDims(), memory::data_type::f32,
+        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(1)->getShape().getStaticDims(), memory::data_type::f32,
                                                                memory::format_tag::nchw);
-        config.inConfs[2].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getParentEdgeAt(2)->getShape().getStaticDims(), memory::data_type::f32,
+        config.inConfs[2].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getParentEdgeAt(2)->getShape().getStaticDims(), memory::data_type::f32,
                                                                memory::format_tag::oihw);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<MKLDNNMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), memory::data_type::f32,
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlMemoryDesc>(getChildEdgeAt(0)->getShape().getStaticDims(), memory::data_type::f32,
                                                                 memory::format_tag::nchw);
         supportedPrimitiveDescriptors.push_back({config, impl_type});
     }
@@ -1068,20 +1068,20 @@ void MKLDNNDeformableConvolutionNode::execute(mkldnn::stream strm) {
     const auto *weights = reinterpret_cast<const float *>(srcMemory2.GetPtr());
     float *dst = reinterpret_cast<float *>(dstMemory.GetPtr());
 
-    auto src_block_desc = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    auto src_block_desc = getParentEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
     std::vector<size_t> src_strides(src_block_desc.getStrides().size());
     for (int i = 0; i < src_strides.size(); i++) {
         src_strides[src_block_desc.getOrder()[i]] = src_block_desc.getStrides()[i];
     }
 
-    auto dst_block_desc = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>();
+    auto dst_block_desc = getChildEdgeAt(0)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>();
     std::vector<size_t> dst_strides(dst_block_desc.getStrides().size());
     for (int i = 0; i < dst_strides.size(); i++) {
         dst_strides[dst_block_desc.getOrder()[i]] = dst_block_desc.getStrides()[i];
     }
 
-    auto off_strides =  getParentEdgeAt(1)->getMemory().GetDescWithType<BlockedMemoryDesc>().getStrides();
-    auto wei_strides =  getParentEdgeAt(2)->getMemory().GetDescWithType<BlockedMemoryDesc>().getStrides();
+    auto off_strides =  getParentEdgeAt(1)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
+    auto wei_strides =  getParentEdgeAt(2)->getMemory().GetDescWithType<CpuBlockedMemoryDesc>().getStrides();
 
     if (def_conv_kernel) {
         executeOptimized(src, offsets, weights, dst, src_strides, off_strides, dst_strides);
