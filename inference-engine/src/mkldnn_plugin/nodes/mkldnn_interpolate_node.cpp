@@ -1955,11 +1955,7 @@ void MKLDNNInterpolateNode::initSupportedPrimitiveDescriptors() {
 
         // planar for 1.ref on machine without sse41(if no sse41, canFuse() is false). 2.JIT kernel for f32 && avx2(gather).(with fuse)
         if (mayiuse(cpu::x64::avx2) && inputPrec == Precision::FP32) {
-<<<<<<< HEAD
             pushDesc(LayoutType::ncsp, jit_avx2);
-=======
-            pushDesc(MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(DATA_ID)->getShape().getRank()), jit_avx2);
->>>>>>> mkutakov/feature/cpu_dynamic_plugin
         }
     }
 }

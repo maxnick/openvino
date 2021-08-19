@@ -42,8 +42,6 @@ public:
 
     static bool isSupportedDesc(const MemoryDesc &desc);
 
-    static bool isSupportedDesc(const MemoryDesc &desc);
-
 private:
     MemoryDescPtr input;
     MemoryDescPtr output;

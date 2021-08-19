@@ -37,22 +37,14 @@ public:
 
     bool hasLayoutType(LayoutType layoutType) const override;
 
-<<<<<<< HEAD
-=======
-    bool blocksExtended() const override;
-
->>>>>>> mkutakov/feature/cpu_dynamic_plugin
     bool isSame(mkldnn::memory::format_tag fmt) const override;
 
     std::string serializeFormat() const override;
 
     size_t getMaxMemSize() const override;
 
-<<<<<<< HEAD
     bool blocksExtended() const override;
 
-=======
->>>>>>> mkutakov/feature/cpu_dynamic_plugin
     size_t getPaddedElementsCount() const override;
 
 private:
@@ -79,10 +71,7 @@ private:
     friend class MemoryDescUtils;
 };
 
-<<<<<<< HEAD
 using DnnlBlockedMemoryDescPtr = std::unique_ptr<DnnlBlockedMemoryDesc>;
 using DnnlBlockedMemoryDescCPtr = std::unique_ptr<const DnnlBlockedMemoryDesc>;
 
-=======
->>>>>>> mkutakov/feature/cpu_dynamic_plugin
 } // namespace MKLDNNPlugin

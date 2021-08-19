@@ -743,7 +743,6 @@ void MKLDNNMVNNode::initSupportedPrimitiveDescriptors() {
     config.inConfs[0].inPlace = -1;
     config.outConfs[0].inPlace = canBeInplace ? 0 : -1;
     if (inputsNum == 2) {
-<<<<<<< HEAD
         config.inConfs[1].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(InferenceEngine::Precision::I32, getInputShapeAtPort(1));
         config.inConfs[1].constant = true;
     }
@@ -752,16 +751,6 @@ void MKLDNNMVNNode::initSupportedPrimitiveDescriptors() {
     auto pushDesc = [&](LayoutType format, impl_desc_type impl_type) {
         config.inConfs[0].desc = creatorsMap.at(format)->createUniqueDesc(inputPrecision, getInputShapeAtPort(0));
         config.outConfs[0].desc = creatorsMap.at(format)->createUniqueDesc(outputPrecision, getOutputShapeAtPort(0));
-=======
-        config.inConfs[1].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getParentEdgeAt(1)->getShape(), memory::data_type::s32,
-                                                               MKLDNNExtensionUtils::GetPlainFormatByRank(getParentEdgeAt(1)->getShape().getRank()));
-        config.inConfs[1].constant = true;
-    }
-
-    auto pushDesc = [&](memory::format_tag format, impl_desc_type impl_type) {
-        config.inConfs[0].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getParentEdgeAt(0)->getShape(), inputDataType, format);
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<DnnlBlockedMemoryDesc>(getParentEdgeAt(0)->getShape(), outputDataType, format);
->>>>>>> mkutakov/feature/cpu_dynamic_plugin
         supportedPrimitiveDescriptors.push_back({config, impl_type});
     };
 
