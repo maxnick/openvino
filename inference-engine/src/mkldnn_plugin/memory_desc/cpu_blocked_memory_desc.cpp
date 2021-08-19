@@ -295,17 +295,7 @@ bool CpuBlockedMemoryDesc::blocksExtended() const {
 }
 
 size_t CpuBlockedMemoryDesc::getPaddedElementsCount() const {
-    if (paddedDims.empty()) {
-        for (size_t i = 0; i < blockedDims.size(); i++) {
-            if (blockedDims[i] == Shape::UNDEFINED_DIM)
-                IE_THROW() << "Can't compute padded elements count for non undefined blocked dims";
-        }
-
-        paddedDims.resize(shape.getRank());
-        std::copy(blockedDims.begin(), blockedDims.begin() + shape.getRank(), paddedDims.begin());
-        for (size_t i = shape.getRank(); i < order.size(); i++) {
-            paddedDims[order[i]] *= blockedDims[i];
-        }
-    }
-    return std::accumulate(paddedDims.begin(), paddedDims.end(), size_t{1}, std::multiplies<size_t>());
+    if (std::any_of(blockedDims.begin(), blockedDims.end(), [](Dim dim) { return dim == Shape::UNDEFINED_DIM; }))
+        IE_THROW() << "Can't compute padded elements count for non undefined blocked dims";
+    return std::accumulate(blockedDims.begin(), blockedDims.end(), size_t{1}, std::multiplies<size_t>());
 }
