@@ -82,7 +82,8 @@ std::vector<std::string> disabledTestPatterns() {
 
 
         // #################################  DYNAMIC SHAPE ####################################
-        // R"(.*InferRequestDynamicTests.*)"
+        R"(.*InferRequestDynamicTests.*)",
+        R"(.*ExecGraphNmsTransformLastNode.*)"
 
 
 

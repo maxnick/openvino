@@ -17,7 +17,7 @@ public:
      *
      * @return blocked dimensions
      */
-    virtual const std::vector<size_t>& getBlockDims() const = 0;
+    virtual const VectorDims& getBlockDims() const = 0;
 
     /**
      * @brief Returns the vector of order

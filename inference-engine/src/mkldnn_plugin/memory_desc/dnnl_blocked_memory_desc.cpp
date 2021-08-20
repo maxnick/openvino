@@ -47,7 +47,7 @@ DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, con
  *
  *   Limitation of conversion first N elements of order should be permutation of [0,1,2 ... N]
  */
-DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
+DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const VectorDims& blockedDims,
                                                  const std::vector<size_t>& order, size_t offsetPadding, const std::vector<size_t>& offsetPaddingToData,
                                                  const std::vector<size_t>& strides) : MemoryDesc(shape, DnnlBlocked) {
     using namespace mkldnn;
@@ -197,8 +197,8 @@ DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(const Shape& shape, mkldnn::memory:
     }
 
     std::vector<size_t> perm;
-    std::vector<size_t> inner_blks;
-    std::vector<size_t> inner_idxs;
+    VectorDims inner_blks;
+    VectorDims inner_idxs;
 
     mkldnn::impl::memory_desc_wrapper::compute_blocking(mkldnn::memory::convert_to_c(format), perm, inner_blks, inner_idxs);
 
@@ -206,7 +206,7 @@ DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(const Shape& shape, mkldnn::memory:
     order.insert(order.end(), inner_idxs.begin(), inner_idxs.end());
 }
 
-const std::vector<size_t>& DnnlBlockedMemoryDesc::getBlockDims() const {
+const VectorDims& DnnlBlockedMemoryDesc::getBlockDims() const {
     if (blockedDims.empty()) {
         const auto dims = desc.dims();
 
@@ -217,13 +217,13 @@ const std::vector<size_t>& DnnlBlockedMemoryDesc::getBlockDims() const {
         const size_t total_ndims = outer_ndims + inner_ndims;
 
         // total inner block size. in case of 4i16o4i will be {16, 16, 1, 1}
-        std::vector<size_t> total_block_per_dim(outer_ndims, 1);
+        VectorDims total_block_per_dim(outer_ndims, 1);
         for (int i = 0; i < inner_ndims; i++) {
             total_block_per_dim[blk_desc.inner_idxs[i]] *= blk_desc.inner_blks[i];
         }
         // blocked dims
         // [dims via new_outer_order with auto pad] U [inner_blk_dims]
-        std::vector<size_t> outer_block_dims = MKLDNNExtensionUtils::convertToVectorDims(dims);
+        VectorDims outer_block_dims = MKLDNNExtensionUtils::convertToVectorDims(dims);
         for (size_t i = 0; i < outer_block_dims.size(); i++) {
             if (outer_block_dims[i] != Shape::UNDEFINED_DIM) {
                 outer_block_dims[i] = div_up(outer_block_dims[i], total_block_per_dim[i]);
@@ -355,11 +355,11 @@ DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(const mkldnn::memory::desc& mdesc) 
     }
 
     // total inner block size. in case of 4i16o4i will be {16, 16, 1, 1}
-    std::vector<size_t> total_block_per_dim(outer_ndims, 1);
+    VectorDims total_block_per_dim(outer_ndims, 1);
     for (int i = 0; i < inner_ndims; i++) {
         total_block_per_dim[blk_desc.inner_idxs[i]] *= blk_desc.inner_blks[i];
     }
-    std::vector<size_t> outer_block_dims(std::begin(dims), std::begin(dims) + outer_ndims);
+    VectorDims outer_block_dims(std::begin(dims), std::begin(dims) + outer_ndims);
     for (size_t i = 0; i < outer_block_dims.size(); i++) {
         outer_block_dims[i] = div_up(outer_block_dims[i], total_block_per_dim[i]);
     }
@@ -709,12 +709,12 @@ bool DnnlBlockedMemoryDesc::isSame(mkldnn::memory::format_tag fmt) const {
     std::vector<size_t> actualOrder(desc.data.ndims);
     {
         const auto dims = desc.dims();
-        std::vector<size_t> total_block_per_dim(dims.size(), 1);
+        VectorDims total_block_per_dim(dims.size(), 1);
         const auto &blk_desc = desc.data.format_desc.blocking;
         for (int i = 0; i < blk_desc.inner_nblks; i++) {
             total_block_per_dim[blk_desc.inner_idxs[i]] *= blk_desc.inner_blks[i];
         }
-        std::vector<size_t> outer_block_dims(std::begin(dims), std::begin(dims) + dims.size());
+        VectorDims outer_block_dims(std::begin(dims), std::begin(dims) + dims.size());
         for (size_t i = 0; i < outer_block_dims.size(); i++) {
             outer_block_dims[i] = div_up(outer_block_dims[i], total_block_per_dim[i]);
         }
@@ -730,12 +730,12 @@ bool DnnlBlockedMemoryDesc::isSame(mkldnn::memory::format_tag fmt) const {
     std::vector<size_t> refOrder(refDesc.data.ndims);
     {
         const auto dims = refDesc.dims();
-        std::vector<size_t> total_block_per_dim(dims.size(), 1);
+        VectorDims total_block_per_dim(dims.size(), 1);
         const auto &blk_desc = refDesc.data.format_desc.blocking;
         for (int i = 0; i < blk_desc.inner_nblks; i++) {
             total_block_per_dim[blk_desc.inner_idxs[i]] *= blk_desc.inner_blks[i];
         }
-        std::vector<size_t> outer_block_dims(std::begin(dims), std::begin(dims) + dims.size());
+        VectorDims outer_block_dims(std::begin(dims), std::begin(dims) + dims.size());
         for (size_t i = 0; i < outer_block_dims.size(); i++) {
             outer_block_dims[i] = div_up(outer_block_dims[i], total_block_per_dim[i]);
         }

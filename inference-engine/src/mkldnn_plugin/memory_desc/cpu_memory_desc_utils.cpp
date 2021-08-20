@@ -129,11 +129,11 @@ InferenceEngine::TensorDesc MemoryDescUtils::convertToTensorDesc(const MemoryDes
     }
 }
 
-std::string MemoryDescUtils::dim2str(size_t dim) {
+std::string MemoryDescUtils::dim2str(Dim dim) {
     return dim == Shape::UNDEFINED_DIM ? "?" : std::to_string(dim);
 }
 
-std::string MemoryDescUtils::dims2str(const std::vector<size_t>& dims) {
+std::string MemoryDescUtils::dims2str(const VectorDims& dims) {
     std::stringstream output;
     output << "{";
 

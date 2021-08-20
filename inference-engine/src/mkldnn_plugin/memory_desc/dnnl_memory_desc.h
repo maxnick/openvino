@@ -61,7 +61,7 @@ private:
 
     size_t getCurrentMemSizeImp() const override;
     bool isDefinedImp() const override;
-    std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
+    std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const VectorDims& dims) const override;
 
     friend DnnlMemoryDescPtr MKLDNNExtensionUtils::makeDescriptor(const mkldnn::memory::desc &desc);
 };

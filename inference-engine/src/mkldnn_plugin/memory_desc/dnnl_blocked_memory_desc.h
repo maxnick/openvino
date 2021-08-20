@@ -25,7 +25,7 @@ public:
     bool isCompatible(const DnnlBlockedMemoryDesc& rhs) const;
     bool isCompatible(const CpuBlockedMemoryDesc& rhs) const;
 
-    const std::vector<size_t>& getBlockDims() const override;
+    const VectorDims& getBlockDims() const override;
 
     const std::vector<size_t>& getOrder() const override;
 
@@ -48,13 +48,13 @@ public:
     size_t getPaddedElementsCount() const override;
 
 private:
-    DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const std::vector<size_t>& blockedDims,
+    DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const VectorDims& blockedDims,
                             const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
                             const std::vector<size_t>& strides = {});
 
     DnnlBlockedMemoryDesc(const mkldnn::memory::desc& mdesc);
 
-    std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const std::vector<size_t>& dims) const override;
+    std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const VectorDims& dims) const override;
 
     bool isPlainFormat() const;
     bool isBlockedCFormat(size_t blk_size = UNREACHABLE_DIM) const;

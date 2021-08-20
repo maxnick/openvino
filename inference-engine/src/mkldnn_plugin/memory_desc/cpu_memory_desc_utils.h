@@ -87,14 +87,14 @@ public:
      * @param dim Dim to be converted
      * @return dim as string
      */
-    static std::string dim2str(size_t dim);
+    static std::string dim2str(Dim dim);
 
     /**
      * @brief Converts dims to string, undefined dim represented as ?
      * @param dim Dims to be converted
      * @return dims as string
      */
-    static std::string dims2str(const std::vector<size_t>& dims);
+    static std::string dims2str(const VectorDims& dims);
 };
 
 }  // namespace MKLDNNPlugin
