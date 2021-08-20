@@ -183,7 +183,7 @@ void MKLDNNROIAlignNode::executeSpecified() {
     auto isBlkFmt =   srcBlockDesc->hasLayoutType(LayoutType::nCsp16c) || srcBlockDesc->hasLayoutType(LayoutType::nCsp8c);
 
     int blockSize = isBlkFmt ? srcBlockDesc->getBlockDims().back() : 1;
-    
+
     const auto *srcData = reinterpret_cast<const inputType *>(getParentEdgeAt(0)->getMemoryPtr()->GetPtr());
     const auto *srcRoi = reinterpret_cast<const float *>(getParentEdgeAt(1)->getMemoryPtr()->GetPtr());
     const auto *srcRoiIdx = reinterpret_cast<const int *>(getParentEdgeAt(2)->getMemoryPtr()->GetPtr());

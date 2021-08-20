@@ -42,7 +42,7 @@ MKLDNNPoolingNode::MKLDNNPoolingNode(const std::shared_ptr<ngraph::Node>& op, co
     if (!isSupportedOperation(op, errorMessage)) {
         IE_THROW(NotImplemented) << errorMessage;
     }
-        
+
     auto maxPoolOp = ngraph::as_type_ptr<ngraph::op::v1::MaxPool>(op);
     auto avgPoolOp = ngraph::as_type_ptr<ngraph::op::v1::AvgPool>(op);
     if (maxPoolOp) {

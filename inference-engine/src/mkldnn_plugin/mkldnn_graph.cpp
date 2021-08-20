@@ -1115,7 +1115,6 @@ void MKLDNNGraph::DropDWConvNode(const MKLDNNNodePtr &node) {
         MKLDNNEdgePtr newEdge(new MKLDNNEdge(parent, parentConv, inNum, outNum));
         graphEdges.push_back(newEdge);
         parent->addEdge(newEdge);
-        // TODO: phase 2 validate
         parentConv->inputShapes.push_back(node->getInputShapeAtPort(portCandidate));
     }
 }

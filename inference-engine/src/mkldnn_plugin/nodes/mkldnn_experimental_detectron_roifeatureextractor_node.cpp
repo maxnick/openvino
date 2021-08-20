@@ -304,7 +304,8 @@ void reorder_rois(const float *rois, const int* ids, int* mapping, const int roi
     }
 }
 
-bool MKLDNNExperimentalDetectronROIFeatureExtractorNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept {
+bool MKLDNNExperimentalDetectronROIFeatureExtractorNode::isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op,
+                                                                              std::string& errorMessage) noexcept {
     try {
         if (isDynamicNgraphNode(op)) {
             errorMessage = "Doesn't support op with dynamic shapes";

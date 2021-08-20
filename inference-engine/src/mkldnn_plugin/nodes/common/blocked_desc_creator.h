@@ -35,7 +35,7 @@ public:
     std::unique_ptr<CpuBlockedMemoryDesc> createUniqueDesc(const InferenceEngine::Precision& precision, const InferenceEngine::SizeVector& srcDims) const {
         return MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(createDesc(precision, Shape(srcDims)));
     }
-    
+
     virtual size_t getMinimalRank() const = 0;
     virtual ~BlockedDescCreator() = default;
 };
