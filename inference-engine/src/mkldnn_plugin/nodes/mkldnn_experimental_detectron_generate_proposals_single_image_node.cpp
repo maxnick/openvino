@@ -345,7 +345,7 @@ void MKLDNNExperimentalDetectronGenerateProposalsSingleImageNode::execute(mkldnn
             IE_THROW() << "'Anchors' blob size for ONNXProposal is incompatible with 'deltas' blob size!";
 
         size_t score_dims_size = 1;
-        const auto &scoreDims = getParentEdgeAt(INPUT_DELTAS)->getMemory().getStaticDims();
+        const auto &scoreDims = getParentEdgeAt(INPUT_SCORES)->getMemory().getStaticDims();
         for (size_t i = 0; i < scoreDims.size(); i++) {
             score_dims_size *= scoreDims[i];
         }
