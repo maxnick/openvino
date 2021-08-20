@@ -77,16 +77,7 @@ std::vector<std::string> disabledTestPatterns() {
         // need to implement Export / Import
         R"(.*IEClassImportExportTestP.*)",
         // azure is failing after #6199
-        R"(.*/NmsLayerTest.*)",
-
-
-
-        // #################################  DYNAMIC SHAPE ####################################
-        R"(.*InferRequestDynamicTests.*)",
-        R"(.*ExecGraphNmsTransformLastNode.*)"
-
-
-
+        R"(.*/NmsLayerTest.*)"
     };
 #ifdef __APPLE__
         // TODO: Issue 55717

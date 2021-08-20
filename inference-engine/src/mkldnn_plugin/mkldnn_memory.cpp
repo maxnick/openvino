@@ -131,7 +131,7 @@ void MKLDNNMemory::SetData(const MKLDNNMemory& src, size_t size, bool ftz) const
 
 void MKLDNNMemory::FillZero() {
     void* dataPtr = GetData();
-    memset(dataPtr, 0, GetSize());
+    memset(dataPtr, 0, getDesc().getMaxMemSize());
 }
 
 void *MKLDNNMemory::GetPtr() const  {

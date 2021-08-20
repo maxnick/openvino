@@ -539,12 +539,12 @@ BlockedMemoryDescPtr MKLDNNNode::getInputMemDescAtPort<BlockedMemoryDesc, 0, 0>(
 
 template<>
 DnnlMemoryDescPtr MKLDNNNode::getOutputMemDescAtPort<DnnlMemoryDesc, 0, 0>(size_t portNum) const {
-    return MemoryDescUtils::convertToDnnlMemoryDesc(*getBaseMemDescAtInputPort(portNum));
+    return MemoryDescUtils::convertToDnnlMemoryDesc(*getBaseMemDescAtOutputPort(portNum));
 }
 
 template<>
 BlockedMemoryDescPtr MKLDNNNode::getOutputMemDescAtPort<BlockedMemoryDesc, 0, 0>(size_t portNum) const {
-    return MemoryDescUtils::convertToBlockedMemoryDesc(*getBaseMemDescAtInputPort(portNum));
+    return MemoryDescUtils::convertToBlockedMemoryDesc(*getBaseMemDescAtOutputPort(portNum));
 }
 
 std::string MKLDNNNode::getPrimitiveDescriptorType() {

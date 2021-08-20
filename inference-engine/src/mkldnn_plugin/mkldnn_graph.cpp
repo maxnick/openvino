@@ -662,7 +662,7 @@ void MKLDNNGraph::AllocateWithReuse() {
                 // TODO: WA for some test (like strided_slice_test) which use tensors with
                 //       shapes {0}. And it is implisitly converted into {1} tensor.
                 //       Zeroing of input data allow pass tests.
-                if (edge->getParent()->type == Input)
+                if (edge->getParent()->type == Input && edge->getMemoryPtr()->getDesc().getMaxMemSize() != MemoryDesc::UNDEFINED_SIZE)
                     edge->getMemoryPtr()->FillZero();
 
                 count++;
