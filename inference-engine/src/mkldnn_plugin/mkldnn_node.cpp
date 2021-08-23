@@ -1250,7 +1250,9 @@ MKLDNNNode* MKLDNNNode::NodesFactory::create(const std::shared_ptr<ngraph::Node>
         if (ex.getStatus() != NOT_IMPLEMENTED) {
             throw;
         } else {
-            errorMessage += getExceptionDescWithoutStatus(ex);
+            const auto currErrorMess = getExceptionDescWithoutStatus(ex);
+            if (!currErrorMess.empty())
+                errorMessage += "\n" + currErrorMess;
         }
         IE_SUPPRESS_DEPRECATED_END
     }
@@ -1265,7 +1267,9 @@ MKLDNNNode* MKLDNNNode::NodesFactory::create(const std::shared_ptr<ngraph::Node>
             if (ex.getStatus() != NOT_IMPLEMENTED) {
                 throw;
             } else {
-                errorMessage += getExceptionDescWithoutStatus(ex);
+                const auto currErrorMess = getExceptionDescWithoutStatus(ex);
+                if (!currErrorMess.empty())
+                    errorMessage += "\n" + currErrorMess;
             }
             IE_SUPPRESS_DEPRECATED_END
         }
@@ -1281,7 +1285,9 @@ MKLDNNNode* MKLDNNNode::NodesFactory::create(const std::shared_ptr<ngraph::Node>
             if (ex.getStatus() != NOT_IMPLEMENTED) {
                 throw;
             } else {
-                errorMessage += getExceptionDescWithoutStatus(ex);
+                const auto currErrorMess = getExceptionDescWithoutStatus(ex);
+                if (!currErrorMess.empty())
+                    errorMessage += "\n" + currErrorMess;
             }
             IE_SUPPRESS_DEPRECATED_END
         }
@@ -1297,7 +1303,7 @@ MKLDNNNode* MKLDNNNode::NodesFactory::create(const std::shared_ptr<ngraph::Node>
     if (!newNode) {
         std::string errorDetails;
         if (!errorMessage.empty()) {
-            errorDetails = "\nDetails: \n" + errorMessage;
+            errorDetails = "\nDetails: " + errorMessage;
         }
         IE_THROW() << "Unsupported operation of type: " << op->get_type_name() << " name: " << op->get_friendly_name() << errorDetails;
     }
