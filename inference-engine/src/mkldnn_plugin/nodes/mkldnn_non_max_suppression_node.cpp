@@ -12,6 +12,7 @@
 #include "mkldnn_non_max_suppression_node.h"
 #include "ie_parallel.hpp"
 #include <ngraph/opsets/opset5.hpp>
+#include <ngraph_ops/nms_ie_internal.hpp>
 #include "utils/general_utils.h"
 
 using namespace MKLDNNPlugin;
@@ -23,14 +24,23 @@ bool MKLDNNNonMaxSuppressionNode::isSupportedOperation(const std::shared_ptr<con
             errorMessage = "Doesn't support op with dynamic input shapes";
             return false;
         }
-        const auto nms = std::dynamic_pointer_cast<const ngraph::op::v5::NonMaxSuppression>(op);
-        if (!nms) {
-            errorMessage = "Only NonMaxSuppression v5 is supported";
+
+        using NonMaxSuppressionV5 = ngraph::op::v5::NonMaxSuppression;
+        if (!one_of(op->get_type_info(), NonMaxSuppressionV5::type_info, ngraph::op::internal::NonMaxSuppressionIEInternal::type_info)) {
+            errorMessage = "Only NonMaxSuppression v5 and NonMaxSuppressionIEInternal are supported";
             return false;
         }
         if (op->get_input_size() > 2 && !dynamic_cast<ngraph::op::v0::Constant *>(op->get_input_node_ptr(2))) {
-            errorMessage = "Doesn't support NonMaxSuppression v5 with undefined max_output_boxes_per_class";
+            errorMessage = "Doesn't support NonMaxSuppression with undefined max_output_boxes_per_class";
             return false;
+        }
+
+        if (const auto nms5 = std::dynamic_pointer_cast<const NonMaxSuppressionV5>(op)) {
+            const auto boxEncoding = nms5->get_box_encoding();
+            if (!one_of(boxEncoding, NonMaxSuppressionV5::BoxEncodingType::CENTER, NonMaxSuppressionV5::BoxEncodingType::CORNER)) {
+                errorMessage = "Supports only CENTER and CORNER box encoding type";
+                return false;
+            }
         }
     } catch (...) {
         return false;
@@ -46,7 +56,6 @@ MKLDNNNonMaxSuppressionNode::MKLDNNNonMaxSuppressionNode(const std::shared_ptr<n
         }
 
         errorPrefix = "NMS layer with name '" + op->get_friendly_name() + "' ";
-        const auto nms = std::dynamic_pointer_cast<const ngraph::op::v5::NonMaxSuppression>(op);
 
         if (getOriginalInputsNumber() < 2 || getOriginalInputsNumber() > 6)
             IE_THROW() << errorPrefix << "has incorrect number of input edges: " << getOriginalInputsNumber();
@@ -54,9 +63,16 @@ MKLDNNNonMaxSuppressionNode::MKLDNNNonMaxSuppressionNode(const std::shared_ptr<n
         if (getOriginalOutputsNumber() != 3)
             IE_THROW() << errorPrefix << "has incorrect number of output edges: " << getOriginalOutputsNumber();
 
-        boxEncodingType = static_cast<boxEncoding>(nms->get_box_encoding());
-
-        sort_result_descending = nms->get_sort_result_descending();
+        if (const auto nms5 = std::dynamic_pointer_cast<const ngraph::op::v5::NonMaxSuppression>(op)) {
+            boxEncodingType = static_cast<boxEncoding>(nms5->get_box_encoding());
+            sort_result_descending = nms5->get_sort_result_descending();
+        } else if (const auto nmsIe = std::dynamic_pointer_cast<const ngraph::op::internal::NonMaxSuppressionIEInternal>(op)) {
+            boxEncodingType = nmsIe->m_center_point_box ? boxEncoding::CENTER : boxEncoding::CORNER;
+            sort_result_descending = nmsIe->m_sort_result_descending;
+        } else {
+            const auto &typeInfo = op->get_type_info();
+            IE_THROW() << errorPrefix << " doesn't support NMS: " << typeInfo.name << " v" << typeInfo.version;
+        }
 
         const auto &boxes_dims = getInputShapeAtPort(NMS_BOXES).getStaticDims();
         num_batches = boxes_dims[0];
@@ -138,6 +154,10 @@ void MKLDNNNonMaxSuppressionNode::execute(mkldnn::stream strm) {
         max_output_boxes_per_class = reinterpret_cast<int *>(getParentEdgeAt(NMS_MAXOUTPUTBOXESPERCLASS)->getMemoryPtr()->GetPtr())[0];
     }
 
+    if (!isDynamicNode()) {
+        max_output_boxes_per_class = std::min(max_output_boxes_per_class, num_boxes);
+    }
+
     if (max_output_boxes_per_class == 0)
         return;
 
@@ -194,17 +214,20 @@ void MKLDNNNonMaxSuppressionNode::execute(mkldnn::stream strm) {
     auto indicesMemPtr = getChildEdgesAtPort(NMS_SELECTEDINDICES)[0]->getMemoryPtr();
     auto scoresMemPtr =  getChildEdgesAtPort(NMS_SELECTEDSCORES)[0]->getMemoryPtr();
     const size_t validOutputs = std::min(filtBoxes.size(), maxNumberOfBoxes);
-    VectorDims newDims{validOutputs, 3};
 
-    indicesMemPtr->redefineDesc(getOutputMemDescAtPort<BlockedMemoryDesc>(NMS_SELECTEDINDICES)->cloneWithNewDims(newDims));
-    scoresMemPtr->redefineDesc(getOutputMemDescAtPort<BlockedMemoryDesc>(NMS_SELECTEDSCORES)->cloneWithNewDims(newDims));
+    if (isDynamicNode()) {
+        VectorDims newDims{validOutputs, 3};
+        indicesMemPtr->redefineDesc(getOutputMemDescAtPort<BlockedMemoryDesc>(NMS_SELECTEDINDICES)->cloneWithNewDims(newDims));
+        scoresMemPtr->redefineDesc(getOutputMemDescAtPort<BlockedMemoryDesc>(NMS_SELECTEDSCORES)->cloneWithNewDims(newDims));
+    }
 
     int selectedIndicesStride = indicesMemPtr->GetDescWithType<BlockedMemoryDesc>()->getStrides()[0];
 
     int *selectedIndicesPtr = reinterpret_cast<int *>(indicesMemPtr->GetPtr());
     float *selectedScoresPtr = reinterpret_cast<float *>(scoresMemPtr->GetPtr());
 
-    for (size_t idx = 0lu; idx < validOutputs; idx++) {
+    size_t idx = 0lu;
+    for (; idx < validOutputs; idx++) {
         selectedIndicesPtr[0] = filtBoxes[idx].batch_index;
         selectedIndicesPtr[1] = filtBoxes[idx].class_index;
         selectedIndicesPtr[2] = filtBoxes[idx].box_index;
@@ -214,6 +237,11 @@ void MKLDNNNonMaxSuppressionNode::execute(mkldnn::stream strm) {
         selectedScoresPtr[1] = static_cast<float>(filtBoxes[idx].class_index);
         selectedScoresPtr[2] = static_cast<float>(filtBoxes[idx].score);
         selectedScoresPtr += selectedIndicesStride;
+    }
+
+    if (!isDynamicNode()) {
+        std::fill(selectedIndicesPtr, selectedIndicesPtr + (maxNumberOfBoxes - idx) * selectedIndicesStride, -1);
+        std::fill(selectedScoresPtr, selectedScoresPtr + (maxNumberOfBoxes - idx) * selectedIndicesStride, -1.f);
     }
 
     int *valid_outputs = reinterpret_cast<int *>(getChildEdgesAtPort(NMS_VALIDOUTPUTS)[0]->getMemoryPtr()->GetPtr());
