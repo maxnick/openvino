@@ -1118,6 +1118,7 @@ void MKLDNNGraph::DropDWConvNode(const MKLDNNNodePtr &node) {
         parent->addEdge(newEdge);
         parentConv->inputShapes.push_back(node->getInputShapeAtPort(portCandidate));
     }
+    parentConv->outputShapes[0] = node->getOutputShapeAtPort(0);
 }
 
 void MKLDNNGraph::RemoveDroppedNodes() {
