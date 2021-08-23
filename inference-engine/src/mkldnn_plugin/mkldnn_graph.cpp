@@ -779,8 +779,6 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
         if (ext_blob_ptr == intr_blob_ptr) continue;
 
         const auto &outDims = intr_blob.getStaticDims();
-        int MB = outDims[0];
-        int MB_to_process = MB;
         size_t size_to_copy = intr_blob.GetDescWithType<BlockedMemoryDesc>()->getPaddedElementsCount();
         // TODO: Should we support InferenceEngine::PluginConfigParams::KEY_DYN_BATCH_LIMIT???
         // TODO [DS]: phase 2: should we support this behaviour? Looks obsolete in the dynamic shapes paradigm
@@ -788,8 +786,8 @@ void MKLDNNGraph::PullOutputData(BlobMap &out) {
             if (node->isDynamicNode()) {
                 IE_THROW(NotImplemented) << "[DS] not implemented dynamic batch for node with dynamic shape";
             }
-            MB_to_process = node->batchToProcess();
-            size_to_copy = size_to_copy / std::accumulate(outDims.begin() + 1, outDims.end(), (size_t)1, std::multiplies<size_t>()) * MB_to_process;
+            int MB_to_process = node->batchToProcess();
+            size_to_copy = std::accumulate(outDims.begin() + 1, outDims.end(), (size_t)1, std::multiplies<size_t>()) * MB_to_process;
         }
 
         const auto actualDesc = MemoryDescUtils::convertToTensorDesc(node->getParentEdgeAt(0)->getMemory().getDesc());
