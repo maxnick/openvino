@@ -84,8 +84,8 @@ void MKLDNNReorderNode::createPrimitive() {
         if (MKLDNNPlugin::one_of(inDims.size(), 4, 5) &&
                 inDims[1] <= 64 &&
                 inDims[1] >= 16 &&
-                (parentMem.getDesc().hasLayoutType(LayoutType::nspc) &&
-                parentMem.GetDescWithType<BlockedMemoryDesc>()->getPaddedElementsCount() / inDims[1]) >= 128 &&
+                parentMem.getDesc().hasLayoutType(LayoutType::nspc) &&
+                (parentMem.GetDescWithType<BlockedMemoryDesc>()->getPaddedElementsCount() / inDims[1]) >= 128 &&
                 getChildEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::ncsp) &&
                 parentMem.getDesc().getPrecision() == Precision::FP32 &&
                 getChildEdgeAt(0)->getMemory().getDesc().getPrecision() == Precision::FP32) {
