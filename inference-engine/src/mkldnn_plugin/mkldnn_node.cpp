@@ -874,7 +874,7 @@ void MKLDNNNode::prepareMemory(const NodeDesc *selected_pd, mkldnn::primitive_de
             IE_THROW() << "Destination memory didn't allocate for node " << getName()
                                << " from node " << getParentEdgeAt(i)->getParent()->getName() << ".";
     }
-    std::vector<DnnlMemoryDesc> intDescs;
+    std::vector<DnnlMemoryDescPtr> intDescs;
     for (auto &it : internalBlobDesc)
         intDescs.push_back(it(itpd, 0));
 
@@ -890,7 +890,7 @@ void MKLDNNNode::prepareMemory(const NodeDesc *selected_pd, mkldnn::primitive_de
             memory.Create(newDesc, internalBlob->buffer());
 
             MKLDNNMemoryPtr _ptr = MKLDNNMemoryPtr(new MKLDNNMemory(engine));
-            _ptr->Create(intDescs[i]);
+            _ptr->Create(*intDescs[i]);
             _ptr->SetData(memory);
 
             return _ptr;

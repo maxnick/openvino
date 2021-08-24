@@ -48,8 +48,8 @@ bool MKLDNNDeconvolutionNode::isSupportedOperation(const std::shared_ptr<const n
 
 MKLDNNDeconvolutionNode::MKLDNNDeconvolutionNode(const std::shared_ptr<ngraph::Node>& op,
                                                  const mkldnn::engine& eng, MKLDNNWeightsSharing::Ptr &cache) : MKLDNNNode(op, eng, cache) {
-    internalBlobDesc.emplace_back([&](primitive_desc_iterator &primitive_desc_it, size_t idx) -> DnnlMemoryDesc {
-        return *MKLDNNExtensionUtils::makeDescriptor(primitive_desc_it.weights_desc(0));
+    internalBlobDesc.emplace_back([&](primitive_desc_iterator &primitive_desc_it, size_t idx) -> DnnlMemoryDescPtr {
+        return MKLDNNExtensionUtils::makeDescriptor(primitive_desc_it.weights_desc(0));
     });
     std::string errorMessage;
     if (isSupportedOperation(op, errorMessage)) {
