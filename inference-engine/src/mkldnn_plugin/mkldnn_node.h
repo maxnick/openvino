@@ -664,10 +664,23 @@ public:
         originalOutputPrecisions.push_back(precision);
     }
 
+    // TODO: alighn behaviour for original(Input/Output)Precisions and (input/output)Shapes
+    /**
+     * @brief Returns inputs number which have ngraph nodes.
+     * Inputs number compute as size of originalInputPrecisions vector
+     * IMPORTANT!!!
+     * FuseConvolutionAndBias and FuseMultiplyAndAdd change originalInputPrecisions vector
+     * @return original inputs number
+     */
     size_t getOriginalInputsNumber() const {
         return originalInputPrecisions.size();
     }
 
+    /**
+     * @brief Returns outputs number which have ngraph nodes.
+     * Outputs number compute as size of originalOutputPrecisions vector
+     * @return original outputs number
+     */
     size_t getOriginalOutputsNumber() const {
         return originalOutputPrecisions.size();
     }

@@ -100,7 +100,7 @@ void MKLDNNConvertNode::initSupportedPrimitiveDescriptors() {
         dataConfigOut.desc->setPrecision(output->getPrecision());
         config.outConfs.push_back(dataConfigOut);
         supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::unknown);
-    } else if (getOriginalInputsNumber() == 1 && getOriginalOutputsNumber() == 1) {
+    } else if (inputShapes.size() == 1 && outputShapes.size() == 1) {
         const Shape& insShape = getInputShapeAtPort(0);
         auto insPrecision = getOriginalInputPrecisionAtPort(0);
         const Shape& outputShape = getOutputShapeAtPort(0);

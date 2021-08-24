@@ -468,7 +468,7 @@ bool MKLDNNNode::canBeInPlace() const {
     }
 
     auto inShape = getInputShapeAtPort(0);
-    for (size_t cIdx = 0; cIdx < getOriginalOutputsNumber(); cIdx++) {
+    for (size_t cIdx = 0; cIdx < outputShapes.size(); cIdx++) {
         if (getOutputShapeAtPort(cIdx) != inShape) {
             return false;
         }
@@ -694,10 +694,10 @@ void MKLDNNNode::executeDynamicImpl(mkldnn::stream strm) {
 }
 
 void MKLDNNNode::redefineOutputMemory(const std::vector<VectorDims> &newShapes) {
-    if (newShapes.size() != getOriginalOutputsNumber()) {
+    if (newShapes.size() != outputShapes.size()) {
         IE_THROW() << "Number shapes mismatch with real outputs number for node with name: " << getName();
     }
-    for (size_t i = 0; i < getOriginalOutputsNumber(); i++) {
+    for (size_t i = 0; i < outputShapes.size(); i++) {
         getChildEdgesAtPort(i)[0]->getMemoryPtr()->redefineDesc(getBaseMemDescAtOutputPort(i)->cloneWithNewDims(newShapes[i]));
     }
 }

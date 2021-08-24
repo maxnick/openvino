@@ -257,8 +257,8 @@ void MKLDNNExperimentalDetectronDetectionOutputNode::initSupportedPrimitiveDescr
         return;
 
     std::vector<PortConfigurator> inDataConf;
-    inDataConf.reserve(getOriginalInputsNumber());
-    for (int i = 0; i < getOriginalInputsNumber(); ++i)
+    inDataConf.reserve(inputShapes.size());
+    for (int i = 0; i < inputShapes.size(); ++i)
         inDataConf.emplace_back(LayoutType::ncsp, Precision::FP32);
 
     addSupportedPrimDesc(inDataConf,

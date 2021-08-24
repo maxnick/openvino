@@ -117,28 +117,28 @@ void MKLDNNNonMaxSuppressionNode::initSupportedPrimitiveDescriptors() {
     const std::vector<Precision> supportedPrecision = {Precision::I16, Precision::U8, Precision::I8, Precision::U16, Precision::I32,
                                                        Precision::U32, Precision::I64, Precision::U64};
 
-    if (getOriginalInputsNumber() > NMS_MAXOUTPUTBOXESPERCLASS)
+    if (inputShapes.size() > NMS_MAXOUTPUTBOXESPERCLASS)
         check1DInput(getInputShapeAtPort(NMS_MAXOUTPUTBOXESPERCLASS), supportedPrecision, "max_output_boxes_per_class", NMS_MAXOUTPUTBOXESPERCLASS);
-    if (getOriginalInputsNumber() > NMS_IOUTHRESHOLD)
+    if (inputShapes.size() > NMS_IOUTHRESHOLD)
         check1DInput(getInputShapeAtPort(NMS_IOUTHRESHOLD), supportedFloatPrecision, "iou_threshold", NMS_IOUTHRESHOLD);
-    if (getOriginalInputsNumber() > NMS_SCORETHRESHOLD)
+    if (inputShapes.size() > NMS_SCORETHRESHOLD)
         check1DInput(getInputShapeAtPort(NMS_SCORETHRESHOLD), supportedFloatPrecision, "score_threshold", NMS_SCORETHRESHOLD);
-    if (getOriginalInputsNumber() > NMS_SOFTNMSSIGMA)
+    if (inputShapes.size() > NMS_SOFTNMSSIGMA)
         check1DInput(getInputShapeAtPort(NMS_SCORETHRESHOLD), supportedFloatPrecision, "soft_nms_sigma", NMS_SCORETHRESHOLD);
 
     checkOutput(getOutputShapeAtPort(NMS_SELECTEDINDICES), supportedIntOutputPrecision, "selected_indices", NMS_SELECTEDINDICES);
     checkOutput(getOutputShapeAtPort(NMS_SELECTEDSCORES), supportedFloatPrecision, "selected_scores", NMS_SELECTEDSCORES);
 
     std::vector<PortConfigurator> inDataConf;
-    inDataConf.reserve(getOriginalInputsNumber());
-    for (int i = 0; i < getOriginalInputsNumber(); ++i) {
+    inDataConf.reserve(inputShapes.size());
+    for (int i = 0; i < inputShapes.size(); ++i) {
         Precision inPrecision = i == NMS_MAXOUTPUTBOXESPERCLASS ? Precision::I32 : Precision::FP32;
         inDataConf.emplace_back(LayoutType::ncsp, inPrecision);
     }
 
     std::vector<PortConfigurator> outDataConf;
-    outDataConf.reserve(getOriginalOutputsNumber());
-    for (int i = 0; i < getOriginalOutputsNumber(); ++i) {
+    outDataConf.reserve(outputShapes.size());
+    for (int i = 0; i < outputShapes.size(); ++i) {
         Precision outPrecision = i == NMS_SELECTEDSCORES ? Precision::FP32 : Precision::I32;
         outDataConf.emplace_back(LayoutType::ncsp, outPrecision);
     }

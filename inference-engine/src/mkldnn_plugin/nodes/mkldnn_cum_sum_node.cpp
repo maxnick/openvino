@@ -75,16 +75,16 @@ void MKLDNNCumSumNode::initSupportedPrimitiveDescriptors() {
         dataPrecision != Precision::FP32 && dataPrecision != Precision::I64 && dataPrecision != Precision::U64 && dataPrecision != Precision::BF16)
         IE_THROW() << errorPrefix << " has unsupported 'data' input precision: " << dataPrecision.name();
 
-    if (getOriginalInputsNumber() == numOfInputs) {
+    if (inputShapes.size() == numOfInputs) {
         const auto &axisTensorPrec = getOriginalInputPrecisionAtPort(AXIS);
         if (axisTensorPrec != Precision::I32 && axisTensorPrec != Precision::I64)
             IE_THROW() << errorPrefix << " has unsupported 'axis' input precision: " << axisTensorPrec.name();
     }
 
     std::vector<PortConfigurator> inDataConf;
-    inDataConf.reserve(getOriginalInputsNumber());
+    inDataConf.reserve(inputShapes.size());
     inDataConf.emplace_back(LayoutType::ncsp, dataPrecision);
-    for (int i = 1; i < getOriginalInputsNumber(); ++i)
+    for (int i = 1; i < inputShapes.size(); ++i)
         inDataConf.emplace_back(LayoutType::ncsp, Precision::I32);
 
     addSupportedPrimDesc(inDataConf,

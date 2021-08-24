@@ -91,7 +91,7 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
     auto& originInputPrecisions = getOriginalInputPrecisions();
     inputPrecision = originInputPrecisions[0];
     bool isMixedPrecision = false;
-    for (int i = 1; i < getOriginalInputsNumber(); i++) {
+    for (int i = 1; i < inputShapes.size(); i++) {
         if (originInputPrecisions[0] != originInputPrecisions[i]) {
             isMixedPrecision = true;
             break;

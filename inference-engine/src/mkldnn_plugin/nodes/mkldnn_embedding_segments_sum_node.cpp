@@ -70,9 +70,9 @@ void MKLDNNEmbeddingSegmentsSumNode::initSupportedPrimitiveDescriptors() {
                                                        {LayoutType::ncsp, Precision::I32},
                                                        {LayoutType::ncsp, Precision::I32},
                                                        {LayoutType::ncsp, Precision::I32}});
-    if (getOriginalInputsNumber() > DEFAULT_INDEX_IDX)
+    if (inputShapes.size() > DEFAULT_INDEX_IDX)
         inDataConfigurators.push_back({LayoutType::ncsp, Precision::I32});
-    if (getOriginalInputsNumber() > PER_SAMPLE_WEIGHTS_IDX)
+    if (inputShapes.size() > PER_SAMPLE_WEIGHTS_IDX)
         inDataConfigurators.push_back({LayoutType::ncsp, inDataPrecision});
 
     addSupportedPrimDesc(inDataConfigurators, {{LayoutType::ncsp, inDataPrecision}}, impl_desc_type::ref_any);

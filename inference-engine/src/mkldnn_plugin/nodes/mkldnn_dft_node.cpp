@@ -90,7 +90,7 @@ void MKLDNNDFTNode::initSupportedPrimitiveDescriptors() {
         IE_THROW() << layerErrorPrefix << " has unsupported 'axes' input precision: " << axesPrecision.name();
     }
 
-    if (getOriginalInputsNumber() > SIGNAL_SIZE_INDEX) {
+    if (inputShapes.size() > SIGNAL_SIZE_INDEX) {
         const auto& signalSizeTensorPrec = getOriginalInputPrecisionAtPort(SIGNAL_SIZE_INDEX);
         if (signalSizeTensorPrec != Precision::I32 && signalSizeTensorPrec != Precision::I64) {
             IE_THROW() << layerErrorPrefix << " has unsupported 'signal_size' input precision: " << signalSizeTensorPrec.name();
@@ -99,7 +99,7 @@ void MKLDNNDFTNode::initSupportedPrimitiveDescriptors() {
 
     std::vector<PortConfigurator> inDataConfigurators({{LayoutType::ncsp, Precision::FP32},
                                                        {LayoutType::ncsp, Precision::I32}});
-    if (getOriginalInputsNumber() > SIGNAL_SIZE_INDEX)
+    if (inputShapes.size() > SIGNAL_SIZE_INDEX)
         inDataConfigurators.push_back({LayoutType::ncsp,  Precision::I32});
 
     addSupportedPrimDesc(inDataConfigurators, {{LayoutType::ncsp, Precision::FP32}}, impl_desc_type::ref_any);
