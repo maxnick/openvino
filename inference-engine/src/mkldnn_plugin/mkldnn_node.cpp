@@ -685,12 +685,9 @@ void MKLDNNNode::execute(mkldnn::stream strm) {
 
 void MKLDNNNode::executeDynamic(mkldnn::stream strm) {
     const auto newShapes = shapeInfer();
-    redefineOutputMemory(newShapes);
+    if (!newShapes.empty())
+        redefineOutputMemory(newShapes);
     executeDynamicImpl(strm);
-}
-
-void MKLDNNNode::executeDynamicImpl(mkldnn::stream strm) {
-    IE_THROW() << "[DS] executeDynamicImpl not implemented for node with type: " << getTypeStr();
 }
 
 void MKLDNNNode::redefineOutputMemory(const std::vector<VectorDims> &newShapes) {

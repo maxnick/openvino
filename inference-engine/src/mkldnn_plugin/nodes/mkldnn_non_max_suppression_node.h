@@ -53,7 +53,7 @@ public:
     void executeDynamicImpl(mkldnn::stream strm) override { execute(strm); }
 
     std::vector<VectorDims> shapeInfer() const override {
-        return std::vector<VectorDims>{{1, 3}, {1, 3}, getOutputShapeAtPort(NMS_VALIDOUTPUTS).getStaticDims()};
+        return std::vector<VectorDims>();
     }
 
 private:

@@ -508,7 +508,8 @@ public:
     void resolveInPlaceEdges();
 
     virtual void execute(mkldnn::stream strm);
-    virtual void executeDynamic(mkldnn::stream strm);
+    void executeDynamic(mkldnn::stream strm);
+    void redefineOutputMemory(const std::vector<VectorDims> &newShapes);
 
     virtual void initSupportedPrimitiveDescriptors();
 
@@ -532,8 +533,6 @@ public:
     virtual bool created(const MKLDNNExtensionManager::Ptr& extMgr) {
         return created();
     }
-
-    void redefineOutputMemory(const std::vector<VectorDims> &newShapes);
 
     /**
      * @brief Performs Node initialization based on graph context.
@@ -722,10 +721,13 @@ public:
     }
 
 protected:
-    virtual std::vector<std::vector<size_t>> shapeInfer() const {
-        IE_THROW(NotImplemented) << "MKLDNNNode::shapeInfer is not defined for node with type: " << getTypeStr();
+    // TODO [DS] : make pure after all nodes will be support dynamic shapes
+    virtual std::vector<VectorDims> shapeInfer() const {
+        IE_THROW(NotImplemented) << "[DS] MKLDNNNode::shapeInfer is not defined for node with type: " << getTypeStr();
     }
-    virtual void executeDynamicImpl(mkldnn::stream strm);
+    virtual void executeDynamicImpl(mkldnn::stream strm) {
+        IE_THROW(NotImplemented) << "[DS] executeDynamicImpl not implemented for node with type: " << getTypeStr();
+    }
 
     bool canFuseSimpleOperation(const MKLDNNNodePtr& node) const;
     // TODO [mandrono]: place outside of the node API
