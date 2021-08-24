@@ -31,14 +31,14 @@ public:
      * @param desc MemoryDesc to be converted
      * @return converted DnnlBockedMemoryDesc
      */
-    static std::unique_ptr<DnnlBlockedMemoryDesc> convertToDnnlBlockedMemoryDesc(const MemoryDesc& desc);
+    static DnnlBlockedMemoryDesc convertToDnnlBlockedMemoryDesc(const MemoryDesc& desc);
 
     /**
      * @brief Converts InferenceEngine::TensorDesc to DnnlBlockedMemoryDesc
      * @param desc InferenceEngine::TensorDesc to be converted
      * @return converted DnnlBlockedMemoryDesc
      */
-    static std::unique_ptr<DnnlBlockedMemoryDesc> convertToDnnlBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc);
+    static DnnlBlockedMemoryDesc convertToDnnlBlockedMemoryDesc(const InferenceEngine::TensorDesc& desc);
 
     /**
      * @brief Converts MemoryDesc to BlockedMemoryDesc
@@ -59,7 +59,7 @@ public:
      * @param desc is the MemoryDesc to be cloned
      * @return pointer to the new MemoryDesc
      */
-    static std::unique_ptr<MemoryDesc> cloneWithDefaultStridesAndOffset(const MemoryDesc* desc);
+    static std::unique_ptr<MemoryDesc> cloneWithDefaultStridesAndOffset(const MemoryDesc& desc);
 
     /**
      * @brief Creates InferenceEngine::Blob from MemoryDesc

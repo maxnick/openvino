@@ -144,8 +144,8 @@ void MKLDNNDepthToSpaceNode::initSupportedPrimitiveDescriptors() {
     auto range = BlockedDescCreator::makeFilteredRange(creators, nDims, supportedTypes);
 
     for (auto itr = range.first; itr != range.second; ++itr) {
-        config.inConfs[0].desc = itr->second->createUniqueDesc(precision, getInputShapeAtPort(0).getStaticDims());
-        config.outConfs[0].desc = itr->second->createUniqueDesc(precision, getOutputShapeAtPort(0).getStaticDims());
+        config.inConfs[0].desc = itr->second->createUniqueDesc(precision, getInputShapeAtPort(0));
+        config.outConfs[0].desc = itr->second->createUniqueDesc(precision, getOutputShapeAtPort(0));
         supportedPrimitiveDescriptors.emplace_back(config, impl_type);
     }
 }
@@ -161,7 +161,6 @@ void MKLDNNDepthToSpaceNode::createPrimitive() {
         THROW_ERROR << "has unidentified preferable primitive descriptor";
 
     VectorDims srcDims = srcMemPtr->getStaticDims();
-    VectorDims dstDims = dstMemPtr->getStaticDims();
 
     size_t nDims = srcDims.size();
     const size_t nSpatialDims = nDims - 2;
@@ -198,8 +197,7 @@ void MKLDNNDepthToSpaceNode::createPrimitive() {
     };
 
     if (isBlocked) {
-        SizeVector srcBlockedDims = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getBlockDims();
-        SizeVector dstBlockedDims = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getBlockDims();
+        VectorDims srcBlockedDims = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getBlockDims();
 
         size_t orderShiftForBlocks, orderShiftForDims;
         if (mode == Mode::BLOCKS_FIRST) {
@@ -230,9 +228,7 @@ void MKLDNNDepthToSpaceNode::createPrimitive() {
         reshapeAndSetPermOrder(orderShiftForDims, orderShiftForBlocks, firstSpatialOrder, srcBlockedDims);
     } else if (getParentEdgeAt(0)->getMemory().getDesc().hasLayoutType(LayoutType::nspc)) {
         srcDims.push_back(srcDims[1]);
-        dstDims.push_back(dstDims[1]);
         srcDims.erase(srcDims.begin() + 1);
-        dstDims.erase(dstDims.begin() + 1);
         firstSpatialOrder = 1;
 
         size_t shift = static_cast<size_t>(mode == DEPTH_FIRST) + nSpatialDims + 1;

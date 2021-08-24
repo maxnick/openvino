@@ -81,7 +81,6 @@ private:
 
     bool useExternalMemory = false;
     MKLDNNEdgeWeakPtr memoryFromEdge;
-    Shape shape;
     MKLDNNMemoryPtr memoryPtr;
     Status status = Status::Uninitialized;
 

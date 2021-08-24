@@ -105,13 +105,13 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
     // Concat supports only equal precisions for inputs and output
     outputPrecision = inputPrecision;
 
-    const auto& dstDims = getOutputShapeAtPort(0).getStaticDims();
+    const auto& dstShape = getOutputShapeAtPort(0);
     std::vector<LayoutType> tdCreatorTypes = {LayoutType::ncsp, LayoutType::nspc};
 
     // check if blocked layouts are available the channels size should be evenly divided by the block size to avoid slow oneDNN ref implementation
-    if (dstDims.size() > channelAxis) {
+    if (dstShape.getRank() > channelAxis) {
         for (auto item : { std::make_pair(8lu, LayoutType::nCsp8c), std::make_pair(16lu, LayoutType::nCsp16c)}) {
-            SizeVector blkDims = dstDims;
+            const VectorDims &blkDims = dstShape.getStaticDims();
             if (blkDims[channelAxis] % item.first)
                 continue;
 
@@ -133,7 +133,7 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
 
     auto& creatorsMap = BlockedDescCreator::getCommonCreators();
 
-    auto itrRange = BlockedDescCreator::makeFilteredRange(creatorsMap, static_cast<unsigned>(dstDims.size()), tdCreatorTypes);
+    auto itrRange = BlockedDescCreator::makeFilteredRange(creatorsMap, static_cast<unsigned>(dstShape.getRank()), tdCreatorTypes);
     for (auto itr = itrRange.first; itr != itrRange.second; ++itr) {
         NodeConfig config;
 
@@ -141,7 +141,7 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
         config.outConfs.resize(1);
         config.outConfs[0].inPlace = -1;
         config.outConfs[0].constant = false;
-        config.outConfs[0].desc = itr->second->createUniqueDesc(outputPrecision, dstDims);
+        config.outConfs[0].desc = itr->second->createUniqueDesc(outputPrecision, dstShape);
 
         config.inConfs.resize(getParentEdges().size());
 
@@ -182,7 +182,7 @@ void MKLDNNConcatNode::initSupportedPrimitiveDescriptors() {
             }
         }
 
-        config.outConfs[0].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(outputPrecision, Shape(dstDims), blkDims, order, offset, offsets, strides);
+        config.outConfs[0].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(outputPrecision, dstShape, blkDims, order, offset, offsets, strides);
 
         for (size_t i = 0; i < getParentEdges().size(); i++) {
             const auto& srcBlkDims = refConfig.inConfs[i].desc->as<CpuBlockedMemoryDesc>()->getBlockDims();
@@ -430,7 +430,7 @@ void MKLDNNConcatNode::initOptimalPrimitiveDescriptor() {
         }
 
         // reset undefined offsets
-        config.outConfs[i].desc = MemoryDescUtils::cloneWithDefaultStridesAndOffset(config.outConfs[i].desc.get());
+        config.outConfs[i].desc = MemoryDescUtils::cloneWithDefaultStridesAndOffset(*config.outConfs[i].desc);
     }
     auto firstOutBlockingDesc = config.outConfs[0].desc->as<BlockedMemoryDesc>();
     size_t offset = 0;

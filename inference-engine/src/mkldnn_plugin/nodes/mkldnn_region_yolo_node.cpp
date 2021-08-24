@@ -371,7 +371,7 @@ inline void MKLDNNRegionYoloNode::calculate_logistic(size_t start_index, int cou
 }
 
 void MKLDNNRegionYoloNode::execute(mkldnn::stream strm) {
-    const auto inShape = getParentEdgeAt(0)->getMemory().GetShape();
+    const auto &inShape = getParentEdgeAt(0)->getMemory().GetShape();
     const auto &inDims = inShape.getStaticDims();
     size_t B =  (inShape.getRank() > 0) ? inDims[0] : 1;
     size_t IC = (inShape.getRank() > 1) ? inDims[1] : 1;

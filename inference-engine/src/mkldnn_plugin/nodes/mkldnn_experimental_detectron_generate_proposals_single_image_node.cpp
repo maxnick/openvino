@@ -331,9 +331,9 @@ void MKLDNNExperimentalDetectronGenerateProposalsSingleImageNode::execute(mkldnn
         }
 
         size_t anchor_dims_size = 1;
-        const auto &anchDims = getParentEdgeAt(INPUT_ANCHORS)->getMemory().getStaticDims();
-        for (size_t i = 0; i < anchDims.size(); i++) {
-            anchor_dims_size *= anchDims[i];
+        const auto &anchorDims = getParentEdgeAt(INPUT_ANCHORS)->getMemory().getStaticDims();
+        for (size_t i = 0; i < anchorDims.size(); i++) {
+            anchor_dims_size *= anchorDims[i];
         }
 
         size_t deltas_dims_size = 1;

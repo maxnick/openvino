@@ -27,13 +27,13 @@ public:
 
     const VectorDims& getBlockDims() const override;
 
-    const std::vector<size_t>& getOrder() const override;
+    const VectorDims& getOrder() const override;
 
-    const std::vector<size_t>& getOffsetPaddingToData() const override;
+    const VectorDims& getOffsetPaddingToData() const override;
 
     size_t getOffsetPadding() const override;
 
-    const std::vector<size_t>& getStrides() const override;
+    const VectorDims& getStrides() const override;
 
     bool hasLayoutType(LayoutType layoutType) const override;
 
@@ -49,12 +49,12 @@ public:
 
 private:
     DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const VectorDims& blockedDims,
-                            const std::vector<size_t>& order, size_t offsetPadding = 0, const std::vector<size_t>& offsetPaddingToData = {},
-                            const std::vector<size_t>& strides = {});
+                            const VectorDims& order, size_t offsetPadding = 0, const VectorDims& offsetPaddingToData = {},
+                            const VectorDims& strides = {});
 
     DnnlBlockedMemoryDesc(const mkldnn::memory::desc& mdesc);
 
-    std::unique_ptr<MemoryDesc> cloneWithNewDimsImp(const VectorDims& dims) const override;
+    MemoryDescPtr cloneWithNewDimsImp(const VectorDims& dims) const override;
 
     bool isPlainFormat() const;
     bool isBlockedCFormat(size_t blk_size = UNREACHABLE_DIM) const;

@@ -107,8 +107,8 @@ void MKLDNNFullyConnectedNode::getSupportedDescriptors() {
         outputDataType = memory::data_type::bf16;
     }
 
-    const auto inDims = getInputShapeAtPort(0).getStaticDims();
-    const auto outDims = getOutputShapeAtPort(0).getStaticDims();
+    const auto& inDims = getInputShapeAtPort(0).getStaticDims();
+    const auto& outDims = getOutputShapeAtPort(0).getStaticDims();
 
     if (inDims.size() == 3) {
         weightsDims = InferenceEngine::SizeVector({static_cast<size_t>(outDims[2]), static_cast<size_t>(inDims[2])});

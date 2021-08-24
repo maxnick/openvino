@@ -1199,10 +1199,10 @@ void MKLDNNFakeQuantizeNode::initSupportedPrimitiveDescriptors() {
 
             if (i == 0) {
                 auto descCreator = BlockedDescCreator::getCommonCreators().at(fmt);
-                dataConfig.desc = descCreator->createUniqueDesc(getInputPrecision(), getInputShapeAtPort(i).getStaticDims());
+                dataConfig.desc = descCreator->createUniqueDesc(getInputPrecision(), getInputShapeAtPort(i));
             } else {
                 auto descCreator = BlockedDescCreator::getCommonCreators().at(LayoutType::ncsp);
-                dataConfig.desc = descCreator->createUniqueDesc(Precision::FP32, getInputShapeAtPort(i).getStaticDims());
+                dataConfig.desc = descCreator->createUniqueDesc(Precision::FP32, getInputShapeAtPort(i));
             }
             config.inConfs.push_back(dataConfig);
         }
@@ -1211,7 +1211,7 @@ void MKLDNNFakeQuantizeNode::initSupportedPrimitiveDescriptors() {
         dataConfig.inPlace = -1;
         dataConfig.constant = false;
         auto descCreator = BlockedDescCreator::getCommonCreators().at(fmt);
-        dataConfig.desc = descCreator->createUniqueDesc(getOutputPrecision(), getOutputShapeAtPort(0).getStaticDims());
+        dataConfig.desc = descCreator->createUniqueDesc(getOutputPrecision(), getOutputShapeAtPort(0));
         config.outConfs.push_back(dataConfig);
 
         supportedPrimitiveDescriptors.push_back({config, impl_type});

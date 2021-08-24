@@ -137,7 +137,7 @@ template <typename dataType>
 void MKLDNNCumSumNode::exec() {
     const auto *input = reinterpret_cast<const dataType *>(getParentEdgeAt(CUM_SUM_DATA)->getMemoryPtr()->GetPtr());
     auto *output = reinterpret_cast<dataType *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
-    const std::vector<size_t> strides = getParentEdgeAt(CUM_SUM_DATA)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getStrides();
+    const VectorDims strides = getParentEdgeAt(CUM_SUM_DATA)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getStrides();
 
     if (reverse) {
         if (exclusive) {
@@ -155,7 +155,7 @@ void MKLDNNCumSumNode::exec() {
 }
 
 template <bool reverse, bool exclusive, typename dataType>
-void MKLDNNCumSumNode::cumSum(const dataType *input, dataType *output, const std::vector<size_t> &strides) {
+void MKLDNNCumSumNode::cumSum(const dataType *input, dataType *output, const VectorDims &strides) {
     SizeVector iterationRange(numOfDims - 1);
     size_t j = 0;
     for (size_t i = 0; i < shape.size(); i++) {

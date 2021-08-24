@@ -506,7 +506,7 @@ void MKLDNNNode::resolveInPlaceEdges() {
     }
 }
 
-std::unique_ptr<MemoryDesc> MKLDNNNode::getBaseMemDescAtInputPort(size_t portNum) const {
+MemoryDescPtr MKLDNNNode::getBaseMemDescAtInputPort(size_t portNum) const {
     if (auto primDesc = getSelectedPrimitiveDescriptor()) {
         const auto& inConfs = primDesc->getConfig().inConfs;
         if (inConfs.size() < portNum) {
@@ -517,7 +517,7 @@ std::unique_ptr<MemoryDesc> MKLDNNNode::getBaseMemDescAtInputPort(size_t portNum
     IE_THROW() << "Can't get input memory desc, primitive descriptor is not selected";
 }
 
-std::unique_ptr<MemoryDesc> MKLDNNNode::getBaseMemDescAtOutputPort(size_t portNum) const {
+MemoryDescPtr MKLDNNNode::getBaseMemDescAtOutputPort(size_t portNum) const {
     if (auto primDesc = getSelectedPrimitiveDescriptor()) {
         const auto& outConfs = primDesc->getConfig().outConfs;
         if (outConfs.size() < portNum) {
@@ -884,7 +884,7 @@ void MKLDNNNode::prepareMemory(const NodeDesc *selected_pd, mkldnn::primitive_de
 
         auto create = [&] () {
             // TODO [DS]: internal blobs should be removed or rewritten using Memory object
-            auto newDesc = *MemoryDescUtils::convertToDnnlBlockedMemoryDesc(internalBlob->getTensorDesc());
+            auto newDesc = MemoryDescUtils::convertToDnnlBlockedMemoryDesc(internalBlob->getTensorDesc());
 
             MKLDNNMemory memory{ engine };
             memory.Create(newDesc, internalBlob->buffer());
@@ -1025,7 +1025,7 @@ const std::vector<impl_desc_type>& MKLDNNNode::getPrimitivesPriority() {
     return implPriorities;
 }
 
-std::unique_ptr<MemoryDesc> MKLDNNNode::getDefinedInputDesc(const NodeConfig &config, size_t idx) const {
+MemoryDescPtr MKLDNNNode::getDefinedInputDesc(const NodeConfig &config, size_t idx) const {
     int num = getParentEdgeAt(idx)->getInputNum();
     auto *selectedPD = getParentEdgeAt(idx)->getParent()->getSelectedPrimitiveDescriptor();
     if (!selectedPD)
@@ -1050,10 +1050,10 @@ std::unique_ptr<MemoryDesc> MKLDNNNode::getDefinedInputDesc(const NodeConfig &co
         }
     }
 
-    return MemoryDescUtils::cloneWithDefaultStridesAndOffset(config.inConfs[idx].desc.get());
+    return MemoryDescUtils::cloneWithDefaultStridesAndOffset(*config.inConfs[idx].desc);
 }
 
-std::unique_ptr<MemoryDesc> MKLDNNNode::getDefinedOutputDesc(const NodeConfig &config, size_t idx) const {
+MemoryDescPtr MKLDNNNode::getDefinedOutputDesc(const NodeConfig &config, size_t idx) const {
     int num = getChildEdgeAt(idx)->getOutputNum();
     auto *selectedPD = getChildEdgeAt(idx)->getChild()->getSelectedPrimitiveDescriptor();
     if (!selectedPD)
@@ -1078,7 +1078,7 @@ std::unique_ptr<MemoryDesc> MKLDNNNode::getDefinedOutputDesc(const NodeConfig &c
         }
     }
 
-    return MemoryDescUtils::cloneWithDefaultStridesAndOffset(config.outConfs[idx].desc.get());
+    return MemoryDescUtils::cloneWithDefaultStridesAndOffset(*config.outConfs[idx].desc);
 }
 
 void MKLDNNNode::initOptimalPrimitiveDescriptor() {
@@ -1111,11 +1111,11 @@ bool MKLDNNNode::isConfigDefined(const NodeConfig &config) const {
     return true;
 }
 
-std::unique_ptr<MemoryDesc> MKLDNNNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
+MemoryDescPtr MKLDNNNode::getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
     return MKLDNNExtensionUtils::makeDescriptor(primitive_desc_it.src_desc(idx));
 }
 
-std::unique_ptr<MemoryDesc> MKLDNNNode::getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
+MemoryDescPtr MKLDNNNode::getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx) {
     return MKLDNNExtensionUtils::makeDescriptor(primitive_desc_it.dst_desc(idx));
 }
 

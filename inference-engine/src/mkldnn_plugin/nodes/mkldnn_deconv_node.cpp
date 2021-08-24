@@ -359,7 +359,7 @@ void MKLDNNDeconvolutionNode::createDescriptor(const std::vector<const MemoryDes
     const auto out_candidate = MemoryDescUtils::convertToDnnlBlockedMemoryDesc(*outputDesc[0]);
 
     // grouping and autoblicking is not compatible
-    if ((withGroups && !isDW) && (in_candidate->blocksExtended() || out_candidate->blocksExtended()))
+    if ((withGroups && !isDW) && (in_candidate.blocksExtended() || out_candidate.blocksExtended()))
         return;
 
     auto convertDims = [] (const std::vector<ptrdiff_t>& orig_dims) {
@@ -370,24 +370,24 @@ void MKLDNNDeconvolutionNode::createDescriptor(const std::vector<const MemoryDes
         mkldnn::memory::desc wgh_candidate(MKLDNNExtensionUtils::convertToDnnlDims(weightDims), memory::data_type::s8, memory::format_tag::any);
         std::shared_ptr<mkldnn::deconvolution_forward::desc> deconv_desc;
         deconv_desc.reset(new deconvolution_forward::desc(prop_kind::forward_inference, mkldnn::algorithm::deconvolution_direct,
-                                                          in_candidate->getDnnlDesc(), wgh_candidate, out_candidate->getDnnlDesc(),
+                                                          in_candidate.getDnnlDesc(), wgh_candidate, out_candidate.getDnnlDesc(),
                                                           convertDims(stride), convertDims(dilation),
                                                           convertDims(paddingL), convertDims(paddingR)));
         descs.emplace_back(deconv_desc);
     } else {
-        mkldnn::memory::desc wgh_candidate(MKLDNNExtensionUtils::convertToDnnlDims(weightDims), in_candidate->getDataType(), memory::format_tag::any);
+        mkldnn::memory::desc wgh_candidate(MKLDNNExtensionUtils::convertToDnnlDims(weightDims), in_candidate.getDataType(), memory::format_tag::any);
         for (auto alg : {mkldnn::algorithm::convolution_winograd, mkldnn::algorithm::convolution_direct}) {
             std::shared_ptr<mkldnn::convolution_forward::desc> conv_desc;
             conv_desc.reset(new convolution_forward::desc(prop_kind::forward_inference, alg,
-                                                          out_candidate->getDnnlDesc(), wgh_candidate, in_candidate->getDnnlDesc(),
+                                                          out_candidate.getDnnlDesc(), wgh_candidate, in_candidate.getDnnlDesc(),
                                                           convertDims(stride),
                                                           convertDims(dilation),
                                                           convertDims(paddingL),
                                                           convertDims(paddingR)));
 
             std::shared_ptr<mkldnn::convolution_backward_data::desc> deconv_desc;
-            deconv_desc.reset(new convolution_backward_data::desc(alg, out_candidate->getDnnlDesc(), wgh_candidate,
-                                                                  in_candidate->getDnnlDesc(),
+            deconv_desc.reset(new convolution_backward_data::desc(alg, out_candidate.getDnnlDesc(), wgh_candidate,
+                                                                  in_candidate.getDnnlDesc(),
                                                                   convertDims(stride),
                                                                   convertDims(dilation),
                                                                   convertDims(paddingL),

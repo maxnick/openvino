@@ -93,9 +93,9 @@ void MKLDNNEmbeddingBagPackedSumNode::execute(mkldnn::stream strm) {
     if (_withWeights)
         weightsData = reinterpret_cast<const uint8_t *>(getParentEdgeAt(PER_SAMPLE_WEIGHTS_IDX)->getMemoryPtr()->GetPtr());
 
-    const auto &mem = getParentEdgeAt(0)->getMemory();
-    MKLDNNEmbeddingBagSumNode::execute(srcData, weightsData, dstData, mem.getDesc().getPrecision(),
-                                       mem.getStaticDims(), getChildEdgesAtPort(0)[0]->getMemory().GetShape().getStaticDims());
+    const auto &inputMem  = getParentEdgeAt(0)->getMemory();
+    MKLDNNEmbeddingBagSumNode::execute(srcData, weightsData, dstData, inputMem .getDesc().getPrecision(),
+                                       inputMem .getStaticDims(), getChildEdgesAtPort(0)[0]->getMemory().GetShape().getStaticDims());
 }
 
 bool MKLDNNEmbeddingBagPackedSumNode::created() const {

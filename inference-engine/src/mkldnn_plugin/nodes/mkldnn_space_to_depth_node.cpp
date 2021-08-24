@@ -142,8 +142,8 @@ void MKLDNNSpaceToDepthNode::initSupportedPrimitiveDescriptors() {
     auto range = BlockedDescCreator::makeFilteredRange(creators, nDims, supportedTypes);
 
     for (auto itr = range.first; itr != range.second; ++itr) {
-        config.inConfs[0].desc = itr->second->createUniqueDesc(precision, getInputShapeAtPort(0).getStaticDims());
-        config.outConfs[0].desc = itr->second->createUniqueDesc(precision, getOutputShapeAtPort(0).getStaticDims());
+        config.inConfs[0].desc = itr->second->createUniqueDesc(precision, getInputShapeAtPort(0));
+        config.outConfs[0].desc = itr->second->createUniqueDesc(precision, getOutputShapeAtPort(0));
         supportedPrimitiveDescriptors.emplace_back(config, impl_type);
     }
 }
@@ -195,8 +195,8 @@ void MKLDNNSpaceToDepthNode::createPrimitive() {
     };
 
     if (isBlocked) {
-        SizeVector srcBlockedDims = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getBlockDims();
-        SizeVector dstBlockedDims = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getBlockDims();
+        VectorDims srcBlockedDims = getParentEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getBlockDims();
+        VectorDims dstBlockedDims = getChildEdgeAt(0)->getMemory().GetDescWithType<BlockedMemoryDesc>()->getBlockDims();
 
         size_t orderShiftForBlocks, orderShiftForDims;
         if (mode == Mode::BLOCKS_FIRST) {

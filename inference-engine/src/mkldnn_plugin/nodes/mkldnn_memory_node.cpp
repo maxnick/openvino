@@ -119,7 +119,8 @@ void MKLDNNMemoryInputNode::createPrimitive() {
     dataStore->Create(getChildEdgeAt(0)->getMemory().getDesc());
 
     // default memory state is zero filled
-    dataStore->FillZero();
+    if (dataStore->getDesc().getMaxMemSize() != MemoryDesc::UNDEFINED_SIZE)
+        dataStore->FillZero();
 }
 
 /**

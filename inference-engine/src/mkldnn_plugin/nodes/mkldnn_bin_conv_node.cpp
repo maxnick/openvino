@@ -984,7 +984,7 @@ void MKLDNNBinaryConvolutionNode::initSupportedPrimitiveDescriptors() {
 
         //activation
         auto nspcCreator = BlockedDescCreator::getCommonCreators().at(LayoutType::nspc);
-        config.inConfs[0].desc = nspcCreator->createUniqueDesc(Precision::BIN, getInputShapeAtPort(0).getStaticDims());
+        config.inConfs[0].desc = nspcCreator->createUniqueDesc(Precision::BIN, getInputShapeAtPort(0));
 
         //weights
         size_t weiFirstDimBlockSize = implType == impl_desc_type::jit_avx512 ? 16 : 8; //memory::format_tag::OIhw16o32i : memory::format_tag::OIhw8o32i;
@@ -997,7 +997,7 @@ void MKLDNNBinaryConvolutionNode::initSupportedPrimitiveDescriptors() {
 
         //result
         auto outputPrecision = withBinarization ? Precision::BIN : Precision::FP32;
-        config.outConfs[0].desc = nspcCreator->createUniqueDesc(outputPrecision, getOutputShapeAtPort(0).getStaticDims());
+        config.outConfs[0].desc = nspcCreator->createUniqueDesc(outputPrecision, getOutputShapeAtPort(0));
         if (withSum) {
             config.inConfs.push_back(config.outConfs[0]);
             config.outConfs[0].inPlace = 2;
@@ -1008,9 +1008,9 @@ void MKLDNNBinaryConvolutionNode::initSupportedPrimitiveDescriptors() {
         auto weiCreator = BlockedDescCreator::getCommonCreators().at(LayoutType::ncsp);
         auto nspcCreator = BlockedDescCreator::getCommonCreators().at(LayoutType::nspc);
 
-        config.inConfs[0].desc = nspcCreator->createUniqueDesc(Precision::BIN, getInputShapeAtPort(0).getStaticDims());
-        config.inConfs[1].desc = weiCreator->createUniqueDesc(Precision::BIN, getInputShapeAtPort(1).getStaticDims());
-        config.outConfs[0].desc = nspcCreator->createUniqueDesc(Precision::FP32, getOutputShapeAtPort(0).getStaticDims());
+        config.inConfs[0].desc = nspcCreator->createUniqueDesc(Precision::BIN, getInputShapeAtPort(0));
+        config.inConfs[1].desc = weiCreator->createUniqueDesc(Precision::BIN, getInputShapeAtPort(1));
+        config.outConfs[0].desc = nspcCreator->createUniqueDesc(Precision::FP32, getOutputShapeAtPort(0));
         supportedPrimitiveDescriptors.push_back({config, implType});
     }
 }
@@ -1020,9 +1020,9 @@ void MKLDNNBinaryConvolutionNode::createPrimitive() {
     if (!selectedPrimitiveDescriptor)
         IE_THROW() << "CPU binary convolution with name '" << getName() << "' doesn't have primitive descriptors.";
 
-    auto srcDims = getParentEdgesAtPort(0)[0]->getMemory().GetShape().getStaticDims();
-    auto weiDims = getParentEdgesAtPort(1)[0]->getMemory().GetShape().getStaticDims();
-    auto dstDims = getChildEdgesAtPort(0)[0]->getMemory().GetShape().getStaticDims();
+    auto srcDims = getParentEdgesAtPort(0)[0]->getMemory().getStaticDims();
+    auto weiDims = getParentEdgesAtPort(1)[0]->getMemory().getStaticDims();
+    auto dstDims = getChildEdgesAtPort(0)[0]->getMemory().getStaticDims();
 
     auto implType = selectedPrimitiveDescriptor->getImplementationType();
 

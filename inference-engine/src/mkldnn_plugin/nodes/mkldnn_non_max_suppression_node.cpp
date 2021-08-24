@@ -217,8 +217,8 @@ void MKLDNNNonMaxSuppressionNode::execute(mkldnn::stream strm) {
 
     if (isDynamicNode()) {
         VectorDims newDims{validOutputs, 3};
-        indicesMemPtr->redefineDesc(getOutputMemDescAtPort<BlockedMemoryDesc>(NMS_SELECTEDINDICES)->cloneWithNewDims(newDims));
-        scoresMemPtr->redefineDesc(getOutputMemDescAtPort<BlockedMemoryDesc>(NMS_SELECTEDSCORES)->cloneWithNewDims(newDims));
+        indicesMemPtr->redefineDesc(getBaseMemDescAtOutputPort(NMS_SELECTEDINDICES)->cloneWithNewDims(newDims));
+        scoresMemPtr->redefineDesc(getBaseMemDescAtOutputPort(NMS_SELECTEDSCORES)->cloneWithNewDims(newDims));
     }
 
     int selectedIndicesStride = indicesMemPtr->GetDescWithType<BlockedMemoryDesc>()->getStrides()[0];

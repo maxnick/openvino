@@ -23,24 +23,24 @@ static NodeConfig make_plain_config(const std::shared_ptr<ngraph::Node>& op) {
     NodeConfig config;
 
     for (size_t i = 0; i < op->get_input_size(); i++) {
-        const auto &shape = op->get_input_shape(i);
-        const auto& dims = ngraph::is_scalar(shape) ? ngraph::Shape{1} : shape;
+        const auto &origShape = op->get_input_partial_shape(i);
+        const auto& shape = Shape(origShape.rank().get_length() == 0 ? ngraph::PartialShape{1} : origShape);
         const auto prec = InferenceEngine::details::convertPrecision(op->get_input_element_type(i));
 
         PortConfig data_conf {};
         auto descCreator = BlockedDescCreator::getCommonCreators().at(LayoutType::ncsp);
-        data_conf.desc = descCreator->createUniqueDesc(prec, dims);
+        data_conf.desc = descCreator->createUniqueDesc(prec, shape);
         config.inConfs.push_back(data_conf);
     }
 
     for (size_t i = 0; i < op->get_output_size(); i++) {
-        const auto &shape = op->get_output_shape(i);
-        const auto& dims = ngraph::is_scalar(shape) ? ngraph::Shape{1} : shape;
+        const auto &origShape = op->get_output_partial_shape(i);
+        const auto& shape = Shape(origShape.rank().get_length() == 0 ? ngraph::PartialShape{1} : origShape);
         const auto prec = InferenceEngine::details::convertPrecision(op->get_output_element_type(i));
 
         PortConfig data_conf {};
         auto descCreator = BlockedDescCreator::getCommonCreators().at(LayoutType::ncsp);
-        data_conf.desc = descCreator->createUniqueDesc(prec, dims);
+        data_conf.desc = descCreator->createUniqueDesc(prec, shape);
         config.outConfs.push_back(data_conf);
     }
 

@@ -48,8 +48,8 @@ DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, con
  *   Limitation of conversion first N elements of order should be permutation of [0,1,2 ... N]
  */
 DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, const Shape& shape, const VectorDims& blockedDims,
-                                                 const std::vector<size_t>& order, size_t offsetPadding, const std::vector<size_t>& offsetPaddingToData,
-                                                 const std::vector<size_t>& strides) : MemoryDesc(shape, DnnlBlocked) {
+                                                 const VectorDims& order, size_t offsetPadding, const VectorDims& offsetPaddingToData,
+                                                 const VectorDims& strides) : MemoryDesc(shape, DnnlBlocked) {
     using namespace mkldnn;
     // scalar case
     if (shape.getRank() == 0) {
@@ -101,7 +101,7 @@ DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(InferenceEngine::Precision prc, con
             IE_THROW() << "Can not construct DnnlBlockedMemoryDesc from strides: " << vec2str(strides);
     }
 
-    std::vector<size_t> outer_order(outer_ndims, outer_ndims + 1); // outer_order[i] is index of stride for i-th dimension
+    VectorDims outer_order(outer_ndims, outer_ndims + 1); // outer_order[i] is index of stride for i-th dimension
     for (size_t i = 0; i < outer_ndims; i++) {
         outer_order[order[i]] = i;
     }
@@ -196,7 +196,7 @@ DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(const Shape& shape, mkldnn::memory:
         desc = mkldnn::memory::desc(MKLDNNExtensionUtils::convertToDnnlDims(dims), dataType, format);
     }
 
-    std::vector<size_t> perm;
+    VectorDims perm;
     VectorDims inner_blks;
     VectorDims inner_idxs;
 
@@ -231,7 +231,7 @@ const VectorDims& DnnlBlockedMemoryDesc::getBlockDims() const {
         }
 
         // order of outer dims. In case of IOhw_ will be {1, 0, 2, 3}
-        std::vector<size_t> outer_order(outer_ndims);
+        VectorDims outer_order(outer_ndims);
         std::copy(order.begin(), order.begin() + outer_ndims, outer_order.begin());
 
         blockedDims.resize(total_ndims, 0);
@@ -243,7 +243,7 @@ const VectorDims& DnnlBlockedMemoryDesc::getBlockDims() const {
     return blockedDims;
 }
 
-const std::vector<size_t>& DnnlBlockedMemoryDesc::getStrides() const {
+const VectorDims& DnnlBlockedMemoryDesc::getStrides() const {
     if (strides.empty()) {
         const auto dims = desc.dims();
 
@@ -254,13 +254,13 @@ const std::vector<size_t>& DnnlBlockedMemoryDesc::getStrides() const {
         const size_t total_ndims = outer_ndims + inner_ndims;
 
         // strides of inner dims. In case of 4i16o4i will be {64, 4, 1}
-        std::vector<size_t> inner_strides(inner_ndims, 1);
+        VectorDims inner_strides(inner_ndims, 1);
         for (size_t i = 1; i < blk_desc.inner_nblks; i++) {
             inner_strides[blk_desc.inner_nblks - 1 - i] = inner_strides[blk_desc.inner_nblks - i] * blk_desc.inner_blks[blk_desc.inner_nblks - i];
         }
 
         // order of outer dims. In case of IOhw_ will be {1, 0, 2, 3}
-        std::vector<size_t> outer_order(outer_ndims);
+        VectorDims outer_order(outer_ndims);
         std::copy(order.begin(), order.begin() + outer_ndims, outer_order.begin());
 
         // blocked strides
@@ -273,13 +273,13 @@ const std::vector<size_t>& DnnlBlockedMemoryDesc::getStrides() const {
     return strides;
 }
 
-const std::vector<size_t>& DnnlBlockedMemoryDesc::getOrder() const {
+const VectorDims& DnnlBlockedMemoryDesc::getOrder() const {
     return order;
 }
 
-const std::vector<size_t>& DnnlBlockedMemoryDesc::getOffsetPaddingToData() const {
+const VectorDims& DnnlBlockedMemoryDesc::getOffsetPaddingToData() const {
     if (offsetPaddingToData.empty()) {
-        offsetPaddingToData = std::vector<size_t>(std::begin(desc.data.padded_offsets), std::begin(desc.data.padded_offsets) + getOrder().size());
+        offsetPaddingToData = VectorDims(std::begin(desc.data.padded_offsets), std::begin(desc.data.padded_offsets) + getOrder().size());
     }
     return offsetPaddingToData;
 }
@@ -349,7 +349,7 @@ DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(const mkldnn::memory::desc& mdesc) 
     const size_t total_ndims = outer_ndims + inner_ndims;
 
     // strides of inner dims. In case of 4i16o4i will be {64, 4, 1}
-    std::vector<size_t> inner_strides(inner_ndims, 1);
+    VectorDims inner_strides(inner_ndims, 1);
     for (size_t i = 1; i < blk_desc.inner_nblks; i++) {
         inner_strides[blk_desc.inner_nblks - 1 - i] = inner_strides[blk_desc.inner_nblks - i] * blk_desc.inner_blks[blk_desc.inner_nblks - i];
     }
@@ -365,7 +365,7 @@ DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(const mkldnn::memory::desc& mdesc) 
     }
 
     // order of outer dims. In case of IOhw_ will be {1, 0, 2, 3}
-    std::vector<size_t> outer_order(outer_ndims);
+    VectorDims outer_order(outer_ndims);
     std::iota(outer_order.begin(), outer_order.end(), 0);
     std::sort(outer_order.begin(), outer_order.end(),
               [&blk_desc, &outer_block_dims](size_t ind_l, size_t ind_r) {
@@ -448,7 +448,7 @@ bool DnnlBlockedMemoryDesc::isTailCFormat() const {
     return true;
 }
 
-std::unique_ptr<MemoryDesc> DnnlBlockedMemoryDesc::cloneWithNewDimsImp(const VectorDims &dims) const {
+MemoryDescPtr DnnlBlockedMemoryDesc::cloneWithNewDimsImp(const VectorDims &dims) const {
     if (std::any_of(dims.begin(), dims.end(), [](size_t x){ return Shape::UNDEFINED_DIM == x; })) {
         IE_THROW() << "Can't clone desc if new dims are undefined";
     }
@@ -477,7 +477,7 @@ std::unique_ptr<MemoryDesc> DnnlBlockedMemoryDesc::cloneWithNewDimsImp(const Vec
     if (retCode != dnnl::impl::status::success) {
         IE_THROW() << "Can not clone DnnlBlockedMemoryDesc with dims: " << MemoryDescUtils::dims2str(dims);
     }
-    return std::unique_ptr<DnnlBlockedMemoryDesc>(new DnnlBlockedMemoryDesc(newMklDesc));
+    return DnnlBlockedMemoryDescPtr(new DnnlBlockedMemoryDesc(newMklDesc));
 }
 
 static const std::map<int, std::vector<mkldnn::memory::format_tag>> form_tags_by_ndims {
@@ -706,7 +706,7 @@ bool DnnlBlockedMemoryDesc::isSame(mkldnn::memory::format_tag fmt) const {
     auto actualStrides = desc.data.format_desc.blocking.strides;
     auto refStrides = refDesc.data.format_desc.blocking.strides;
 
-    std::vector<size_t> actualOrder(desc.data.ndims);
+    VectorDims actualOrder(desc.data.ndims);
     {
         const auto dims = desc.dims();
         VectorDims total_block_per_dim(dims.size(), 1);
@@ -727,7 +727,7 @@ bool DnnlBlockedMemoryDesc::isSame(mkldnn::memory::format_tag fmt) const {
                   });
     }
 
-    std::vector<size_t> refOrder(refDesc.data.ndims);
+    VectorDims refOrder(refDesc.data.ndims);
     {
         const auto dims = refDesc.dims();
         VectorDims total_block_per_dim(dims.size(), 1);

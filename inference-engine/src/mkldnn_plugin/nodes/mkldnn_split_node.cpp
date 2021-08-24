@@ -216,7 +216,7 @@ void MKLDNNSplitNode::initSupportedPrimitiveDescriptors() {
         config.inConfs.resize(INPUTS_NUM);
         config.inConfs[0].inPlace = -1;
         config.inConfs[0].constant = false;
-        config.inConfs[0].desc = creatorsMap.at(LayoutType::nspc)->createUniqueDesc(inpPrecision, srcShape.getStaticDims());
+        config.inConfs[0].desc = creatorsMap.at(LayoutType::nspc)->createUniqueDesc(inpPrecision, srcShape);
         config.inConfs[1].inPlace = -1;
         config.inConfs[1].constant = true;
         config.inConfs[1].desc = MKLDNNPlugin::make_unique<CpuBlockedMemoryDesc>(axisPrecision, Shape(SizeVector{1}));
@@ -229,7 +229,7 @@ void MKLDNNSplitNode::initSupportedPrimitiveDescriptors() {
         for (size_t i = 0; i < outputShapes.size(); i++) {
             config.outConfs[i].inPlace = -1;
             config.outConfs[i].constant = false;
-            config.outConfs[i].desc = creatorsMap.at(LayoutType::ncsp)->createUniqueDesc(inpPrecision, outputShapes[i].getStaticDims());
+            config.outConfs[i].desc = creatorsMap.at(LayoutType::ncsp)->createUniqueDesc(inpPrecision, outputShapes[i]);
         }
         supportedPrimitiveDescriptors.emplace_back(config, impl_desc_type::ref);
     }
@@ -333,7 +333,7 @@ void MKLDNNSplitNode::initOptimalPrimitiveDescriptor() {
         }
 
         // reset undefined offsets
-        config.inConfs[i].desc = MemoryDescUtils::cloneWithDefaultStridesAndOffset(config.inConfs[i].desc.get());
+        config.inConfs[i].desc = MemoryDescUtils::cloneWithDefaultStridesAndOffset(*config.inConfs[i].desc);
     }
     if (config.outConfs.size() != outputShapes.size())
         THROW_ERROR << "has invalid config";

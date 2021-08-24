@@ -102,7 +102,7 @@ public:
         return useExternalStorage;
     }
 
-    const std::vector<size_t>& getStaticDims() const {
+    const VectorDims& getStaticDims() const {
         return getDesc().getShape().getStaticDims();
     }
 

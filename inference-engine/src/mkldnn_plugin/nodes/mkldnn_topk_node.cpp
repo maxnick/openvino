@@ -52,7 +52,7 @@ MKLDNNTopKNode::MKLDNNTopKNode(const std::shared_ptr<ngraph::Node>& op, const mk
     }
     auto topK1Op = ngraph::as_type_ptr<ngraph::op::v1::TopK>(op);
 
-    SizeVector dstDims = topK1Op->get_output_shape(TOPK_VALUE);
+    VectorDims dstDims = topK1Op->get_output_shape(TOPK_VALUE);
     src_dims = topK1Op->get_input_shape(TOPK_DATA);
 
     axis = topK1Op->get_axis();
@@ -112,7 +112,7 @@ void MKLDNNTopKNode::execute(mkldnn::stream strm) {
         } else {
             dst_idx = reinterpret_cast<int *>(getChildEdgesAtPort(0)[0]->getMemoryPtr()->GetPtr());
         }
-        SizeVector dstDims = getChildEdgesAtPort(0)[0]->getMemory().getStaticDims();
+        const VectorDims& dstDims = getChildEdgesAtPort(0)[0]->getMemory().getStaticDims();
 
         if (dstDims[axis] != static_cast<size_t>(src_k)) {
             std::string errorMsg = "Output tensor dimension mismatch";
@@ -120,10 +120,10 @@ void MKLDNNTopKNode::execute(mkldnn::stream strm) {
         }
     } else if (outputShapes.size() == 2) {
         dst_data = reinterpret_cast<float *>(getChildEdgesAtPort(TOPK_VALUE)[0]->getMemoryPtr()->GetPtr());
-        SizeVector dst_data_dims = getChildEdgesAtPort(TOPK_VALUE)[0]->getMemory().getStaticDims();
+        const VectorDims& dst_data_dims = getChildEdgesAtPort(TOPK_VALUE)[0]->getMemory().getStaticDims();
 
         dst_idx = reinterpret_cast<int *>(getChildEdgesAtPort(TOPK_INDEX)[0]->getMemoryPtr()->GetPtr());
-        SizeVector dst_idx_dims = getChildEdgesAtPort(TOPK_INDEX)[0]->getMemory().getStaticDims();
+        const VectorDims& dst_idx_dims = getChildEdgesAtPort(TOPK_INDEX)[0]->getMemory().getStaticDims();
 
         if (dst_idx_dims[axis] != static_cast<size_t>(src_k) || dst_data_dims[axis] != static_cast<size_t>(src_k)) {
             std::string errorMsg = "Output tensors dimension mismatch";
@@ -137,7 +137,7 @@ void MKLDNNTopKNode::execute(mkldnn::stream strm) {
     if (src_dims[axis] < static_cast<size_t>(src_k))
         src_k = src_dims[axis];
 
-    SizeVector in_dims = getParentEdgeAt(TOPK_DATA)->getMemory().getStaticDims();
+    const VectorDims& in_dims = getParentEdgeAt(TOPK_DATA)->getMemory().getStaticDims();
 
     if (src_k == 1) {
         if (is_last_dim) {
@@ -171,7 +171,7 @@ bool MKLDNNTopKNode::created() const {
 }
 
 template <class Compare1, template <typename> class Compare2>
-void MKLDNNTopKNode::top1_axis(const float* src_data, float* dst_data, int* dst_idx, SizeVector in_dims) {
+void MKLDNNTopKNode::top1_axis(const float* src_data, float* dst_data, int* dst_idx, VectorDims in_dims) {
     int after_num = count(in_dims, axis + 1, in_dims.size());
     int first_index = 0;
 
@@ -220,7 +220,7 @@ void MKLDNNTopKNode::top1_axis(const float* src_data, float* dst_data, int* dst_
 }
 
 template <template <typename> class Compare>
-void MKLDNNTopKNode::top1(const float* src_data, float* dst_data, int* dst_idx, SizeVector in_dims) {
+void MKLDNNTopKNode::top1(const float* src_data, float* dst_data, int* dst_idx, VectorDims in_dims) {
     parallel_for(before_num, [&](int i0) {
         int index_max_val = 0;
         int s_index = i0 * dim;
@@ -240,7 +240,7 @@ void MKLDNNTopKNode::top1(const float* src_data, float* dst_data, int* dst_idx, 
 }
 
 template <class Compare1, template <typename> class Compare2>
-void MKLDNNTopKNode::topk_axis(const float* src_data, float* dst_data, int* dst_idx, SizeVector in_dims) {
+void MKLDNNTopKNode::topk_axis(const float* src_data, float* dst_data, int* dst_idx, VectorDims in_dims) {
     int after_num = count(in_dims, axis + 1, in_dims.size());
     int first_index = 0;
 
@@ -407,7 +407,7 @@ void MKLDNNTopKNode::topk_axis(const float* src_data, float* dst_data, int* dst_
 }
 
 template <template <typename> class Compare>
-void MKLDNNTopKNode::topk(const float* src_data, float* dst_data, int* dst_idx, SizeVector in_dims) {
+void MKLDNNTopKNode::topk(const float* src_data, float* dst_data, int* dst_idx, VectorDims in_dims) {
     parallel_for(before_num, [&](int i0) {
         std::vector<float> max_values(src_k + 1);
         std::vector<int> max_indexes(src_k + 1);
@@ -468,14 +468,14 @@ void MKLDNNTopKNode::topk(const float* src_data, float* dst_data, int* dst_idx, 
     });
 }
 
-inline int MKLDNNTopKNode::count(SizeVector dims, size_t start_ind, size_t end_ind) {
+inline int MKLDNNTopKNode::count(VectorDims dims, size_t start_ind, size_t end_ind) {
     size_t count = 1;
     for (size_t i = start_ind; i < end_ind; i++)
         count *= dims[i];
     return static_cast<int>(count);
 }
 
-inline int MKLDNNTopKNode::count(SizeVector dims, size_t start_ind) {
+inline int MKLDNNTopKNode::count(VectorDims dims, size_t start_ind) {
     return count(dims, start_ind, dims.size());
 }
 

@@ -257,7 +257,7 @@ struct PortConfig {
     // TODO [DS]: better to make private and const
     bool constant = false;
     int inPlace = -1;
-    std::unique_ptr<MemoryDesc> desc;
+    MemoryDescPtr desc;
 };
 
 struct NodeConfig {
@@ -458,7 +458,23 @@ public:
      * @brief Returns input selected primitive descriptor on the specified port
      * must be used after selectOptimalPrimitiveDescriptor stage
      * @param portNum port number
-     * @return selected primitive descriptor with type T
+     * @return pointer to selected primitive descriptor with type MemoryDesc
+     */
+    MemoryDescPtr getBaseMemDescAtInputPort(size_t portNum) const;
+
+    /**
+     * @brief Returns output selected primitive descriptor on the specified port
+     * must be used after selectOptimalPrimitiveDescriptor stage
+     * @param portNum port number
+     * @return pointer to selected primitive descriptor with type MemoryDesc
+     */
+    MemoryDescPtr getBaseMemDescAtOutputPort(size_t portNum) const;
+
+    /**
+     * @brief Returns input selected primitive descriptor on the specified port
+     * must be used after selectOptimalPrimitiveDescriptor stage
+     * @param portNum port number
+     * @return pointer to selected primitive descriptor with type T
      */
     template <typename T,
               typename std::enable_if<!std::is_pointer<T>::value && !std::is_reference<T>::value, int>::type = 0,
@@ -469,7 +485,7 @@ public:
      * @brief Returns output selected primitive descriptor on the specified port
      * must be used after selectOptimalPrimitiveDescriptor stage
      * @param portNum port number
-     * @return selected primitive descriptor with type T
+     * @return pointer to selected primitive descriptor with type T
      */
     template <typename T,
               typename std::enable_if<!std::is_pointer<T>::value && !std::is_reference<T>::value, int>::type = 0,
@@ -709,10 +725,10 @@ protected:
     virtual size_t getMaxBatch();
 
 
-    virtual std::unique_ptr<MemoryDesc> getDefinedInputDesc(const NodeConfig &config, size_t idx) const;
-    virtual std::unique_ptr<MemoryDesc> getDefinedOutputDesc(const NodeConfig &config, size_t idx) const;
-    virtual std::unique_ptr<MemoryDesc> getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx);
-    virtual std::unique_ptr<MemoryDesc> getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx);
+    virtual MemoryDescPtr getDefinedInputDesc(const NodeConfig &config, size_t idx) const;
+    virtual MemoryDescPtr getDefinedOutputDesc(const NodeConfig &config, size_t idx) const;
+    virtual MemoryDescPtr getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx);
+    virtual MemoryDescPtr getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx);
 
     /**
      * @brief Appends new item into ops list with the information on how the node should be executed as post operation.
@@ -832,9 +848,6 @@ protected:
     }
 
 private:
-    std::unique_ptr<MemoryDesc> getBaseMemDescAtInputPort(size_t portNum) const;
-    std::unique_ptr<MemoryDesc> getBaseMemDescAtOutputPort(size_t portNum) const;
-
     bool isDynamic = false;
 
     std::vector<MKLDNNEdgeWeakPtr> parentEdges;
