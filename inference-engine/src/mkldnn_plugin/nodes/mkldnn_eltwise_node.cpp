@@ -793,18 +793,41 @@ private:
     }
 };
 
+MKLDNNEltwiseNode::Policy MKLDNNEltwiseNode::determinePolicy(const std::shared_ptr<ngraph::Node>& op) {
+    const auto const1 = std::dynamic_pointer_cast<ngraph::opset1::Constant>(op->get_input_node_shared_ptr(0));
+    const auto const2 = std::dynamic_pointer_cast<ngraph::opset1::Constant>(op->get_input_node_shared_ptr(1));
+    int constPort = -1;
+    if (const2) {
+        constPort = 1;
+    } else if (const1) {
+        constPort = 0;
+    } else {
+        return Undefined;
+    }
+
+    auto const_shape = op->get_input_shape(constPort);
+    if (ngraph::shape_size(const_shape) == 1)
+        return PerTensor;
+    else
+        return PerChannel;
+}
+
 const std::map<const ngraph::DiscreteTypeInfo, MKLDNNEltwiseNode::Initializer> MKLDNNEltwiseNode::initializers = {
     {ngraph::op::v1::Add::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, MKLDNNEltwiseNode& node) {
         node.algorithm = EltwiseAdd;
+        node.policy = determinePolicy(op);
     }},
     {ngraph::op::v1::Subtract::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, MKLDNNEltwiseNode& node) {
         node.algorithm = EltwiseSubtract;
+        node.policy = determinePolicy(op);
     }},
     {ngraph::op::v1::Multiply::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, MKLDNNEltwiseNode& node) {
         node.algorithm = EltwiseMultiply;
+        node.policy = determinePolicy(op);
     }},
     {ngraph::op::v1::Divide::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, MKLDNNEltwiseNode& node) {
         node.algorithm = EltwiseDivide;
+        node.policy = determinePolicy(op);
     }},
     {ngraph::op::v0::SquaredDifference::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, MKLDNNEltwiseNode& node) {
         node.algorithm = EltwiseSquaredDifference;
@@ -830,6 +853,7 @@ const std::map<const ngraph::DiscreteTypeInfo, MKLDNNEltwiseNode::Initializer> M
         node.alpha = powerStatic->get_power();
         node.beta = powerStatic->get_scale();
         node.gamma = powerStatic->get_shift();
+        node.policy = PerTensor;
     }},
     {ngraph::op::v1::Equal::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, MKLDNNEltwiseNode& node) {
         node.algorithm = EltwiseEqual;
@@ -956,6 +980,7 @@ const std::map<const ngraph::DiscreteTypeInfo, MKLDNNEltwiseNode::Initializer> M
     }},
     {ngraph::op::v0::PRelu::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, MKLDNNEltwiseNode& node) {
         node.algorithm = EltwisePrelu;
+        node.policy = determinePolicy(op);
     }},
     {ngraph::op::v0::Erf::get_type_info_static(), [](const std::shared_ptr<ngraph::Node>& op, MKLDNNEltwiseNode& node) {
         node.algorithm = EltwiseErf;
@@ -986,7 +1011,7 @@ bool MKLDNNEltwiseNode::isSupportedOperation(const std::shared_ptr<const ngraph:
 }
 
 MKLDNNEltwiseNode::MKLDNNEltwiseNode(const std::shared_ptr<ngraph::Node>& op, const mkldnn::engine& eng, MKLDNNWeightsSharing::Ptr &cache) :
-        MKLDNNNode(op, eng, cache) {
+    MKLDNNNode(op, eng, cache), policy(Undefined) {
     std::string errorMessage;
     if (!isSupportedOperation(op, errorMessage)) {
         IE_THROW(NotImplemented) << errorMessage;
@@ -1715,7 +1740,7 @@ void MKLDNNEltwiseNode::fuseInto(MKLDNNNodePtr& parentNode) {
             getInputShapeAtPort(0) == getInputShapeAtPort(1);
     if (!specialConvolutionAddFusing && canBePerformedAsScaleShift(parentNode.get())) {
         std::tie(scales, shifts) = getScalesAndShifts(parentNode.get());
-        if ((parentNode->getType() == FullyConnected) && one_of(getAlgorithm(), EltwiseAdd, EltwiseSubtract,
+        if ((parentNode->getType() == FullyConnected || parentNode->getType() == MatMul) && one_of(getAlgorithm(), EltwiseAdd, EltwiseSubtract,
                 EltwiseMultiply, EltwiseDivide, EltwiseMulAdd, EltwisePowerStatic, EltwisePrelu)) {
             std::tie(scales, shifts) = getScalesAndShifts(parentNode.get());
         } else {
@@ -1793,8 +1818,11 @@ void MKLDNNEltwiseNode::appendBinPostOps(mkldnn::post_ops& ops, const VectorDims
     auto appendBinary = [&](const mkldnn::algorithm alg, MKLDNNMemoryPtr &memPtr, const std::vector<float> &data) {
         if (data.empty())
             IE_THROW() << errorPrefix << "cannot be performed since buffers are not allocated";
+        if (policy == Undefined)
+            IE_THROW() << errorPrefix << "cannot be performed since policy is Undefined";
 
-        DnnlBlockedMemoryDesc memoryDesc(Precision::FP32, Shape(postOpDims));
+        DnnlBlockedMemoryDesc memoryDesc(Precision::FP32, policy == PerTensor ? Shape(broadcastBinaryShape) : Shape(postOpDims));
+
         ops.append_binary(alg, memoryDesc.getDnnlDesc());
 
         if (!memPtr) {
@@ -1820,8 +1848,10 @@ void MKLDNNEltwiseNode::appendBinPostOps(mkldnn::post_ops& ops, const VectorDims
         break;
     case EltwiseMulAdd:
     case EltwisePowerStatic:
-        appendBinary(mkldnn::algorithm::binary_mul, scalesMemory, scales);
-        appendBinary(mkldnn::algorithm::binary_add, shiftsMemory, shifts);
+        if (beta != 1.0f) // Multiply if has scales
+            appendBinary(mkldnn::algorithm::binary_mul, scalesMemory, scales);
+        if (gamma != 0.0f) // Add only if has shifts
+            appendBinary(mkldnn::algorithm::binary_add, shiftsMemory, shifts);
         break;
     case EltwisePrelu:
         appendBinary(mkldnn::algorithm::binary_prelu, scalesMemory, scales);
