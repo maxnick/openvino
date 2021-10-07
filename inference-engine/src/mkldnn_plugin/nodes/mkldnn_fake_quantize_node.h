@@ -121,8 +121,8 @@ public:
     InferenceEngine::Precision getInputPrecision() const { return inputPrecision; }
     InferenceEngine::Precision getOutputPrecision() const { return outputPrecision; }
 
-    void appendPostOps(mkldnn::post_ops& ops, const VectorDims &postOpDims = {}, int align = -1, bool initAsBinary = false,
-                       bool initBinaryMemory = false) override;
+    void appendPostOps(mkldnn::post_ops& ops, const VectorDims &postOpDims = {}, int align = 16) override;
+    void appendBinPostOps(mkldnn::post_ops& ops, const VectorDims &postOpDims, std::vector<MKLDNNMemoryPtr>& binaryPostOpsMem) override;
 
     static bool isSupportedOperation(const std::shared_ptr<const ngraph::Node>& op, std::string& errorMessage) noexcept;
 
@@ -149,6 +149,7 @@ private:
 
     void init() override;
     std::vector<LayoutType> getDataFormats() const;
+    void initializePostOpData(const VectorDims &postOpDims, const size_t bufferAlignment);
     void executeReference();
     void executeBinarization(const std::unique_ptr<jit_uni_quantize_kernel> &pKernel) const;
     void executeQuantization(const std::unique_ptr<jit_uni_quantize_kernel> &pKernel) const;
