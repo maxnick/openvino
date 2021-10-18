@@ -14,7 +14,10 @@
 class Buffer {
 public:
     Buffer() : data(nullptr), size(0), total_size(-1) {}
-    Buffer(size_t size, const InferenceEngine::Precision precision) : data(nullptr), precision(precision), total_size(size) {
+    Buffer(size_t size, const InferenceEngine::Precision precision)
+        : data(nullptr),
+          precision(precision),
+          total_size(size) {
         allocate(size, precision);
     }
 
@@ -23,13 +26,17 @@ public:
         memcpy(data, buf.data, buf.total_size);
     }
 
-     Buffer(Buffer&& buf) noexcept: data(buf.data), precision(buf.precision), size(buf.size), total_size(buf.total_size) {
+    Buffer(Buffer&& buf) noexcept
+        : data(buf.data),
+          precision(buf.precision),
+          size(buf.size),
+          total_size(buf.total_size) {
         buf.data = nullptr;
         buf.total_size = -1;
         buf.size = 0;
     }
 
-     void allocate(const size_t _size, const InferenceEngine::Precision _precision) {
+    void allocate(const size_t _size, const InferenceEngine::Precision _precision) {
         if (data)
             deallocate();
 
@@ -45,7 +52,7 @@ public:
         }
     }
 
-     void deallocate() {
+    void deallocate() {
         if (!data)
             return;
         free(data);
@@ -79,7 +86,6 @@ public:
         return elem_size(precision);
     }
 
-
     ~Buffer() {
         deallocate();
     }
@@ -98,7 +104,8 @@ public:
 void fillBlobs(const std::vector<std::string>& inputFiles,
                const size_t& batchSize,
                benchmark_app::InputsInfo& app_inputs_info,
-               std::vector<InferReqWrap::Ptr> requests, bool supress = false);
+               std::vector<InferReqWrap::Ptr> requests,
+               bool supress = false);
 
 std::vector<Buffer> prepareRandomInputs(std::vector<benchmark_app::InputsInfo>& app_inputs_info);
 
