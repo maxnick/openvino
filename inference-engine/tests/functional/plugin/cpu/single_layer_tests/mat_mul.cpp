@@ -199,14 +199,14 @@ std::vector<CPUSpecificParams> filterSpecificParams() {
     return specificParams;
 }
 
-/* ============= FullyConnected ============= */
-namespace fullyConnected {
-
-const auto fusingBiasFC = fusingSpecificParams{std::make_shared<postNodesMgr>(std::vector<postNodeBuilder>{
+const auto fusingBias = fusingSpecificParams{std::make_shared<postNodesMgr>(std::vector<postNodeBuilder>{
             {[](std::shared_ptr<Node> inpNode, const element::Type& ngPrc, ParameterVector& params) {
                 auto bias = builder::makeConstant(ngPrc, Shape({inpNode->get_output_shape(0).back()}), std::vector<float>{}, true);
                 return std::make_shared<opset1::Add>(inpNode, bias);
-            }, "fusingBiasFC"}}), {"Add"}};
+            }, "fusingBias"}}), {"Add"}};
+
+/* ============= FullyConnected ============= */
+namespace fullyConnected {
 
 const std::vector<ShapeRelatedParams> IS2D = {
     {static_shapes_to_test_representation({{59, 1}, {1, 120}}), {false, false}},
@@ -232,7 +232,7 @@ const std::vector<ShapeRelatedParams> IS2D = {
 
 std::vector<fusingSpecificParams> fusingParamsSet2D {
         emptyFusingSpec,
-        fusingBiasFC,
+        fusingBias,
         fusingRelu,
         fusingMultiplyPerChannel,
         fusingPReluPerTensor,
@@ -242,7 +242,7 @@ std::vector<fusingSpecificParams> fusingParamsSet2D {
 
 std::vector<fusingSpecificParams> fusingParamsSet2DBF16 {
         emptyFusingSpec,
-        fusingBiasFC,
+        fusingBias,
         fusingRelu,
         fusingPReluPerTensor,
 };
@@ -288,7 +288,7 @@ const std::vector<ShapeRelatedParams> IS3D = {
 
 std::vector<fusingSpecificParams> fusingParamsSet3D {
         emptyFusingSpec,
-        fusingBiasFC,
+        fusingBias,
         fusingMultiplyPerChannel,
         fusingFakeQuantizePerChannel,
         fusingFakeQuantizePerTensorRelu,
@@ -296,7 +296,7 @@ std::vector<fusingSpecificParams> fusingParamsSet3D {
 
 std::vector<fusingSpecificParams> fusingParamsSet3DBF16 {
         emptyFusingSpec,
-        fusingBiasFC,
+        fusingBias,
         fusingMultiplyPerChannel,
 };
 
@@ -555,6 +555,8 @@ std::vector<fusingSpecificParams> matmulFusingParams {
         fusingSqrt,
         fusingPReluPerTensor,
         fusingMultiplyPerChannel,
+        fusingAddPerTensor,
+        fusingBias,
         fusingFakeQuantizePerChannel,
         /* @todo FQ unfolds into FQ + Convert + Substract + Multiply after LPT,
          * so Relu cannot be fused in this case. Should be analysed */

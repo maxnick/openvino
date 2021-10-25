@@ -47,6 +47,10 @@ protected:
     AttrPtr initPrimitiveAttr(const VectorDims& dims);
 
 private:
+    mkldnn::memory::desc getBiasDesc();
+
+    bool withBiases;
+
     void setPostOps(mkldnn::primitive_attr &attr, const VectorDims& dims, bool initWeights);
 
     std::string errorPrefix;
