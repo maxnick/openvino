@@ -11,6 +11,6 @@
 #include "infer_request_wrap.hpp"
 #include "utils.hpp"
 
-std::map<std::string, std::vector<InferenceEngine::Blob::Ptr>> prepareCachedBlobs(
+std::map<std::string, std::vector<InferenceEngine::Blob::Ptr>> getBlobs(
     std::map<std::string, std::vector<std::string>>& inputFiles,
     std::vector<benchmark_app::InputsInfo>& app_inputs_info);
