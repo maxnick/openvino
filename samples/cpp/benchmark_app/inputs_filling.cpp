@@ -7,7 +7,10 @@
 #include <format_reader_ptr.h>
 
 #include <algorithm>
+#include <fstream>
+#include <iomanip>
 #include <memory>
+#include <random>
 #include <samples/slog.hpp>
 #include <string>
 #include <utility>

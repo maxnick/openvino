@@ -8,7 +8,6 @@
 #include <string>
 #include <vector>
 
-#include "infer_request_wrap.hpp"
 #include "utils.hpp"
 
 std::map<std::string, std::vector<InferenceEngine::Blob::Ptr>> getBlobs(

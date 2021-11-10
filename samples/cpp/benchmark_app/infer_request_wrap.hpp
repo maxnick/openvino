@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "remote_blobs_filling.hpp"
 #include "statistics_report.hpp"
 
 typedef std::chrono::high_resolution_clock Time;
@@ -35,7 +36,8 @@ public:
         : _request(net.CreateInferRequest()),
           _id(id),
           _lat_group_id(0),
-          _callbackQueue(callbackQueue) {
+          _callbackQueue(callbackQueue),
+          outputClBuffer() {
         _request.SetCompletionCallback([&]() {
             _endTime = Time::now();
             _callbackQueue(_id, _lat_group_id, getExecutionTimeInMilliseconds());
@@ -63,7 +65,6 @@ public:
     }
 
     void setShape(const std::string& name, const InferenceEngine::SizeVector& dims) {
-        // TODO check return status
         _request.GetBlob(name)->setShape(dims);
     }
 
@@ -84,6 +85,13 @@ public:
         _lat_group_id = id;
     }
 
+    // in case of using GPU memory we need to allocate CL buffer for
+    // output blobs. By encapsulating cl buffer inside InferReqWrap
+    // we will control the number of output buffers and access to it.
+    std::map<std::string, ::gpu::BufferType>& getOutputClBuffer() {
+        return outputClBuffer;
+    }
+
 private:
     InferenceEngine::InferRequest _request;
     Time::time_point _startTime;
@@ -91,6 +99,7 @@ private:
     size_t _id;
     size_t _lat_group_id;
     QueueCallbackFunction _callbackQueue;
+    std::map<std::string, ::gpu::BufferType> outputClBuffer;
 };
 
 class InferRequestsQueue final {
@@ -109,6 +118,7 @@ public:
         _latency_groups.resize(lat_group_n);
         resetTimes();
     }
+
     ~InferRequestsQueue() {
         // Inference Request guarantee that it will wait for all asynchronous internal tasks in destructor
         // So it should be released before any context that the request can use inside internal asynchronous tasks
