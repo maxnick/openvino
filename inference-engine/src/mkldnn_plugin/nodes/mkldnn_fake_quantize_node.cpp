@@ -1698,6 +1698,13 @@ void MKLDNNFakeQuantizeNode::initializePostOpData(const VectorDims &dims, const 
                 outputScale.resize(rnd_up(outputScale.size(), bufferAlignment), 0);
             if (outputShift.size() > 1)
                 outputShift.resize(rnd_up(outputShift.size(), bufferAlignment), 0);
+
+            cropLowData.set(cropLow.size(), 1 << 1, &cropLow[0]);
+            cropHighData.set(cropHigh.size(), 1 << 1, &cropHigh[0]);
+            inputScaleData.set(inputScale.size(), 1 << 1, &inputScale[0]);
+            inputShiftData.set(inputShift.size(), 1 << 1, &inputShift[0]);
+            outputScaleData.set(outputScale.size(), 1 << 1, &outputScale[0]);
+            outputShiftData.set(outputShift.size(), 1 << 1, &outputShift[0]);
         }
 
     isPostOpDataInitialized = true;
@@ -1734,7 +1741,7 @@ void MKLDNNFakeQuantizeNode::appendPostOps(mkldnn::post_ops& ops, const VectorDi
     } else {
         mkldnn::algorithm alg = getAlgorithm() == FQCommon ? mkldnn::algorithm::quantization_quantize_dequantize :
                                                              mkldnn::algorithm::quantization_quantize;
-        ops.append_quantization(alg, cropLow, cropHigh, inputScale, inputShift, outputScale, outputShift);
+        ops.append_quantization(alg, &cropLowData, &cropHighData, &inputScaleData, &inputShiftData, &outputScaleData, &outputShiftData);
     }
 }
 
