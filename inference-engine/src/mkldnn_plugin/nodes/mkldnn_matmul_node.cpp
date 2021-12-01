@@ -96,11 +96,10 @@ void MKLDNNMatMulNode::setPostOps(mkldnn::primitive_attr &attr, const VectorDims
     mkldnn::post_ops ops;
 
     auto getBinPostOpShape = [&](){
-        const auto outShape = getOutputShapeAtPort(0).getStaticDims();
-        const auto outShapeRank = getOutputShapeAtPort(0).getRank();
+        const auto outShapeRank = dims.size();
         const auto chIdx = getChannelAxis();
         std::vector<size_t> binaryShape(outShapeRank, 1);
-        binaryShape[chIdx] = outShape[chIdx];
+        binaryShape[chIdx] = dims[chIdx];
         return binaryShape;
     };
 
@@ -166,10 +165,10 @@ static VectorDims getStridesAndModifyShape(Shape& shape, const bool transpose) {
     return strides;
 }
 
-mkldnn::memory::desc MKLDNNMatMulNode::getBiasDesc() {
+mkldnn::memory::desc MKLDNNMatMulNode::makeBiasDesc(const DnnlMemoryDescCPtr outMemDesc) {
     // oneDNN matmul requires shape for bias desc to be the same rank
-    VectorDims biasDims(getOutputShapeAtPort(0).getRank(), 1);
-    const auto outDims = getOutputShapeAtPort(0).getStaticDims();
+    VectorDims biasDims(outMemDesc->getShape().getRank(), 1);
+    const auto outDims = outMemDesc->getShape().getStaticDims();
     const auto chIdx = getChannelAxis();
     biasDims[chIdx] = outDims[chIdx];
     const auto bdt = MKLDNNExtensionUtils::IEPrecisionToDataType(getOriginalInputPrecisionAtPort(2));
@@ -265,7 +264,7 @@ void MKLDNNMatMulNode::createDescriptor(const std::vector<MemoryDescPtr>& inputD
     if (withBiases) {
         matmul_desc.reset(new matmul::desc(inDataDesc[0]->getDnnlDesc(),
                                            inDataDesc[1]->getDnnlDesc(),
-                                           getBiasDesc(),
+                                           makeBiasDesc(outDataDesc),
                                            outDataDesc->getDnnlDesc()));
     } else {
         matmul_desc.reset(new matmul::desc(inDataDesc[0]->getDnnlDesc(),
@@ -366,10 +365,7 @@ void MKLDNNMatMulNode::prepareParams() {
     AttrPtr attr;
 
     if (isDynamicNode()) {
-        if (!pAttr) {
-            pAttr = initPrimitiveAttr(src0MemPtr->getStaticDims());
-        }
-        attr = pAttr;
+        attr = initPrimitiveAttr(dstMemPtr->getStaticDims());
 
         const auto& src0Desc = src0MemPtr->getDesc();
         const auto& src1Desc = src1MemPtr->getDesc();
@@ -393,9 +389,9 @@ void MKLDNNMatMulNode::prepareParams() {
 
     if (withBiases) {
         matmul_desc.reset(new mkldnn::matmul::desc{src0TransposedDesc->getDnnlDesc(),
-                                            src1TransposedDesc->getDnnlDesc(),
-                                            getBiasDesc(),
-                                            dstDnnlDesc->getDnnlDesc()});
+                                                   src1TransposedDesc->getDnnlDesc(),
+                                                   makeBiasDesc(dstDnnlDesc),
+                                                   dstDnnlDesc->getDnnlDesc()});
     } else {
         matmul_desc.reset(new mkldnn::matmul::desc(src0TransposedDesc->getDnnlDesc(),
                                             src1TransposedDesc->getDnnlDesc(),

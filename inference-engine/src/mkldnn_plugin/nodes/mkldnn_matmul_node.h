@@ -47,7 +47,7 @@ protected:
     AttrPtr initPrimitiveAttr(const VectorDims& dims);
 
 private:
-    mkldnn::memory::desc getBiasDesc();
+    mkldnn::memory::desc makeBiasDesc(const DnnlMemoryDescCPtr outMemDesc);
 
     bool withBiases;
 
@@ -60,7 +60,6 @@ private:
 
     std::array<DnnlBlockedMemoryDescPtr, 2> inDataDesc;
     DnnlBlockedMemoryDescPtr outDataDesc;
-    AttrPtr pAttr;
 };
 
 }  // namespace MKLDNNPlugin

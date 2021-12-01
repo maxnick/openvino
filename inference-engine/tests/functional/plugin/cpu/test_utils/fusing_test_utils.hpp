@@ -78,7 +78,7 @@ protected:
 
 static size_t getChannelAxis(const std::shared_ptr<ngraph::Node>& node) {
     if (std::dynamic_pointer_cast<ngraph::op::MatMul>(node))
-        return node->get_shape().size() - 1; // last dimension
+        return node->get_output_partial_shape(0).size() - 1; // last dimension
     else
         return 1; // second dimension
 }
