@@ -1685,7 +1685,6 @@ void MKLDNNFakeQuantizeNode::initializePostOpData(const VectorDims &dims, const 
             }
         }
     } else {
-
             if (cropLow.size() > 1)
                 cropLow.resize(rnd_up(cropLow.size(), bufferAlignment), 0);
             if (cropHigh.size() > 1)
@@ -1714,7 +1713,9 @@ void MKLDNNFakeQuantizeNode::appendPostOps(mkldnn::post_ops& ops, const VectorDi
     // MKLDNN quantization_injectors assumes that quantization data memory is always aligned on 16
     // by length of AVX512 vector register which is also enough for AVX2 and SSE42 implementations.
     // Otherwise it can lead to buffer over-read and performance penalties due to denormals.
-    initializePostOpData(postOpDims, align);
+    constexpr size_t alignment = 16ul;
+
+    initializePostOpData(postOpDims, alignment);
 
     if (getAlgorithm() == FQBinarization) {
         const auto realAxisSize = postOpDims[postOpDims.size() > 1 ? 1 : 0];

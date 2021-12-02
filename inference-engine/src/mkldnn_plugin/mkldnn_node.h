@@ -581,7 +581,7 @@ public:
      * Seed node should call this routine and pass its post operations list as parameter.
      * @param ops List of fused post operations
      */
-    virtual void appendPostOps(mkldnn::post_ops& ops, const VectorDims &postOpDims, int align = -1, bool initAsBinary = false, bool initBinaryMemory = false);
+    virtual void appendPostOps(mkldnn::post_ops& ops, const VectorDims& postOpDims, int align = -1);
 
 protected:
     bool canFuseSimpleOperation(const MKLDNNNodePtr& node) const;
@@ -598,12 +598,6 @@ protected:
     virtual MemoryDescPtr getSrcMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx);
     virtual MemoryDescPtr getDstMemDesc(mkldnn::primitive_desc_iterator &primitive_desc_it, size_t idx);
 
-    /**
-     * @brief Appends new item into ops list with the information on how the node should be executed as post operation.
-     * Seed node should call this routine and pass its post operations list as parameter.
-     * @param ops List of fused post operations
-     */
-    virtual void appendPostOps(mkldnn::post_ops& ops, const VectorDims& postOpDims, int align = -1);
     virtual void appendBinPostOps(mkldnn::post_ops& ops, const VectorDims& postOpDims, std::vector<MKLDNNMemoryPtr>& binaryPostOpsMem);
 
     virtual AttrPtr initPrimitiveAttr() { return nullptr; }
