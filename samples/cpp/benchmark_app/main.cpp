@@ -441,10 +441,6 @@ int main(int argc, char* argv[]) {
             ie.SetConfig(item.second, item.first);
         }
 
-        auto get_total_ms_time = [](Time::time_point& startTime) {
-            return std::chrono::duration_cast<ns>(Time::now() - startTime).count() * 0.000001;
-        };
-
         size_t batchSize = FLAGS_b;
         Precision precision = Precision::UNSPECIFIED;
         std::string topology_name = "";
@@ -466,7 +462,7 @@ int main(int argc, char* argv[]) {
             slog::info << "Skipping the step for loading network from file" << slog::endl;
             auto startTime = Time::now();
             exeNetwork = ie.LoadNetwork(FLAGS_m, device_name);
-            auto duration_ms = double_to_string(get_total_ms_time(startTime));
+            auto duration_ms = double_to_string(get_duration_ms_till_now(startTime));
             slog::info << "Load network took " << duration_ms << " ms" << slog::endl;
             if (statistics)
                 statistics->addParameters(StatisticsReport::Category::EXECUTION_RESULTS,
@@ -490,7 +486,7 @@ int main(int argc, char* argv[]) {
 
             auto startTime = Time::now();
             CNNNetwork cnnNetwork = ie.ReadNetwork(FLAGS_m);
-            auto duration_ms = double_to_string(get_total_ms_time(startTime));
+            auto duration_ms = double_to_string(get_duration_ms_till_now(startTime));
             slog::info << "Read network took " << duration_ms << " ms" << slog::endl;
             if (statistics)
                 statistics->addParameters(StatisticsReport::Category::EXECUTION_RESULTS,
@@ -521,7 +517,7 @@ int main(int argc, char* argv[]) {
                 slog::info << "Reshaping network: " << getShapesString(shapes) << slog::endl;
                 startTime = Time::now();
                 cnnNetwork.reshape(shapes);
-                duration_ms = double_to_string(get_total_ms_time(startTime));
+                duration_ms = double_to_string(get_duration_ms_till_now(startTime));
                 slog::info << "Reshape network took " << duration_ms << " ms" << slog::endl;
                 if (statistics)
                     statistics->addParameters(StatisticsReport::Category::EXECUTION_RESULTS,
@@ -568,7 +564,7 @@ int main(int argc, char* argv[]) {
             next_step();
             startTime = Time::now();
             exeNetwork = ie.LoadNetwork(cnnNetwork, device_name);
-            duration_ms = double_to_string(get_total_ms_time(startTime));
+            duration_ms = double_to_string(get_duration_ms_till_now(startTime));
             slog::info << "Load network took " << duration_ms << " ms" << slog::endl;
             if (statistics)
                 statistics->addParameters(StatisticsReport::Category::EXECUTION_RESULTS,
@@ -585,7 +581,7 @@ int main(int argc, char* argv[]) {
             next_step();
             auto startTime = Time::now();
             exeNetwork = ie.ImportNetwork(FLAGS_m, device_name, {});
-            auto duration_ms = double_to_string(get_total_ms_time(startTime));
+            auto duration_ms = double_to_string(get_duration_ms_till_now(startTime));
             slog::info << "Import network took " << duration_ms << " ms" << slog::endl;
             if (statistics)
                 statistics->addParameters(StatisticsReport::Category::EXECUTION_RESULTS,
@@ -802,14 +798,11 @@ int main(int argc, char* argv[]) {
         next_step(ss.str());
 
         if (inferenceOnly) {
-            slog::info
-                << "Benchmark inference only mode is enabled. Input blobs will be filled once before performance "
-                   "measurements."
-                << slog::endl;
+            slog::info << "BENCHMARK IS IN INFERENCE ONLY MODE." << slog::endl;
+            slog::info << "Input blobs will be filled once before performance measurements." << slog::endl;
         } else {
-            slog::info << "Benchmark full mode is enabled. Input blobs setting will be included in performance "
-                          "measurements."
-                       << slog::endl;
+            slog::info << "BENCHMARK IS IN FULL MODE." << slog::endl;
+            slog::info << "Inputs setup stage will be included in performance measurements." << slog::endl;
         }
 
         // copy prepared data straight into inferRequest->getBlob()
@@ -1024,7 +1017,7 @@ int main(int argc, char* argv[]) {
                             });
                         statistics->addParameters(StatisticsReport::Category::EXECUTION_RESULTS,
                                                   {
-                                                      {"Avgerage (ms)", double_to_string(groupLatencies[i].average())},
+                                                      {"Average (ms)", double_to_string(groupLatencies[i].average())},
                                                   });
                         statistics->addParameters(StatisticsReport::Category::EXECUTION_RESULTS,
                                                   {
@@ -1091,7 +1084,7 @@ int main(int argc, char* argv[]) {
             if (FLAGS_pcseq && app_inputs_info.size() > 1) {
                 slog::info << "Latency for each data shape group:" << slog::endl;
                 for (size_t i = 0; i < app_inputs_info.size(); ++i) {
-                    slog::info << i << ".";
+                    slog::info << (i + 1) << ".";
                     for (auto& item : app_inputs_info[i]) {
                         std::stringstream input_shape;
                         auto shape = item.second.dataShape;
