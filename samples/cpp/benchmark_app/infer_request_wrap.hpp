@@ -18,9 +18,7 @@
 
 #include "remote_blobs_filling.hpp"
 #include "statistics_report.hpp"
-
-typedef std::chrono::high_resolution_clock Time;
-typedef std::chrono::nanoseconds ns;
+#include "utils.hpp"
 
 typedef std::function<void(size_t id, size_t group_id, const double latency)> QueueCallbackFunction;
 
