@@ -10,6 +10,7 @@
 #include "normalize_preprocess.h"
 #include "mkldnn_node.h"
 #include "mkldnn_edge.h"
+#include "cache/multi_cache.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -249,6 +250,8 @@ private:
     // non-executable (optimized out) nodes, such as Input, Reshape, etc.
     std::vector<MKLDNNNodePtr> constantGraphNodes;
     std::vector<MKLDNNNodePtr> executableGraphNodes;
+
+    MultyCachePtr executorCache;
 
     void EnforceBF16();
 };
