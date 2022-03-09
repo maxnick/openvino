@@ -433,7 +433,9 @@ MKLDNNMemoryPtr &MKLDNNEdge::getMemoryPtr() {
         auto sharedEdge = getSharedEdge();
         auto sharedEdgeParent = sharedEdge->getParent();
         if (sharedEdgeParent->isConstant()) {
-            memoryPtr->Create(desc, sharedEdge->getMemoryPtr()->GetData());
+            auto newMemMngr = std::make_shared<DnnlMemoryMngr>(std::unique_ptr<MemoryMngrWithReuse>(new MemoryMngrWithReuse()));
+            newMemMngr->setExtBuff(sharedEdge->getMemoryPtr()->GetData(), sharedEdge->getMemoryPtr()->getDesc().getCurrentMemSize());
+            memoryPtr->Create(desc, newMemMngr);
         } else {
             memoryPtr->Create(desc, sharedEdge->getMemoryPtr()->getDnnlMemoryMngr());
         }
@@ -481,10 +483,10 @@ void MKLDNNEdge::init() {
     if (edgePtr.get() == this) {
         changeStatus(Status::NeedAllocation);
     } else {
-        if (edgePtr->getParent()->isConstant() && !edgePtr->getChild()->isConstant()) {
-            changeStatus(Status::NeedAllocation);
-            return;
-        }
+//        if (edgePtr->getParent()->isConstant() && !edgePtr->getChild()->isConstant()) {
+//            changeStatus(Status::NeedAllocation);
+//            return;
+//        }
         sharedMemFrom(edgePtr);
     }
 
