@@ -517,9 +517,13 @@ void Node::execute(dnnl::stream strm) {
     }
 }
 
-void Node::executeDynamic(dnnl::stream strm) {
+void Node::executeDynamic(dnnl::stream strm, std::unordered_map<std::string, std::array<uint64_t, 3>>& countersMap) {
+    auto& counters = countersMap[getTypeStr()];
     if (needShapeInfer()) {
+        auto start = std::chrono::steady_clock::now();
         redefineOutputMemory(shapeInfer());
+        auto end = std::chrono::steady_clock::now();
+        counters[0] += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     }
     if (isExecutable()) {
         if (needPrepareParams()) {
@@ -527,9 +531,15 @@ void Node::executeDynamic(dnnl::stream strm) {
                 " since the input shapes are not defined.";
             DEBUG_LOG(" prepareParams() on #", getExecIndex(), " ", getTypeStr(), " ", algToString(getAlgorithm()),
                       " ", getName(), " ", getOriginalLayers());
+            auto start = std::chrono::steady_clock::now();
             prepareParams();
+            auto end = std::chrono::steady_clock::now();
+            counters[1] += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
         }
+        auto start = std::chrono::steady_clock::now();
         executeDynamicImpl(strm);
+        auto end = std::chrono::steady_clock::now();
+        counters[2] += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     }
     updateLastInputDims();
 }

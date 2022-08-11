@@ -63,6 +63,14 @@ typedef std::vector<edge_cluster_t> edge_clusters_t;
 dnnl::engine Graph::eng(dnnl::engine::kind::cpu, 0);
 
 Graph::~Graph() {
+    for (const auto& item : countersMap) {
+        constexpr int divisor = 1000;
+        std::cout << item.first << " : ";
+        for (const auto& time : item.second) {
+            std::cout << float(time) / infer_call_count / divisor << " , ";
+        }
+        std::cout << std::endl;
+    }
     CPU_DEBUG_CAP_ENABLE(summary_perf(*this));
 }
 
@@ -989,7 +997,7 @@ inline void Graph::ExecuteNode(const NodePtr& node, const dnnl::stream& stream) 
     OV_ITT_SCOPED_TASK(itt::domains::intel_cpu, node->profiling.execute);
 
     if (node->isDynamicNode()) {
-        node->executeDynamic(stream);
+        node->executeDynamic(stream, countersMap);
     } else {
         node->execute(stream);
     }
@@ -1002,6 +1010,7 @@ void Graph::Infer(InferRequestBase* request) {
     }
 
     dnnl::stream stream(eng);
+    infer_call_count++;
 
     for (const auto& node : executableGraphNodes) {
         VERBOSE(node, config.verbose);

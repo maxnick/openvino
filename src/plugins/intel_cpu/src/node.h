@@ -332,7 +332,7 @@ public:
     void resolveInPlaceEdges();
 
     virtual void execute(dnnl::stream strm);
-    void executeDynamic(dnnl::stream strm);
+    void executeDynamic(dnnl::stream strm, std::unordered_map<std::string, std::array<uint64_t, 3>>& countersMap);
     virtual void redefineOutputMemory(const std::vector<VectorDims> &newShapes);
 
     virtual void initSupportedPrimitiveDescriptors();
