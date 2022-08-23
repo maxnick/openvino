@@ -64,10 +64,10 @@ dnnl::engine Graph::eng(dnnl::engine::kind::cpu, 0);
 
 Graph::~Graph() {
     for (const auto& item : countersMap) {
-        constexpr int divisor = 1000;
+        constexpr int divisor = 1000000;
         std::cout << item.first << " : ";
         for (const auto& time : item.second) {
-            std::cout << float(time) / infer_call_count / divisor << " , ";
+            std::cout << float(time) / divisor << " , "; // / infer_call_count
         }
         std::cout << std::endl;
     }

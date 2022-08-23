@@ -263,7 +263,7 @@ private:
     std::vector<NodePtr> executableGraphNodes;
 
     MultiCachePtr rtParamsCache;
-    mutable std::unordered_map<std::string, std::array<uint64_t, 3>> countersMap;
+    mutable std::unordered_map<std::string, std::array<uint64_t, 4>> countersMap;
 
     void EnforceBF16();
 };
