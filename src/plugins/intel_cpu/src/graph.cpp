@@ -1101,6 +1101,7 @@ void Graph::InferDynamic(InferRequestBase* request) {
     }
 
     tbb::task_group tg;
+    tbb::task_arena arena{tbb::task_arena::attach()};
     std::function<void(size_t, size_t)> updateShapes;
     std::function<void(size_t, size_t)> updateDynParams;
 
@@ -1135,8 +1136,10 @@ void Graph::InferDynamic(InferRequestBase* request) {
 
     updateNodes = [&](size_t stopIndx) {
         auto startCounter = prepareCounter.load();
-        tg.run([=, &updateShapes](){ updateShapes(startCounter, stopIndx); });
-        tg.wait();
+        arena.execute([&]() {
+            tg.run([=, &updateShapes](){ updateShapes(startCounter, stopIndx); });
+            tg.wait();
+        });
     };
 #else
     size_t prepareCounter = 0;
