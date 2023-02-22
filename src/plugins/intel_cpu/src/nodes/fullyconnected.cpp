@@ -837,49 +837,49 @@ DnnlDesriptor FullyConnected::createDescriptorInternalForConv(DnnlMemoryDescCPtr
 
 bool FullyConnected::canBeExecutedInConv1x1() const {
     bool retVal = false;
-    const auto inRank = getInputShapeAtPort(DATA_ID).getRank();
-    const auto weightRank = getInputShapeAtPort(WEIGHTS_ID).getRank();
-    // disable rank=4:
-    // if layout is nhwc:
-    //   A matrix: N * IC * H * W --> N * (IC*H*W), the M, N', K of matrix multiply will be:
-    //   M = 1, K = (IC*H*W), when M = 1 it should not be efficient since acts as a vector multiply
-    // if layout is nchw/nChw16c: brg1x1 not support. Although jit supports, it should have similar
-    //   problems with the above.
-    if (dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx512_core) &&
-        getOriginalInputPrecisionAtPort(DATA_ID) == InferenceEngine::Precision::FP32 &&
-        one_of(inRank, 2, 3) && weightRank == 2) {
-        auto dstMemPtr = getChildEdgesAtPort(0)[0]->getMemoryPtr();
-        DnnlMemoryDescCPtr outDesc = dstMemPtr->GetDescWithType<DnnlMemoryDesc>();
-        // brg convolution does not support stride
-        if (outDesc->getDnnlDesc().data.offset0 == 0)
-            retVal = true;
-    }
+    // const auto inRank = getInputShapeAtPort(DATA_ID).getRank();
+    // const auto weightRank = getInputShapeAtPort(WEIGHTS_ID).getRank();
+    // // disable rank=4:
+    // // if layout is nhwc:
+    // //   A matrix: N * IC * H * W --> N * (IC*H*W), the M, N', K of matrix multiply will be:
+    // //   M = 1, K = (IC*H*W), when M = 1 it should not be efficient since acts as a vector multiply
+    // // if layout is nchw/nChw16c: brg1x1 not support. Although jit supports, it should have similar
+    // //   problems with the above.
+    // if (dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx512_core) &&
+    //     getOriginalInputPrecisionAtPort(DATA_ID) == InferenceEngine::Precision::FP32 &&
+    //     one_of(inRank, 2, 3) && weightRank == 2) {
+    //     auto dstMemPtr = getChildEdgesAtPort(0)[0]->getMemoryPtr();
+    //     DnnlMemoryDescCPtr outDesc = dstMemPtr->GetDescWithType<DnnlMemoryDesc>();
+    //     // brg convolution does not support stride
+    //     if (outDesc->getDnnlDesc().data.offset0 == 0)
+    //         retVal = true;
+    // }
 
-    if (retVal) {
-        auto srcMemPtr = getParentEdgesAtPort(0)[0]->getMemoryPtr();
-        const auto& srcDims = srcMemPtr->getStaticDims();
-        auto weightMemPtr = getParentEdgesAtPort(1)[0]->getMemoryPtr();
-        const auto& weightDims = weightMemPtr->getStaticDims();
-        // for original inner product semantics:
-        //  when input is 2D tensor
-        //    M in oneDNN will map to widthInConv
-        //  when input is 3D tensor
-        //    M in oneDNN will map to widthInConv*minibatch
-        // currently nwc mapping in brg:
-        //  when input is 2D tensor
-        //    widthInConv will map to 'w', 'n' will be 1
-        //  when input is 3D tensor
-        //    widthInConv will map to 'w', 'n' will be minibatch
-        Dim widthInConv, N, K;
-        widthInConv = srcDims[inRank - 2];
-        K = srcDims[inRank - 1];
-        N = weightDims[0];
+    // if (retVal) {
+    //     auto srcMemPtr = getParentEdgesAtPort(0)[0]->getMemoryPtr();
+    //     const auto& srcDims = srcMemPtr->getStaticDims();
+    //     auto weightMemPtr = getParentEdgesAtPort(1)[0]->getMemoryPtr();
+    //     const auto& weightDims = weightMemPtr->getStaticDims();
+    //     // for original inner product semantics:
+    //     //  when input is 2D tensor
+    //     //    M in oneDNN will map to widthInConv
+    //     //  when input is 3D tensor
+    //     //    M in oneDNN will map to widthInConv*minibatch
+    //     // currently nwc mapping in brg:
+    //     //  when input is 2D tensor
+    //     //    widthInConv will map to 'w', 'n' will be 1
+    //     //  when input is 3D tensor
+    //     //    widthInConv will map to 'w', 'n' will be minibatch
+    //     Dim widthInConv, N, K;
+    //     widthInConv = srcDims[inRank - 2];
+    //     K = srcDims[inRank - 1];
+    //     N = weightDims[0];
 
-        if (!(widthInConv >= 2 && widthInConv <= 3136 &&
-              K >= 96 && K <= 4096 &&
-              N >= 96 && N <= K * 4))
-            retVal = false;
-    }
+    //     if (!(widthInConv >= 2 && widthInConv <= 3136 &&
+    //           K >= 96 && K <= 4096 &&
+    //           N >= 96 && N <= K * 4))
+    //         retVal = false;
+    // }
 
     return retVal;
 }
