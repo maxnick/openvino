@@ -144,25 +144,25 @@ public:
 
     virtual ~Node() = default;
 
-    void addEdge(const EdgeWeakPtr& edge);
-    void removeEdge(const EdgeWeakPtr& edge);
+    void addEdge(EdgeRawPtr edgePtr);
+    void removeEdge(EdgeRawPtr edgePtr);
 
     virtual void cleanup();
     void remove();
 
-    const std::vector<EdgeWeakPtr> &getParentEdges() const noexcept {
+    const std::vector<std::vector<EdgeRawPtr>> &getParentEdges() const noexcept {
         return parentEdges;
     }
 
-    const std::vector<EdgeWeakPtr> &getChildEdges() const noexcept {
+    const std::vector<std::vector<EdgeRawPtr>> &getChildEdges() const noexcept {
         return childEdges;
     }
 
-    const EdgePtr getParentEdgeAt(size_t idx) const;
-    virtual const EdgePtr getChildEdgeAt(size_t idx) const;
+    const EdgeRawPtr getParentEdgeAt(size_t idx) const;
+    const EdgeRawPtr getChildEdgeAt(size_t idx) const;
 
-    const std::vector<EdgePtr> getParentEdgesAtPort(size_t idx) const;
-    const std::vector<EdgePtr> getChildEdgesAtPort(size_t idx) const;
+    const std::vector<EdgeRawPtr>& getParentEdgesAtPort(size_t idx) const;
+    const std::vector<EdgeRawPtr>& getChildEdgesAtPort(size_t idx) const;
 
     bool isDropped() {
         return (isEdgesEmpty(childEdges) && isEdgesEmpty(parentEdges));
@@ -660,8 +660,8 @@ protected:
     std::shared_ptr<IShapeInfer> shapeInference;
 
 private:
-    std::vector<EdgeWeakPtr> parentEdges;
-    std::vector<EdgeWeakPtr> childEdges;
+    std::vector<std::vector<EdgeRawPtr>> parentEdges;
+    std::vector<std::vector<EdgeRawPtr>> childEdges;
 
     std::vector<InferenceEngine::Precision> originalInputPrecisions;
     std::vector<InferenceEngine::Precision> originalOutputPrecisions;
@@ -682,7 +682,7 @@ private:
 
     MemoryPtr scratchpadMem;
 
-    bool isEdgesEmpty(const std::vector<EdgeWeakPtr>& edges) const;
+    bool isEdgesEmpty(const std::vector<std::vector<EdgeRawPtr>>& edges) const;
 
     enum LOOK { LOOK_UP = 1, LOOK_DOWN = 2 };
     ConstantType checkConstant(LOOK look, std::vector<NodePtr>& checkNodes);

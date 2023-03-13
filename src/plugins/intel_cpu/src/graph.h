@@ -117,7 +117,7 @@ public:
 
     void RemoveDroppedNodes();
     void RemoveDroppedEdges();
-    void RemoveEdge(EdgePtr& edge);
+    void RemoveEdge(EdgeRawPtr edge);
     void DropNode(const NodePtr& node);
     void DropDWConvNode(const NodePtr& node);
 

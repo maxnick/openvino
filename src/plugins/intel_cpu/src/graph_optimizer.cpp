@@ -244,59 +244,62 @@ void GraphOptimizer::FuseConvolutionMatMulDeconvAndBias(Graph &graph) {
 
         CPU_GRAPH_OPTIMIZER_SCOPE(FuseConvolutionMatMulDeconvAndBias_ChildNode);
 
-        auto childs = childNode->childEdges;
-        auto parents = childNode->parentEdges;
+        auto& childs = childNode->childEdges;
+        auto& parents = childNode->parentEdges;
 
-        for (size_t i = 0; i < parents.size(); i++) {
-            auto p_edge = parents[i].lock();
-            if (!p_edge) continue;
-            auto parent = p_edge->getParent();
-            if (!parent) continue;
+        for (auto& port_edges : parents) {
+            for (auto& p_edge : port_edges) {            
+                if (!p_edge) continue;
+                auto parent = p_edge->getParent();
+                if (!parent) continue;
 
-            if (parent == parentNode) {
-                for (size_t j = 0; j < childs.size(); j++) {
-                    if (!childs[j].lock())
-                        continue;
-                    auto child = childs[j].lock()->getChild();
-                    if (!child)
-                        continue;
+                if (parent == parentNode) {
+                    for (auto& child_port_edges : childs) {
+                        for (auto& child_edge : child_port_edges) {
+                            if (child_edge)
+                                continue;
+                            auto child = child_edge->getChild();
+                            if (!child)
+                                continue;
 
-                    EdgePtr &remEdge = p_edge;
+                            EdgeRawPtr& remEdge = p_edge;
+                            int inNum = 0;
+                            if (remEdge) {
+                                inNum = remEdge->getInputNum();
+                                graph.RemoveEdge(remEdge);
+                            }
+                            remEdge = child_edge;
+                            int outNum = 0;
+                            if (remEdge) {
+                                outNum = remEdge->getOutputNum();
+                                graph.RemoveEdge(remEdge);
+                            }
+                            EdgePtr newEdge = std::make_shared<Edge>(parent, child, inNum, outNum);
+                            auto &graphEdges = graph.GetEdges();
+                            graphEdges.push_back(newEdge);
+                            parent->addEdge(newEdge.get());
+                        }
+                    }
+                } else {
+                    EdgeRawPtr&  remEdge = p_edge;
                     int inNum = 0;
                     if (remEdge) {
                         inNum = remEdge->getInputNum();
                         graph.RemoveEdge(remEdge);
                     }
-                    remEdge = childs[j].lock();
-                    int outNum = 0;
-                    if (remEdge) {
-                        outNum = remEdge->getOutputNum();
-                        graph.RemoveEdge(remEdge);
-                    }
-                    EdgePtr newEdge(new Edge(parent, child, inNum, outNum));
-                    auto &graphEdges = graph.GetEdges();
+
+                    const auto& parentEltwise = parentNode;
+                    EdgePtr newEdge = std::make_shared<Edge>(parent, parentEltwise, inNum, parentEltwise->getParentEdges().size());
+                    auto& graphEdges = graph.GetEdges();
                     graphEdges.push_back(newEdge);
-                    parent->addEdge(newEdge);
+                    parent->addEdge(newEdge.get());
+
+                    const auto fusingAxis = parentEltwise->getFusingAxis();
+                    const auto& outShape = parentEltwise->getOutputShapeAtPort(0);
+
+                    parent->outputShapes[inNum] = Shape({outShape.getMinDims()[fusingAxis]}, {outShape.getMaxDims()[fusingAxis]});
+                    parentEltwise->inputShapes.push_back(parent->getOutputShapeAtPort(0));
                 }
-            } else {
-                EdgePtr &remEdge = p_edge;
-                int inNum = 0;
-                if (remEdge) {
-                    inNum = remEdge->getInputNum();
-                    graph.RemoveEdge(remEdge);
-                }
-
-                const auto& parentEltwise = parentNode;
-                EdgePtr newEdge(new Edge(parent, parentEltwise, inNum, parentEltwise->getParentEdges().size()));
-                auto& graphEdges = graph.GetEdges();
-                graphEdges.push_back(newEdge);
-                parent->addEdge(newEdge);
-
-                const auto fusingAxis = parentEltwise->getFusingAxis();
-                const auto& outShape = parentEltwise->getOutputShapeAtPort(0);
-
-                parent->outputShapes[inNum] = Shape({outShape.getMinDims()[fusingAxis]}, {outShape.getMaxDims()[fusingAxis]});
-                parentEltwise->inputShapes.push_back(parent->getOutputShapeAtPort(0));
             }
         }
 
@@ -351,13 +354,14 @@ void GraphOptimizer::FuseDeconvolutionAndSimpleOperation(Graph &graph) {
 
         childNode->fuseInto(parentNode);
 
-        auto parentEdges = childNode->parentEdges;
-        for (auto &parentEdge : parentEdges) {
-            auto p_edge = parentEdge.lock();
-            if (p_edge->getParent()->getType() == Type::Deconvolution)
-                continue;
+        auto& parentEdges = childNode->parentEdges;
+        for (auto& port_edges : parentEdges) {
+            for (auto& p_edge : port_edges) {
+                if (p_edge->getParent()->getType() == Type::Deconvolution)
+                    continue;
 
-            graph.RemoveEdge(p_edge);
+                graph.RemoveEdge(p_edge);
+            }
         }
 
         graph.DropNode(childNode);
@@ -431,44 +435,55 @@ void GraphOptimizer::FuseMultiplyAndAdd(Graph &graph) {
 
         CPU_GRAPH_OPTIMIZER_SCOPE(FuseMultiplyAndAdd_ChildNode);
 
-        auto childs = childNode->childEdges;
-        auto parents = childNode->parentEdges;
+        std::vector<EdgeRawPtr> childs;
+        for (auto& port_edges : childNode->childEdges) {
+            for (auto& edge : port_edges) {
+                childs.push_back(edge);
+            }
+        }
+
+        std::vector<EdgeRawPtr> parents;
+        for (auto& port_edges : childNode->parentEdges) {
+            for (auto& edge : port_edges) {
+                parents.push_back(edge);
+            }
+        }
 
         for (size_t i = 0; i < parents.size(); i++) {
-            auto p_edge = parents[i].lock();
+            auto p_edge = parents[i];
             if (!p_edge) continue;
             auto parent = p_edge->getParent();
             if (!parent) continue;
 
             if (parent == parentNode) {
                 for (size_t j = 0; j < childs.size(); j++) {
-                    if (!childs[j].lock())
+                    if (!childs[j])
                         continue;
-                    auto child = childs[j].lock()->getChild();
+                    auto child = childs[j]->getChild();
                     if (!child)
                         continue;
 
-                    EdgePtr &remEdge = p_edge;
+                    auto& remEdge = p_edge;
                     int inNum = 0;
                     if (remEdge) {
                         inNum = remEdge->getInputNum();
                         remEdge->drop();
                         graph.RemoveEdge(remEdge);
                     }
-                    remEdge = childs[j].lock();
+                    remEdge = childs[j];
                     int outNum = 0;
                     if (remEdge) {
                         outNum = remEdge->getOutputNum();
                         remEdge->drop();
                         graph.RemoveEdge(remEdge);
                     }
-                    EdgePtr newEdge(new Edge(parent, child, inNum, outNum));
+                    EdgePtr newEdge = std::make_shared<Edge>(parent, child, inNum, outNum);
                     auto &graphEdges = graph.GetEdges();
                     graphEdges.push_back(newEdge);
-                    parent->addEdge(newEdge);
+                    parent->addEdge(newEdge.get());
                 }
             } else {
-                EdgePtr &remEdge = p_edge;
+                auto& remEdge = p_edge;
                 int inNum = 0;
                 if (remEdge) {
                     inNum = remEdge->getInputNum();
@@ -477,10 +492,10 @@ void GraphOptimizer::FuseMultiplyAndAdd(Graph &graph) {
                 }
 
                 auto& parentEltwise = parentNode;
-                EdgePtr newEdge(new Edge(parent, parentEltwise, inNum, parentEltwise->getParentEdges().size()));
+                EdgePtr newEdge = std::make_shared<Edge>(parent, parentEltwise, inNum, parentEltwise->getParentEdges().size());
                 auto &graphEdges = graph.GetEdges();
                 graphEdges.push_back(newEdge);
-                parent->addEdge(newEdge);
+                parent->addEdge(newEdge.get());
 
                 parentEltwise->inputShapes.push_back(parent->getOutputShapeAtPort(0));
             }
@@ -526,37 +541,43 @@ void GraphOptimizer::MergeConvertAndScaleShift(Graph& graph) {
 
         CPU_GRAPH_OPTIMIZER_SCOPE(MergeConvertAndScaleShift_ChildNode);
 
-        auto parents = parentNode->parentEdges;
+        std::vector<EdgeRawPtr> parents;
+        for (auto& port_edges : childNode->parentEdges) {
+            for (auto& edge : port_edges) {
+                parents.push_back(edge);
+            }
+        }
+
         for (size_t i = 0; i < parents.size(); i++) {
-            auto p_edge = parents[i].lock();
+            auto p_edge = parents[i];
             if (!p_edge) continue;
             auto parent = p_edge->getParent();
             if (!parent) continue;
 
-            if (!parentNode->childEdges[0].lock())
+            if (!parentNode->childEdges[0][0])
                 continue;
-            auto child = parentNode->childEdges[0].lock()->getChild();
+            auto child = parentNode->childEdges[0][0]->getChild();
             if (!child)
                 continue;
 
-            EdgePtr& remEdge = p_edge;
+            auto& remEdge = p_edge;
             int inNum = 0;
             if (remEdge) {
                 inNum = remEdge->getInputNum();
                 remEdge->drop();
                 graph.RemoveEdge(remEdge);
             }
-            remEdge = parentNode->childEdges[0].lock();
+            remEdge = parentNode->childEdges[0][0];
             int outNum = 0;
             if (remEdge) {
                 outNum = remEdge->getOutputNum();
                 remEdge->drop();
                 graph.RemoveEdge(remEdge);
             }
-            EdgePtr newEdge(new Edge(parent, child, inNum, outNum));
+            EdgePtr newEdge = std::make_shared<Edge>(parent, child, inNum, outNum);
             auto& graphEdges = graph.GetEdges();
             graphEdges.push_back(newEdge);
-            parent->addEdge(newEdge);
+            parent->addEdge(newEdge.get());
         }
 
         childNode->setOriginalInputPrecisionAtPort(0, parentNode->getOriginalInputPrecisionAtPort(0));
@@ -760,13 +781,14 @@ void GraphOptimizer::FuseFullyConnectedAndSimpleOperation(Graph &graph) {
         childNode->fuseInto(parentNode);
 
         if (childNode->getType() == Type::FakeQuantize || childNode->getType() == Type::Eltwise) {
-            auto parentEdges = childNode->parentEdges;
-            for (auto &parentEdge : parentEdges) {
-                auto p_edge = parentEdge.lock();
-                if (p_edge->getParent()->getType() == Type::FullyConnected)
-                    continue;
+            auto& parentEdges = childNode->parentEdges;
+            for (auto& port_edges : parentEdges) {
+                for (auto& p_edge : port_edges) {
+                    if (p_edge->getParent()->getType() == Type::FullyConnected)
+                        continue;
 
-                graph.RemoveEdge(p_edge);
+                    graph.RemoveEdge(p_edge);
+                }
             }
         }
 
@@ -801,12 +823,13 @@ void GraphOptimizer::FuseMatMulAndSimpleOperation(Graph &graph) {
 
         if (childNode->getType() == Type::FakeQuantize || childNode->getType() == Type::Eltwise) {
             auto parentEdges = childNode->parentEdges;
-            for (auto &parentEdge : parentEdges) {
-                auto p_edge = parentEdge.lock();
-                if (p_edge->getParent()->getType() == Type::MatMul)
-                    continue;
+            for (auto& port_edges : parentEdges) {
+                for (auto& p_edge : port_edges) {
+                    if (p_edge->getParent()->getType() == Type::MatMul)
+                        continue;
 
-                graph.RemoveEdge(p_edge);
+                    graph.RemoveEdge(p_edge);
+                }
             }
         }
 
@@ -1009,12 +1032,13 @@ void GraphOptimizer::FuseConvolutionAndSimpleOperationThroughMaxPool(Graph &grap
         parentNode->addFusedNode(fuseCandidate);
         parentNode->addOriginalLayer(fuseCandidate->getOriginalLayers());
         auto parentEdges = fuseCandidate->parentEdges;
-        for (auto &parentEdge : parentEdges) {
-            auto p_edge = parentEdge.lock();
-            if (p_edge->getParent() == childNode)
-                continue;
+        for (auto& port_edges : parentEdges) {
+            for (auto& p_edge : port_edges) {
+                if (p_edge->getParent() == childNode)
+                    continue;
 
-            graph.RemoveEdge(p_edge);
+                graph.RemoveEdge(p_edge);
+            }
         }
         graph.DropNode(fuseCandidate);
     }
@@ -1048,13 +1072,14 @@ void GraphOptimizer::FuseConvolutionAndSimpleOperation(Graph &graph) {
         childNode->fuseInto(parentNode);
 
         if (childNode->getType() == Type::FakeQuantize || childNode->getType() == Type::Eltwise) {
-            auto parentEdges = childNode->parentEdges;
-            for (auto &parentEdge : parentEdges) {
-                auto p_edge = parentEdge.lock();
-                if (p_edge->getParent()->getType() == parentNodeType)
-                    continue;
+            auto& parentEdges = childNode->parentEdges;
+            for (auto& port_edges : parentEdges) {
+                for (auto& p_edge : port_edges) {
+                    if (p_edge->getParent()->getType() == parentNodeType)
+                        continue;
 
-                graph.RemoveEdge(p_edge);
+                    graph.RemoveEdge(p_edge);
+                }
             }
         }
 
@@ -1091,13 +1116,14 @@ void GraphOptimizer::FusePoolingAndFakeQuantize(Graph &graph) {
 
         child->fuseInto(parent);
 
-        auto parents = child->parentEdges;
-        for (size_t i = 0; i < parents.size(); i++) {
-            auto p_edge = parents[i].lock();
-            if (p_edge->getParent()->getType() == Type::Pooling)
-                continue;
+        auto& parents = child->parentEdges;
+        for (auto& port_edges : parents) {
+            for (auto& p_edge : port_edges) {
+                if (p_edge->getParent()->getType() == Type::Pooling)
+                    continue;
 
-            graph.RemoveEdge(p_edge);
+                graph.RemoveEdge(p_edge);
+            }
         }
 
         graph.DropNode(child);
@@ -1120,11 +1146,13 @@ static bool is_data_dependency(const std::shared_ptr<Node> &parent,
     for (; !nextLayers.empty();) {
         auto layer = *nextLayers.begin();
         if (layer == child.get()) return true;
-        for (auto oe : layer->getChildEdges()) {
-            auto nn = oe.lock()->getChild();
-            if (visited.find(nn.get()) == visited.end()) {
-                nextLayers.push_back(nn.get());
-                visited.insert(nn.get());
+        for (auto& port_edges : layer->getChildEdges()) {
+            for (auto oe : port_edges) {
+                auto nn = oe->getChild();
+                if (visited.find(nn.get()) == visited.end()) {
+                    nextLayers.push_back(nn.get());
+                    visited.insert(nn.get());
+                }
             }
         }
         nextLayers.pop_front();
@@ -1323,10 +1351,12 @@ void GraphOptimizer::FuseConvolutionSumAndConvolutionSumActivation(Graph &graph)
         // be overwritten. Should verify that all other consumer already read it and
         // we can spoil input data.
         // TODO: rewrite once we add "Inplace" reporting mechanism
-        for (auto & edge : peerNode->getChildEdges()) {
-            if (!fuse_allowed)
-                break;
-            fuse_allowed &= is_data_dependency(edge.lock()->getChild(), sum);
+        for (auto& port_edges : peerNode->getChildEdges()) {
+            for (auto & edge : port_edges) {
+                if (!fuse_allowed)
+                    break;
+                fuse_allowed &= is_data_dependency(edge->getChild(), sum);
+            }
         }
         if (!fuse_allowed) continue;
 
@@ -1369,26 +1399,27 @@ void GraphOptimizer::FuseConvolutionSumAndConvolutionSumActivation(Graph &graph)
         if (mergedBinConvNode != nullptr)
             childPort = mergedBinConvNode->getParentEdges().size();
 
-        EdgePtr edgePtr(new Edge(peerNode, mergedConv, peer_port, childPort));
+        EdgePtr edgePtr = std::make_shared<Edge>(peerNode, mergedConv, peer_port, childPort);
         graph.GetEdges().push_back(edgePtr);
 
-        mergedConv->addEdge(edgePtr);
+        mergedConv->addEdge(edgePtr.get());
 
-        std::vector<EdgeWeakPtr> edges_to_reconnect = lastNode->getChildEdges();
-        for (auto &edge_w : edges_to_reconnect) {
-            auto edge = edge_w.lock();
-            auto child = edge->getChild();
-            int idxParent = edge->getInputNum();
-            int idxChild = edge->getOutputNum();
+        auto& edges_to_reconnect = lastNode->getChildEdges();
+        for (auto& port_edges : edges_to_reconnect) {
+            for (auto &edge : port_edges) {
+                auto child = edge->getChild();
+                int idxParent = edge->getInputNum();
+                int idxChild = edge->getOutputNum();
 
-            // reconnect after  activation/sum. Port index must be 0
-            IE_ASSERT(idxParent == 0);
+                // reconnect after  activation/sum. Port index must be 0
+                IE_ASSERT(idxParent == 0);
 
-            edge->drop();
+                edge->drop();
 
-            EdgePtr newEdge(new Edge(mergedConv, child, idxParent, idxChild));
-            graph.GetEdges().push_back(newEdge);
-            child->addEdge(newEdge);
+                EdgePtr newEdge = std::make_shared<Edge>(mergedConv, child, idxParent, idxChild);
+                graph.GetEdges().push_back(newEdge);
+                child->addEdge(newEdge.get());
+            }
         }
 
         if (lastNode != sum) {
@@ -1424,13 +1455,14 @@ void GraphOptimizer::FuseMVNAndSimpleOperation(Graph &graph) {
         childNode->fuseInto(parentNode);
 
         if (childNode->getType() == Type::FakeQuantize || childNode->getType() == Type::Eltwise) {
-            auto parentEdges = childNode->parentEdges;
-            for (auto &parentEdge : parentEdges) {
-                auto p_edge = parentEdge.lock();
-                if (p_edge->getParent()->getType() == Type::MVN)
-                    continue;
+            auto& parentEdges = childNode->parentEdges;
+            for (auto& port_edges : parentEdges) {
+                for (auto &p_edge : port_edges) {
+                    if (p_edge->getParent()->getType() == Type::MVN)
+                        continue;
 
-                graph.RemoveEdge(p_edge);
+                    graph.RemoveEdge(p_edge);
+                }
             }
         }
 
@@ -1447,10 +1479,14 @@ void GraphOptimizer::FuseInterpolateAndSimpleOperation(Graph &graph) {
 
     auto isSuitableChildNode = [&](NodePtr parentNode, NodePtr childNode) {
         // Avoid cycle dependencies
-        for (auto &childParentEdge : childNode->getParentEdges()) {
-            for (auto &parentParentEdge : parentNode->getParentEdges()) {
-                if (childParentEdge.lock()->getParent() == parentParentEdge.lock()->getParent())
-                    return false;
+        for (auto port_edges_child : childNode->getParentEdges()) {
+            for (auto &childParentEdge : port_edges_child) {
+                for (auto& port_edges : parentNode->getParentEdges()) {
+                    for (auto &parentParentEdge : port_edges) {
+                        if (childParentEdge->getParent() == parentParentEdge->getParent())
+                            return false;
+                    }
+                }
             }
         }
         if (!childNode->getFusedWith().empty())
@@ -1483,13 +1519,14 @@ void GraphOptimizer::FuseInterpolateAndSimpleOperation(Graph &graph) {
         childNode->fuseInto(parentNode);
 
         if (childNode->getType() == Type::FakeQuantize || childNode->getType() == Type::Eltwise) {
-            auto parentEdges = childNode->parentEdges;
-            for (auto &parentEdge : parentEdges) {
-                auto p_edge = parentEdge.lock();
-                if (p_edge->getParent()->getType() == Type::Interpolate)
-                    continue;
+            auto& parentEdges = childNode->parentEdges;
+            for (auto& port_edges: parentEdges) {
+                for (auto& p_edge : port_edges) {
+                    if (p_edge->getParent()->getType() == Type::Interpolate)
+                        continue;
 
-                graph.RemoveEdge(p_edge);
+                    graph.RemoveEdge(p_edge);
+                }
             }
         }
 
@@ -1523,13 +1560,14 @@ void GraphOptimizer::FuseNormalizeL2AndSimpleOperation(Graph &graph) {
         childNode->fuseInto(parentNode);
 
         if (childNode->getType() == Type::FakeQuantize || childNode->getType() == Type::Eltwise) {
-            auto parentEdges = childNode->parentEdges;
-            for (auto &parentEdge : parentEdges) {
-                auto p_edge = parentEdge.lock();
-                if (p_edge->getParent()->getType() == Type::NormalizeL2)
-                    continue;
+            auto& parentEdges = childNode->parentEdges;
+            for (auto& port_edges: parentEdges) {
+                for (auto& p_edge : port_edges) {
+                    if (p_edge->getParent()->getType() == Type::NormalizeL2)
+                        continue;
 
-                graph.RemoveEdge(p_edge);
+                    graph.RemoveEdge(p_edge);
+                }
             }
         }
 
@@ -1563,15 +1601,16 @@ void GraphOptimizer::FuseReduceAndSimpleOperation(Graph &graph) {
         childNode->fuseInto(parentNode);
 
         if (childNode->getType() == Type::FakeQuantize || childNode->getType() == Type::Eltwise) {
-            auto parentEdges = childNode->parentEdges;
-            for (auto &parentEdge : parentEdges) {
-                auto p_edge = parentEdge.lock();
-                if (p_edge == nullptr)
-                    IE_THROW() << "Cannot get parent edge " << childNode->getName();
-                if (p_edge->getParent()->getType() == Type::Reduce)
-                    continue;
+            auto& parentEdges = childNode->parentEdges;
+            for (auto& port_edges: parentEdges) {
+                for (auto& p_edge : port_edges) {
+                    if (p_edge == nullptr)
+                        IE_THROW() << "Cannot get parent edge " << childNode->getName();
+                    if (p_edge->getParent()->getType() == Type::Reduce)
+                        continue;
 
-                graph.RemoveEdge(p_edge);
+                    graph.RemoveEdge(p_edge);
+                }
             }
         }
 
@@ -1589,15 +1628,29 @@ void GraphOptimizer::FuseEltwiseAndSimple(Graph &graph) {
     auto isSuitableChildNode = [&](NodePtr parentNode, NodePtr childNode) {
         if (parentNode->isConstant() && !childNode->isConstant())
             return false;
-        for (auto &childParentEdge : childNode->getParentEdges()) {
+
+        std::vector<EdgeRawPtr> parents;
+        for (auto& port_edges : childNode->getParentEdges()) {
+            for (auto& edge : port_edges) {
+                parents.push_back(edge);
+            }
+        }
+
+        for (auto &childParentEdge : parents) {
             // WA to prevent unsupported reorder exception issue in some cases
-            if (childParentEdge.lock()->getParent()->getType() == Type::Split) {
+            if (childParentEdge->getParent()->getType() == Type::Split) {
                 return false;
             }
 
             // Avoid cycle dependencies
-            for (auto &parentParentEdge : parentNode->getParentEdges()) {
-                if (childParentEdge.lock()->getParent() == parentParentEdge.lock()->getParent())
+            std::vector<EdgeRawPtr> parent_parents;
+            for (auto& port_edges : parentNode->getParentEdges()) {
+                for (auto& edge : port_edges) {
+                    parent_parents.push_back(edge);
+                }
+            }
+            for (auto &parentParentEdge : parent_parents) {
+                if (childParentEdge->getParent() == parentParentEdge->getParent())
                     return false;
             }
         }
@@ -1635,56 +1688,69 @@ void GraphOptimizer::FuseEltwiseAndSimple(Graph &graph) {
         childNode->fuseInto(parentNode);
 
         if (childNode->getType() == Type::FakeQuantize) {
-            auto parentEdges = childNode->parentEdges;
-            for (auto &parentEdge : parentEdges) {
-                auto p_edge = parentEdge.lock();
-                if (p_edge->getParent()->getType() == Type::Eltwise)
-                    continue;
+            auto& parentEdges = childNode->parentEdges;
+            for (auto& port_edges : parentEdges) {
+                for (auto &p_edge : port_edges) {
+                    if (p_edge->getParent()->getType() == Type::Eltwise)
+                        continue;
 
-                graph.RemoveEdge(p_edge);
+                    graph.RemoveEdge(p_edge);
+                }
             }
 
             graph.DropNode(childNode);
         } else if (childNode->getType() == Type::Eltwise) {
-            auto children = childNode->childEdges;
-            auto parents = childNode->parentEdges;
+            std::vector<EdgeRawPtr> parents;
+            for (auto& port_edges : childNode->parentEdges) {
+                for (auto& edge : port_edges) {
+                    parents.push_back(edge);
+                }
+            }
+
+            std::vector<EdgeRawPtr> children;
+            for (auto& port_edges : childNode->childEdges) {
+                for (auto& edge : port_edges) {
+                    children.push_back(edge);
+                }
+            }
+
             auto initialParentInNum = parentNode->getParentEdges().size();
 
             for (size_t i = 0; i < parents.size(); i++) {
-                auto p_edge = parents[i].lock();
+                auto p_edge = parents[i];
                 if (!p_edge) continue;
                 auto parent = p_edge->getParent();
                 if (!parent) continue;
 
                 if (parent == parentNode) {
                     for (size_t j = 0; j < children.size(); j++) {
-                        if (!children[j].lock())
+                        if (!children[j])
                             continue;
-                        auto child = children[j].lock()->getChild();
+                        auto child = children[j]->getChild();
                         if (!child)
                             continue;
 
-                        EdgePtr &remEdge = p_edge;
+                        auto& remEdge = p_edge;
                         int inNum = 0;
                         if (remEdge) {
                             inNum = remEdge->getInputNum();
                             graph.RemoveEdge(remEdge);
                         }
-                        remEdge = children[j].lock();
+                        remEdge = children[j];
                         int outNum = 0;
                         if (remEdge) {
                             outNum = remEdge->getOutputNum();
                             graph.RemoveEdge(remEdge);
                         }
-                        EdgePtr newEdge(new Edge(parent, child, inNum, outNum));
+                        EdgePtr newEdge = std::make_shared<Edge>(parent, child, inNum, outNum);
                         auto &graphEdges = graph.GetEdges();
                         graphEdges.push_back(newEdge);
-                        parent->addEdge(newEdge);
+                        parent->addEdge(newEdge.get());
 
                         parent->outputShapes[inNum] = child->inputShapes[outNum];
                     }
                 } else {
-                    EdgePtr &remEdge = p_edge;
+                    auto& remEdge = p_edge;
                     int inNum = 0;
                     int outNum = parentNode->getParentEdges().size();
                     if (remEdge) {
@@ -1697,10 +1763,10 @@ void GraphOptimizer::FuseEltwiseAndSimple(Graph &graph) {
                         graph.RemoveEdge(remEdge);
                     }
 
-                    EdgePtr newEdge(new Edge(parent, parentNode, inNum, outNum));
+                    EdgePtr newEdge = std::make_shared<Edge>(parent, parentNode, inNum, outNum);
                     auto &graphEdges = graph.GetEdges();
                     graphEdges.push_back(newEdge);
-                    parent->addEdge(newEdge);
+                    parent->addEdge(newEdge.get());
 
                     parentNode->inputShapes.push_back(parent->getOutputShapeAtPort(inNum));
                 }

@@ -15,6 +15,19 @@ namespace intel_cpu {
 Edge::Edge(const NodePtr &parent, const NodePtr &child, int pr_port, int ch_port) :
         parent(parent), child(child), parent_port(pr_port), child_port(ch_port) {}
 
+Edge::~Edge() {
+    if (auto parent_ptr = parent.lock()) {
+        parent_ptr->removeEdge(this);
+    }
+    if (auto child_ptr = child.lock()) {
+        child_ptr->removeEdge(this);
+    }
+
+    for (auto& edge : mem_consumers) {
+        edge->deregister_mem_provider(this);
+    }
+}
+
 const NodePtr Edge::getParent() const {
     auto parentPtr = parent.lock();
     if (!parentPtr)
@@ -37,33 +50,43 @@ bool Edge::isDropped() const {
     bool not_in_parent = true;
     bool not_in_child = true;
 
+    auto edge_absent = [](const std::vector<std::vector<EdgeRawPtr>>& edges, const EdgeRawPtr edge_to_find) {
+        for (const auto& port_edges : edges) {
+            for (const auto& edge : port_edges) {
+                if (edge == edge_to_find)
+                    return false;
+            }
+        }
+        return true;
+    };
+
     auto parent_ptr = parent.lock();
     if (parent_ptr) {
-        for (auto &edge : parent_ptr->childEdges)
-            if (edge.lock().get() == this)
-                not_in_parent = false;
+        not_in_parent = edge_absent(parent_ptr->getChildEdges(), this);
     }
-
+    
     auto child_ptr = child.lock();
     if (child_ptr) {
-        for (auto &edge : child_ptr->parentEdges)
-            if (edge.lock().get() == this)
-                not_in_child = false;
+        not_in_child = edge_absent(child_ptr->getParentEdges(), this);
     }
     return not_in_parent && not_in_child;
 }
 
 void Edge::drop() {
-    auto _drop_from = [&] (std::vector<EdgeWeakPtr> &list) {
-        auto myself = std::find_if(list.begin(), list.end(),
-                [&] (EdgeWeakPtr edge) { return edge.lock().get() == this; });
+    auto _drop_from = [&] (std::vector<EdgeRawPtr>& edges) {
+        auto myself = std::find_if(edges.begin(), edges.end(),
+                [&] (EdgeRawPtr edge) { return edge == this; });
 
-        if (myself != list.end())
-            list.erase(myself);
+        if (myself != edges.end())
+            edges.erase(myself);
     };
 
-    _drop_from(getParent()->childEdges);
-    _drop_from(getChild()->parentEdges);
+    if (getInputNum() < getParent()->getChildEdges().size()) {
+        _drop_from(getParent()->childEdges[getInputNum()]);
+    }
+    if (getOutputNum() < getChild()->getParentEdges().size()) {
+        _drop_from(getChild()->parentEdges[getOutputNum()]);
+    }
 }
 
 void Edge::collectConsumers(std::vector<NodePtr>& result) const {
@@ -103,7 +126,7 @@ bool Edge::enforceReorder() {
         return result;
     };
 
-    const auto& detectInPlaceChildrenNum = [&childCanChangeMem](const std::vector<EdgePtr>& edges) -> size_t {
+    const auto& detectInPlaceChildrenNum = [&childCanChangeMem](const std::vector<EdgeRawPtr>& edges) -> size_t {
         size_t count = 0;
         for (const auto& edge : edges) {
             if (childCanChangeMem(*edge)) {
@@ -116,12 +139,12 @@ bool Edge::enforceReorder() {
     bool in_place = inPlace();
     int inNumber = getInputNum();
 
-    const auto portChildEdges = parentNode->getChildEdgesAtPort(inNumber);
+    const auto& portChildEdges = parentNode->getChildEdgesAtPort(inNumber);
     if (childCanChangeMem(*this) && portChildEdges.size() > 1) {
         if (childNode->getType() == Type::Convolution) {
             auto execIndex = childNode->getExecIndex();
             for (auto pEdgePeer : portChildEdges) {
-                if (pEdgePeer.get() == this)
+                if (pEdgePeer == this)
                     continue;
                 std::vector<NodePtr> vecConsumers;
                 pEdgePeer->collectConsumers(vecConsumers);
@@ -141,7 +164,7 @@ bool Edge::enforceReorder() {
 
     if (!canBeInPlaceConflicts && in_place && !parentNode->getChildEdges().empty()) {
         for (auto& p_edge_peer : portChildEdges) {
-            if (p_edge_peer.get() == this)
+            if (p_edge_peer == this)
                 continue;
             if (p_edge_peer->getChild()->getType() != Type::Reorder && p_edge_peer->inPlace(LOOK_DOWN)) {
                 canBeInPlaceConflicts = true;
@@ -383,7 +406,7 @@ void Edge::changeStatus(Edge::Status state) {
     if (status != Status::Uninitialized && state == Status::NeedAllocation)
         return;
     if (status == Status::NotAllocated)
-        memoryFromEdge.reset();
+        memoryFromEdge = nullptr;
     status = state;
 }
 
@@ -479,15 +502,26 @@ MemoryPtr &Edge::getMemoryPtr() {
             memoryPtr->Create(desc, sharedEdge->getMemoryPtr()->getDnnlMemoryMngr());
             DEBUG_LOG(*this, " sharedEdge with ", *sharedEdge);
         }
-        memoryFromEdge.reset();
+        memoryFromEdge = nullptr;
         changeStatus(Status::Allocated);
     }
 
     return memoryPtr;
 }
 
-void Edge::sharedMemFrom(const EdgePtr &edge) {
+void Edge::register_as_consumer(EdgeRawPtr edge) {
+    mem_consumers.insert(edge);
+}
+
+void Edge::deregister_mem_provider(EdgeRawPtr edge) {
+    if (memoryFromEdge == edge) {
+        memoryFromEdge = nullptr;
+    }
+}
+
+void Edge::sharedMemFrom(EdgeRawPtr edge) {
     memoryFromEdge = edge;
+    edge->register_as_consumer(this);
     DEBUG_LOG(*this, " sharedMemFrom ", *edge);
     status = Status::NotAllocated;
 }
@@ -505,24 +539,23 @@ void Edge::validate() {
     status = Status::Validated;
 }
 
-EdgePtr Edge::getSharedEdge() const {
-    auto memoryFromEdgePtr = memoryFromEdge.lock();
-    if (!memoryFromEdgePtr) {
+EdgeRawPtr Edge::getSharedEdge() const {
+    if (!memoryFromEdge) {
         IE_THROW() << "Cannot get memory ptr for edge( " << name() << " ). The pointer on the edge with memory is empty!";
     }
-    return memoryFromEdgePtr;
+    return memoryFromEdge;
 }
 
-EdgePtr Edge::getSharedEdge(std::nothrow_t) const {
-    return memoryFromEdge.lock();
+EdgeRawPtr Edge::getSharedEdge(std::nothrow_t) const {
+    return memoryFromEdge;
 }
 
 void Edge::init() {
     if (status != Status::NeedAllocation && status != Status::Uninitialized)
         return;
     DEBUG_LOG(*this);
-    EdgePtr edgePtr = getBaseEdge();
-    if (edgePtr.get() == this) {
+    auto edgePtr = getBaseEdge();
+    if (edgePtr == this) {
         DEBUG_LOG(*this, " getBaseEdge() return itself");
         changeStatus(Status::NeedAllocation);
     } else {
@@ -537,7 +570,7 @@ void Edge::init() {
     auto port = getInputNum();
     if (port < 0)
         return;
-    auto edges_at_same_port = getParent()->getChildEdgesAtPort(static_cast<size_t>(port));
+    auto& edges_at_same_port = getParent()->getChildEdgesAtPort(static_cast<size_t>(port));
     for (auto edge : edges_at_same_port) {
         if (edge->getStatus() != Status::NeedAllocation && edge->getStatus() != Status::Uninitialized) {
             if (edge->getSharedEdge() != edgePtr)
@@ -557,7 +590,7 @@ void Edge::init() {
  * @param type some magic enum values... description needed
  * @return root of view-on-memory subgraph
  */
-EdgePtr Edge::getBaseEdge(int look) {
+EdgeRawPtr Edge::getBaseEdge(int look) {
     auto parentConfig = getParent()->getSelectedPrimitiveDescriptor()->getConfig();
     auto childConfig = getChild()->getSelectedPrimitiveDescriptor()->getConfig();
     int inputNum = getInputNum();
@@ -612,10 +645,10 @@ EdgePtr Edge::getBaseEdge(int look) {
         return getParent()->getParentEdgesAtPort(next_port_idx)[0]->getBaseEdge(LOOK_UP);
     }
 
-    auto edges_for_same_port = getParent()->getChildEdgesAtPort(inputNum);
+    auto& edges_for_same_port = getParent()->getChildEdgesAtPort(inputNum);
     if (!(look & LOOK_NO_RECURRENT)) {
         for (auto edge : edges_for_same_port) {
-            if (edge.get() != this) {
+            if (edge != this) {
                 auto base = edge->getBaseEdge(LOOK_BOTH | LOOK_NO_RECURRENT);
                 // Return once found the first inplace consumer
                 if (base != edge && base != edges_for_same_port[0]) return base;

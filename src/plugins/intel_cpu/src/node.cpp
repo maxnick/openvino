@@ -196,8 +196,7 @@ Node::Node(const std::string& type, const std::string& name, const GraphContext:
     // TODO [NM]: What about filling inDims and outDims?
 }
 
-void Node::addEdge(const EdgeWeakPtr& edge) {
-    auto edgePtr = edge.lock();
+void Node::addEdge(EdgeRawPtr edgePtr) {
     if (!edgePtr)
         return;
     auto parentPtr = edgePtr->getParent();
@@ -205,48 +204,55 @@ void Node::addEdge(const EdgeWeakPtr& edge) {
     if (!parentPtr || !childPtr)
         return;
 
-    parentPtr->childEdges.push_back(edge);
-    childPtr->parentEdges.push_back(edge);
+    auto& parent_child_edges = parentPtr->childEdges;
+    auto parent_port = edgePtr->getInputNum();
+    if (parent_port >= parent_child_edges.size()) {
+        parent_child_edges.resize(parent_port + 1);
+    }
+    parent_child_edges[parent_port].push_back(edgePtr);
+
+    auto& child_parent_edges = childPtr->parentEdges;
+    auto child_port = edgePtr->getOutputNum();
+    if (child_port >= child_parent_edges.size()) {
+        child_parent_edges.resize(child_port + 1);
+    }
+    child_parent_edges[child_port].push_back(edgePtr);
 }
 
-void Node::removeEdge(const EdgeWeakPtr& edge) {
-    auto edgePtr = edge.lock();
+void Node::removeEdge(EdgeRawPtr edgePtr) {
     if (!edgePtr)
         return;
     auto parentPtr = edgePtr->getParent();
     auto childPtr = edgePtr->getChild();
     if (!parentPtr || !childPtr)
         return;
-    for (auto it = childPtr->parentEdges.begin(); it != childPtr->parentEdges.end(); it++) {
-        auto parentEdge = (*it).lock();
-        if (parentEdge && parentEdge->getChild() == childPtr && parentEdge->getParent() == parentPtr) {
-            childPtr->parentEdges.erase(it);
-            break;
+
+    auto erase_edge = [&childPtr, &parentPtr](std::vector<std::vector<EdgeRawPtr>>& edges) {
+        for (auto& port_edges : edges) {
+            auto it = std::find_if(port_edges.begin(), port_edges.end(), [&childPtr, &parentPtr](EdgeRawPtr edge_ptr){
+                return (edge_ptr && edge_ptr->getChild() == childPtr && edge_ptr->getParent() == parentPtr);
+            });
+            if (it != port_edges.end()) {
+                port_edges.erase(it);
+                break;
+            }
         }
-    }
-    for (auto it = parentPtr->childEdges.begin(); it != parentPtr->childEdges.end(); it++) {
-        auto childEdge = (*it).lock();
-        if (childEdge && childEdge->getChild() == childPtr && childEdge->getParent() == parentPtr) {
-            parentPtr->childEdges.erase(it);
-            break;
-        }
-    }
+    };
+
+    erase_edge(childPtr->parentEdges);
+    erase_edge(parentPtr->childEdges);
+
+    auto& child_parent_edges = childPtr->parentEdges;
 }
 
 void Node::remove() {
-    auto parent_edges = parentEdges;
-    for (const auto &parentEdge : parent_edges) {
-        removeEdge(parentEdge);
-    }
-    auto child_edges = childEdges;
-    for (const auto &childEdge : child_edges) {
-        removeEdge(childEdge);
-    }
+    parentEdges.clear();
+    childEdges.clear();
 }
 
-bool Node::isEdgesEmpty(const std::vector<EdgeWeakPtr>& edges) const {
-    for (auto &edge : edges) {
-        if (edge.lock())
+bool Node::isEdgesEmpty(const std::vector<std::vector<EdgeRawPtr>>& edges) const {
+    for (auto& port_edges : edges) {
+        if (!port_edges.empty())
             return false;
     }
     return true;
@@ -486,50 +492,26 @@ std::string Node::getPrimitiveDescriptorType() {
     return str_type;
 }
 
-const EdgePtr Node::getParentEdgeAt(size_t idx) const {
-    if (idx >= parentEdges.size())
-        IE_THROW() << "Node " << getName() << " contains less parent edges than " << idx;
-    auto parentEdgePtr = parentEdges[idx].lock();
-    if (!parentEdgePtr)
-        IE_THROW() << "Node " << getName() << " contains empty parent edge for index " << idx;
-    return parentEdgePtr;
+const EdgeRawPtr Node::getParentEdgeAt(size_t idx) const {
+    return getParentEdgesAtPort(idx)[0];
 }
 
-const EdgePtr Node::getChildEdgeAt(size_t idx) const {
-    if (idx >= childEdges.size())
-        IE_THROW() << "Node " << getName() << " contains less child edges than " << idx;
-    auto childEdgePtr = childEdges[idx].lock();
-    if (!childEdgePtr)
-        IE_THROW() << "Node " << getName() << " contains empty child edge for index " << idx;
-    return childEdgePtr;
+const EdgeRawPtr Node::getChildEdgeAt(size_t idx) const {
+    return getChildEdgesAtPort(idx)[0];
 }
 
-const std::vector<EdgePtr> Node::getParentEdgesAtPort(size_t idx) const {
+const std::vector<EdgeRawPtr>& Node::getParentEdgesAtPort(size_t idx) const {
     if (idx >= inputShapes.size())
         IE_THROW() << "Node " << getName() << " contains less input ports than " << idx;
 
-    std::vector<EdgePtr> res;
-    for (auto &edge_w : parentEdges) {
-        auto edge = edge_w.lock();
-        if (!edge)
-            IE_THROW() << "Node " << getName() << " contains dead weak ptr";
-        if (edge->getOutputNum() == idx) res.push_back(edge);
-    }
-    return res;
+    return parentEdges[idx];
 }
 
-const std::vector<EdgePtr> Node::getChildEdgesAtPort(size_t idx) const {
+const std::vector<EdgeRawPtr>& Node::getChildEdgesAtPort(size_t idx) const {
     if (idx >= outputShapes.size())
         IE_THROW() << "Node " << getName() << " contains less output ports than " << idx;
 
-    std::vector<EdgePtr> res;
-    for (auto &edge_w : childEdges) {
-        auto edge = edge_w.lock();
-        if (!edge)
-            IE_THROW() << "Node " << getName() << " contains dead weak ptr";
-        if (edge->getInputNum() == idx) res.push_back(edge);
-    }
-    return res;
+    return childEdges[idx];
 }
 
 
@@ -596,7 +578,7 @@ void Node::redefineOutputMemory(const std::vector<VectorDims> &newOutputShapes) 
         IE_THROW() << "Number shapes mismatch with real outputs number for node with name: " << getName();
     }
     for (size_t i = 0; i < outputShapes.size(); i++) {
-        const auto edges = getChildEdgesAtPort(i);
+        const auto& edges = getChildEdgesAtPort(i);
 
         // avoid 0D shape incompatible
         auto newOutputShape = newOutputShapes[i];

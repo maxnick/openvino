@@ -161,9 +161,9 @@ void Graph::Replicate(const std::shared_ptr<const ov::Model> &subgraph) {
             auto parentOp = op->get_input_node_shared_ptr(port);
             auto parentNode = op2node[parentOp];
 
-            EdgePtr edge(new Edge(parentNode, node, getParentOutputPort(op, parentOp, port), static_cast<int>(port)));
-            node->addEdge(edge);
+            EdgePtr edge = std::make_shared<Edge>(parentNode, node, getParentOutputPort(op, parentOp, port), static_cast<int>(port));
             graphEdges.push_back(edge);
+            node->addEdge(edge.get());
         }
 
         if (!one_of(op->get_type_info(),
@@ -186,8 +186,8 @@ void Graph::Replicate(const std::shared_ptr<const ov::Model> &subgraph) {
         const NodePtr outNode = std::make_shared<node::Input>(parentNode->outputShapes[port],
                                                                         parentNode->getOriginalOutputPrecisionAtPort(port),
                                                                         nodeName, "Result", context);
-        EdgePtr edge(new Edge(parentNode, outNode, port, 0));
-        outNode->addEdge(edge);
+        EdgePtr edge = std::make_shared<Edge>(parentNode, outNode, port, 0);
+        outNode->addEdge(edge.get());
         graphEdges.push_back(edge);
         graphNodes.push_back(outNode);
     }
@@ -277,8 +277,8 @@ void Graph::Replicate(const CNNNetwork &network) {
             auto parentOp = op->get_input_node_shared_ptr(port);
             auto parentNode = op2node[parentOp];
 
-            EdgePtr edge(new Edge(parentNode, node, getParentOutputPort(op, parentOp, port), static_cast<int>(port)));
-            node->addEdge(edge);
+            EdgePtr edge = std::make_shared<Edge>(parentNode, node, getParentOutputPort(op, parentOp, port), static_cast<int>(port));
+            node->addEdge(edge.get());
             graphEdges.push_back(edge);
         }
 
@@ -302,8 +302,8 @@ void Graph::Replicate(const CNNNetwork &network) {
         const NodePtr outNode = std::make_shared<node::Input>(parentNode->outputShapes[port],
                                                                         parentNode->getOriginalOutputPrecisionAtPort(port),
                                                                         nodeName, "Result", context);
-        EdgePtr edge(new Edge(parentNode, outNode, port, 0));
-        outNode->addEdge(edge);
+        EdgePtr edge = std::make_shared<Edge>(parentNode, outNode, port, 0);
+        outNode->addEdge(edge.get());
         graphEdges.push_back(edge);
         graphNodes.push_back(outNode);
     }
@@ -635,18 +635,18 @@ static inline bool isConstOutput(EdgePtr edge) {
 }
 
 static edge_clusters_t findEdgeClusters(const std::vector<EdgePtr> & graphEdges) {
-    typedef std::unordered_map<EdgePtr, size_t> edge_cluster_idx_map_t;
+    typedef std::unordered_map<EdgeRawPtr, size_t> edge_cluster_idx_map_t;
 
     edge_clusters_t edge_clusters;
     edge_cluster_idx_map_t edge_cluster_indices;
 
     for (auto &edge : graphEdges) {
-        auto edge_it = edge_cluster_indices.find(edge);
+        auto edge_it = edge_cluster_indices.find(edge.get());
         if (edge_it != edge_cluster_indices.end())
             continue;   // edge is visited
 
         size_t cluster_idx = edge_clusters.size();
-        EdgePtr last_shared_edge = nullptr;
+        EdgeRawPtr last_shared_edge = nullptr;
 
         // find cluster index
         for (auto shared_edge = edge->getSharedEdge(std::nothrow);
@@ -1350,42 +1350,42 @@ void Graph::SortTopologically() {
     graphNodes.erase(graphNodes.begin(), graphNodes.end());
     graphNodes.assign(sorted.begin(), sorted.end());
 
-    // TODO: Sort in/out edges by port index because of backward compatibility
-    //       A lot of plugin logic are build on top of assumption that index in
-    //       vector childEdges/parentEdges is port number. But that is not
-    //       truth anymore. But to keep old logic correct need to simulate ordering.
-    //
-    // Make first N (N == port_num) edge indexes are matched with port index
-    for (auto &node : graphNodes) {
-        {
-            int port_num = node->inputShapes.size();
-            std::vector<EdgePtr> res(port_num);
+    // // TODO: Sort in/out edges by port index because of backward compatibility
+    // //       A lot of plugin logic are build on top of assumption that index in
+    // //       vector childEdges/parentEdges is port number. But that is not
+    // //       truth anymore. But to keep old logic correct need to simulate ordering.
+    // //
+    // // Make first N (N == port_num) edge indexes are matched with port index
+    // for (auto &node : graphNodes) {
+    //     {
+    //         int port_num = node->inputShapes.size();
+    //         std::vector<EdgePtr> res(port_num);
 
-            for (int i = 0; i < node->parentEdges.size(); i++) {
-                auto edge = node->getParentEdgeAt(i);
-                int port = edge->getOutputNum();
-                if (port < port_num && !res[port])
-                    res[port] = edge;
-                else
-                    res.push_back(edge);
-            }
-            node->parentEdges = {res.begin(), res.end()};
-        }
-        {
-            int port_num = node->outputShapes.size();
-            std::vector<EdgePtr> res(port_num);
+    //         for (int i = 0; i < node->parentEdges.size(); i++) {
+    //             auto edge = node->getParentEdgeAt(i);
+    //             int port = edge->getOutputNum();
+    //             if (port < port_num && !res[port])
+    //                 res[port] = edge;
+    //             else
+    //                 res.push_back(edge);
+    //         }
+    //         node->parentEdges = {res.begin(), res.end()};
+    //     }
+    //     {
+    //         int port_num = node->outputShapes.size();
+    //         std::vector<EdgePtr> res(port_num);
 
-            for (int i = 0; i < node->childEdges.size(); i++) {
-                auto edge = node->getChildEdgeAt(i);
-                int port = edge->getInputNum();
-                if (port < port_num && !res[port])
-                    res[port] = edge;
-                else
-                    res.push_back(edge);
-            }
-            node->childEdges = {res.begin(), res.end()};
-        }
-    }
+    //         for (int i = 0; i < node->childEdges.size(); i++) {
+    //             auto edge = node->getChildEdgeAt(i);
+    //             int port = edge->getInputNum();
+    //             if (port < port_num && !res[port])
+    //                 res[port] = edge;
+    //             else
+    //                 res.push_back(edge);
+    //         }
+    //         node->childEdges = {res.begin(), res.end()};
+    //     }
+    // }
 }
 
 void Graph::GetPerfData(std::map<std::string, InferenceEngine::InferenceEngineProfileInfo> &perfMap) const {
@@ -1420,9 +1420,9 @@ void Graph::GetPerfData(std::map<std::string, InferenceEngine::InferenceEnginePr
     }
 }
 
-void Graph::RemoveEdge(EdgePtr& edge) {
+void Graph::RemoveEdge(EdgeRawPtr edge) {
     for (auto it = graphEdges.begin(); it != graphEdges.end(); it++) {
-        if ((*it) == edge) {
+        if ((*it).get() == edge) {
             edge->drop();
             graphEdges.erase(it);
             return;
@@ -1431,108 +1431,141 @@ void Graph::RemoveEdge(EdgePtr& edge) {
 }
 
 void Graph::DropNode(const NodePtr &node) {
-    auto children = node->childEdges;
-    auto parents = node->parentEdges;
+    const auto& children = node->getChildEdges();
+    const auto& parents = node->getParentEdges();
 
-    for (size_t i = 0; i < parents.size(); i++) {
-        auto p_edge = parents[i].lock();
-        if (!p_edge) continue;
-        auto parent = p_edge->getParent();
-        if (!parent) continue;
+    for (const auto& port_edges : parents) {
+        for (const auto& p_edge : port_edges) {
+            if (!p_edge) continue;
+            auto parent = p_edge->getParent();
+            if (!parent) continue;
+            for (const auto& child_port_edges : children) {
+                for (const auto& child_edge : child_port_edges) {
+                    auto child = child_edge->getChild();
+                    if (!child)
+                        continue;
 
-        for (size_t j = 0; j < children.size(); j++) {
-            if (!children[j].lock())
-                continue;
-            auto child = children[j].lock()->getChild();
-            if (!child)
-                continue;
-
-            EdgePtr &remEdge = p_edge;
-            int inNum = 0;
-            if (remEdge) {
-                inNum = remEdge->getInputNum();
-                remEdge->drop();
-                RemoveEdge(remEdge);
+                    EdgeRawPtr remEdge = p_edge;
+                    int inNum = 0;
+                    if (remEdge) {
+                        inNum = remEdge->getInputNum();
+                        remEdge->drop();
+                        RemoveEdge(remEdge);
+                    }
+                    remEdge = child_edge;
+                    int outNum = 0;
+                    if (remEdge) {
+                        outNum = remEdge->getOutputNum();
+                        remEdge->drop();
+                        RemoveEdge(remEdge);
+                    }
+                    EdgePtr newEdge(new Edge(parent, child, inNum, outNum));
+                    graphEdges.push_back(newEdge);
+                    parent->addEdge(newEdge.get());
+                }
             }
-            remEdge = children[j].lock();
-            int outNum = 0;
-            if (remEdge) {
-                outNum = remEdge->getOutputNum();
-                remEdge->drop();
-                RemoveEdge(remEdge);
-            }
-            EdgePtr newEdge(new Edge(parent, child, inNum, outNum));
-            graphEdges.push_back(newEdge);
-            parent->addEdge(newEdge);
         }
     }
+    // for (size_t i = 0; i < parents.size(); i++) {
+    //     // auto p_edge = parents[i].lock();
+    //     // if (!p_edge) continue;
+    //     // auto parent = p_edge->getParent();
+    //     // if (!parent) continue;
+
+    //     for (size_t j = 0; j < children.size(); j++) {
+    //         // if (!children[j].lock())
+    //         //     continue;
+    //         // auto child = children[j].lock()->getChild();
+    //         // if (!child)
+    //         //     continue;
+
+    //         // EdgePtr &remEdge = p_edge;
+    //         // int inNum = 0;
+    //         // if (remEdge) {
+    //         //     inNum = remEdge->getInputNum();
+    //         //     remEdge->drop();
+    //         //     RemoveEdge(remEdge);
+    //         // }
+    //         // remEdge = children[j].lock();
+    //         // int outNum = 0;
+    //         // if (remEdge) {
+    //         //     outNum = remEdge->getOutputNum();
+    //         //     remEdge->drop();
+    //         //     RemoveEdge(remEdge);
+    //         // }
+    //         // EdgePtr newEdge(new Edge(parent, child, inNum, outNum));
+    //         // graphEdges.push_back(newEdge);
+    //         // parent->addEdge(newEdge);
+    //     }
+    // }
 }
 
 void Graph::DropDWConvNode(const NodePtr &node) {
-    auto children = node->childEdges;
-    auto parents = node->parentEdges;
+    auto& children = node->getChildEdges();
+    auto& parents = node->getParentEdges();
 
-    auto parentConvEdge = parents[0].lock();
+    auto parentConvEdge = parents[0][0];
     if (!parentConvEdge) return;
     auto parentConv = parentConvEdge->getParent();
     if (!parentConv) return;
 
     parentConv->outputShapes[0] = node->outputShapes[0];
 
-    for (size_t i = 0; i < 1; i++) {
-        auto p_edge = parents[i].lock();
-        if (!p_edge) continue;
-        auto parent = p_edge->getParent();
-        if (!parent) continue;
+    auto p_edge = parents[0][0];
+    if (p_edge) {
+        if (auto parent = p_edge->getParent()) {
+            for (auto& port_edges : children) {
+                for (auto& edge : port_edges) {
+                    if (!edge)
+                        continue;
+                    auto child = edge->getChild();
+                    if (!child)
+                        continue;
 
-        for (size_t j = 0; j < children.size(); j++) {
-            if (!children[j].lock())
-                continue;
-            auto child = children[j].lock()->getChild();
-            if (!child)
-                continue;
-
-            EdgePtr &remEdge = p_edge;
-            int inNum = 0;
-            if (remEdge) {
-                inNum = remEdge->getInputNum();
-                remEdge->drop();
-                RemoveEdge(remEdge);
+                    EdgeRawPtr &remEdge = p_edge;
+                    int inNum = 0;
+                    if (remEdge) {
+                        inNum = remEdge->getInputNum();
+                        remEdge->drop();
+                        RemoveEdge(remEdge);
+                    }
+                    remEdge = edge;
+                    int outNum = 0;
+                    if (remEdge) {
+                        outNum = remEdge->getOutputNum();
+                        remEdge->drop();
+                        RemoveEdge(remEdge);
+                    }
+                    EdgePtr newEdge = std::make_shared<Edge>(parent, child, inNum, outNum);
+                    graphEdges.push_back(newEdge);
+                    parent->addEdge(newEdge.get());
+                }
             }
-            remEdge = children[j].lock();
-            int outNum = 0;
-            if (remEdge) {
-                outNum = remEdge->getOutputNum();
-                remEdge->drop();
-                RemoveEdge(remEdge);
-            }
-            EdgePtr newEdge(new Edge(parent, child, inNum, outNum));
-            graphEdges.push_back(newEdge);
-            parent->addEdge(newEdge);
         }
     }
 
-    for (size_t i = 1; i < parents.size(); i++) {
-        auto p_edge = parents[i].lock();
-        if (!p_edge) continue;
-        auto parent = p_edge->getParent();
-        if (!parent) continue;
+    for (auto& port_edges : children) {
+        for (auto& edge : port_edges) {
+            if (!edge) continue;
+            auto parent = edge->getParent();
+            if (!parent) continue;
 
-        EdgePtr &remEdge = p_edge;
-        int inNum = 0;
-        int portCandidate = 0;
-        if (remEdge) {
-            inNum = remEdge->getInputNum();
-            portCandidate = remEdge->getOutputNum();
-            remEdge->drop();
-            RemoveEdge(remEdge);
+            EdgeRawPtr remEdge = edge;
+            int inNum = 0;
+            int portCandidate = 0;
+            if (remEdge) {
+                inNum = remEdge->getInputNum();
+                portCandidate = remEdge->getOutputNum();
+                remEdge->drop();
+                RemoveEdge(remEdge);
+            }
+            int outNum = parentConv->parentEdges.size();
+
+            EdgePtr newEdge = std::make_shared<Edge>(parent, parentConv, inNum, outNum);
+            graphEdges.push_back(newEdge);
+            parent->addEdge(newEdge.get());
+            parentConv->inputShapes.push_back(node->getInputShapeAtPort(portCandidate));
         }
-        int outNum = parentConv->parentEdges.size();
-
-        EdgePtr newEdge(new Edge(parent, parentConv, inNum, outNum));
-        graphEdges.push_back(newEdge);
-        parent->addEdge(newEdge);
-        parentConv->inputShapes.push_back(node->getInputShapeAtPort(portCandidate));
     }
     parentConv->outputShapes[0] = node->getOutputShapeAtPort(0);
 }
@@ -1606,16 +1639,18 @@ bool Graph::InsertNode(EdgePtr edge, NodePtr node, bool initNode) {
 }
 
 bool Graph::InsertNode(NodePtr parent, NodePtr child, NodePtr node, int parentPort, int childPort, bool initNode) {
-    EdgePtr beforeNode(new Edge(parent, node, parentPort, 0));
-    EdgePtr afterNode(new Edge(node, child, 0, childPort));
+    EdgePtr beforeNode = std::make_shared<Edge>(parent, node, parentPort, 0);
+    EdgePtr afterNode = std::make_shared<Edge>(node, child, 0, childPort);
 
-    // Add edge for beforeNode
-    beforeNode->getChild()->parentEdges.push_back(beforeNode);
-    parent->childEdges.push_back(beforeNode);
+    // // Add edge for beforeNode
+    // beforeNode->getChild()->parentEdges.push_back(beforeNode);
+    // parent->childEdges.push_back(beforeNode);
 
-    // Add edge for afterNode
-    afterNode->getParent()->childEdges.push_back(afterNode);
-    child->parentEdges.push_back(afterNode);
+    // // Add edge for afterNode
+    // afterNode->getParent()->childEdges.push_back(afterNode);
+    // child->parentEdges.push_back(afterNode);
+    parent->addEdge(beforeNode.get());
+    child->addEdge(afterNode.get());
 
     if (initNode) {
         node->getSupportedDescriptors();

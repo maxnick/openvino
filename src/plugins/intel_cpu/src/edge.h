@@ -22,12 +22,19 @@ class Edge;
 
 using EdgePtr = std::shared_ptr<Edge>;
 using EdgeWeakPtr = std::weak_ptr<Edge>;
+using EdgeRawPtr = Edge*;
 
 class Edge {
 public:
     Edge(const std::shared_ptr<Node>& parent,
          const std::shared_ptr<Node>& child,
          int pr_port = 0, int ch_port = 0);
+
+    Edge(const Edge&) = delete;
+    Edge(Edge&&) = delete;
+    Edge& operator=(const Edge&) = delete;
+    Edge& operator=(Edge&&) = delete;
+    ~Edge();
 
     enum class Status {
         Uninitialized,
@@ -72,9 +79,9 @@ public:
 
     void setChildPort(const size_t port) { child_port = port; }
 
-    void sharedMemFrom(const EdgePtr& edge);
-    EdgePtr getSharedEdge() const;
-    EdgePtr getSharedEdge(std::nothrow_t) const;
+    void sharedMemFrom(EdgeRawPtr edge);
+    EdgeRawPtr getSharedEdge() const;
+    EdgeRawPtr getSharedEdge(std::nothrow_t) const;
 
     bool hasDefinedMaxSize() const {
         return getDesc().hasDefinedMaxSize();
@@ -89,7 +96,8 @@ private:
     int child_port;
 
     bool useExternalMemory = false;
-    EdgeWeakPtr memoryFromEdge;
+    EdgeRawPtr memoryFromEdge = nullptr;
+    std::unordered_set<EdgeRawPtr> mem_consumers;
     MemoryPtr memoryPtr;
     Status status = Status::Uninitialized;
 
@@ -97,6 +105,8 @@ private:
     const MemoryDesc& getOutputDesc() const;
     PortDescBaseCPtr getInputPortDesc() const;
     PortDescBaseCPtr getOutputPortDesc() const;
+    void register_as_consumer(EdgeRawPtr edge);
+    void deregister_mem_provider(EdgeRawPtr edge);
 
     const MemoryDesc& getDesc() const;
     bool enforceReorder();
@@ -105,7 +115,7 @@ private:
 
     enum LOOK { LOOK_UP = 1, LOOK_DOWN = 2, LOOK_BOTH = LOOK_UP | LOOK_DOWN, LOOK_NO_RECURRENT = 4 };
 
-    EdgePtr getBaseEdge(int look = LOOK_BOTH);
+    EdgeRawPtr getBaseEdge(int look = LOOK_BOTH);
     bool inPlace(LOOK look = LOOK_BOTH) const;
     void allocateCommon(const std::function<void(const MemoryPtr&, const MemoryDesc&)>& allocate);
 
