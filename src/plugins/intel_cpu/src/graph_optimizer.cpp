@@ -248,7 +248,7 @@ void GraphOptimizer::FuseConvolutionMatMulDeconvAndBias(Graph &graph) {
         auto& parents = childNode->parentEdges;
 
         for (auto& port_edges : parents) {
-            for (auto& p_edge : port_edges) {            
+            for (auto& p_edge : port_edges) {
                 if (!p_edge) continue;
                 auto parent = p_edge->getParent();
                 if (!parent) continue;
@@ -1520,7 +1520,7 @@ void GraphOptimizer::FuseInterpolateAndSimpleOperation(Graph &graph) {
 
         if (childNode->getType() == Type::FakeQuantize || childNode->getType() == Type::Eltwise) {
             auto& parentEdges = childNode->parentEdges;
-            for (auto& port_edges: parentEdges) {
+            for (auto& port_edges : parentEdges) {
                 for (auto& p_edge : port_edges) {
                     if (p_edge->getParent()->getType() == Type::Interpolate)
                         continue;
@@ -1561,7 +1561,7 @@ void GraphOptimizer::FuseNormalizeL2AndSimpleOperation(Graph &graph) {
 
         if (childNode->getType() == Type::FakeQuantize || childNode->getType() == Type::Eltwise) {
             auto& parentEdges = childNode->parentEdges;
-            for (auto& port_edges: parentEdges) {
+            for (auto& port_edges : parentEdges) {
                 for (auto& p_edge : port_edges) {
                     if (p_edge->getParent()->getType() == Type::NormalizeL2)
                         continue;
@@ -1602,7 +1602,7 @@ void GraphOptimizer::FuseReduceAndSimpleOperation(Graph &graph) {
 
         if (childNode->getType() == Type::FakeQuantize || childNode->getType() == Type::Eltwise) {
             auto& parentEdges = childNode->parentEdges;
-            for (auto& port_edges: parentEdges) {
+            for (auto& port_edges : parentEdges) {
                 for (auto& p_edge : port_edges) {
                     if (p_edge == nullptr)
                         IE_THROW() << "Cannot get parent edge " << childNode->getName();
@@ -1806,7 +1806,7 @@ void GraphOptimizer::DropDoubleReorders(Graph &graph) {
             processed.insert(node);
             processed.insert(nextNode);
 
-            EdgePtr edge;
+            EdgeRawPtr edge;
             for (auto cur : p->getChildEdgesAtPort(oldEdgeNum)) {
                 if (cur->getChild() == c)
                     edge = cur;
@@ -1816,7 +1816,9 @@ void GraphOptimizer::DropDoubleReorders(Graph &graph) {
 
             std::string layerName = edge->getParent()->getName() + "_ScaleReorder_" + edge->getChild()->getName();
             graph.InsertReorder(edge, layerName, n->getInput(), nn->getOutput(), false);
-            graph.GetEdges().erase(std::remove(graph.GetEdges().begin(), graph.GetEdges().end(), edge), graph.GetEdges().end());
+            graph.GetEdges().erase(
+                std::remove_if(graph.GetEdges().begin(), graph.GetEdges().end(), [=](const EdgePtr& edge_ptr) { return edge_ptr.get() == edge; }),
+                graph.GetEdges().end());
         }
     }
 }
@@ -1840,7 +1842,7 @@ void GraphOptimizer::FuseBroadcastAndEltwise(Graph &graph) {
         for (size_t i = 1lu; i < broadcastNode->getParentEdges().size(); i++) {
             auto constParent = broadcastNode->getParentEdgesAtPort(i)[0]->getParent();
             for (auto it = edges.begin(); it != edges.end(); it++) {
-                if ((*it) == constParent->getChildEdgeAt(0)) {
+                if ((*it).get() == constParent->getChildEdgeAt(0)) {
                     edges.erase(it);
                     constParent->remove();
                     break;
@@ -2061,13 +2063,14 @@ void GraphOptimizer::FusePerformedAsScaleShiftAndFakeQuantize(Graph &graph) {
         CPU_GRAPH_OPTIMIZER_SCOPE(FusePerformedAsScaleShiftAndFakeQuantize_QuantizeNode);
 
         if (fuseScaleShiftAndFakeQuantizeNodes(parent, child)) {
-            auto parentEdges = parent->parentEdges;
-            for (auto &parentEdge : parentEdges) {
-                auto p_edge = parentEdge.lock();
-                if (!p_edge->getParent()->isConstant())
-                    continue;
+            auto& parentEdges = parent->parentEdges;
+            for (auto& portEdges : parentEdges) {
+                for (auto& p_edge : portEdges) {
+                    if (!p_edge->getParent()->isConstant())
+                        continue;
 
-                graph.RemoveEdge(p_edge);
+                    graph.RemoveEdge(p_edge);
+                }
             }
 
             graph.DropNode(parent);
@@ -2189,7 +2192,7 @@ void GraphOptimizer::MergeTransposeAndReorder(Graph &graph) {
         remEdge->drop();
         auto& edges = graph.GetEdges();
         for (auto it = edges.begin(); it != edges.end(); it++) {
-            if ((*it) == remEdge) {
+            if ((*it).get() == remEdge) {
                 edges.erase(it);
                 if (parentParentConstNode->getChildEdges().empty())
                     parentParentConstNode->remove();
@@ -2212,11 +2215,13 @@ void GraphOptimizer::MergeTransposeAndReorder(Graph &graph) {
         std::string reorderlayerName = parentParentNode->getName() + "_" +
                 Reorder::getReorderArgs(*reorderInDesc, *reorderOutDesc) + "_" + "fake";
 
-        EdgePtr edge;
-        for (auto &childEdge : parentParentNode->getChildEdges()) {
-            if (childEdge.lock()->getChild() == childChildNode) {
-                edge = childEdge.lock();
-                break;
+        EdgeRawPtr edge;
+        for (auto& portChildEdges : parentParentNode->getChildEdges()) {
+            for (auto& childEdge : portChildEdges) {
+                if (childEdge->getChild() == childChildNode) {
+                    edge = childEdge;
+                    break;
+                }
             }
         }
         if (!edge) {
@@ -2297,7 +2302,7 @@ void GraphOptimizer::reshapeRnnSeq(Graph &graph) {
 
         CPU_GRAPH_OPTIMIZER_SCOPE(reshapeRnnSeq_ParentNode);
 
-        auto childrenEdges = parentNode->getChildEdgesAtPort(0);
+        auto& childrenEdges = parentNode->getChildEdgesAtPort(0);
         auto minDims = parentNode->getOutputShapeAtPort(0).getMinDims();
         auto maxDims = parentNode->getOutputShapeAtPort(0).getMaxDims();
         minDims.erase(minDims.begin() + 1);
@@ -2319,9 +2324,9 @@ void GraphOptimizer::reshapeRnnSeq(Graph &graph) {
 
             const auto cpuConstant = std::make_shared<node::Input>(secondInput, graph.getGraphContext());
             EdgePtr newEdge(new Edge(cpuConstant, cpuUnsqueeze, 0, 1));
-            cpuUnsqueeze->addEdge(newEdge);
             auto &graphEdges = graph.GetEdges();
             graphEdges.push_back(newEdge);
+            cpuUnsqueeze->addEdge(newEdge.get());
             graphNodes.push_back(cpuConstant);
 
             graph.RemoveEdge(edge);

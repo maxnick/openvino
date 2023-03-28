@@ -50,7 +50,7 @@ bool Edge::isDropped() const {
     bool not_in_parent = true;
     bool not_in_child = true;
 
-    auto edge_absent = [](const std::vector<std::vector<EdgeRawPtr>>& edges, const EdgeRawPtr edge_to_find) {
+    auto edge_absent = [](const std::vector<std::vector<EdgeRawPtr>>& edges, EdgeRawCPtr edge_to_find) {
         for (const auto& port_edges : edges) {
             for (const auto& edge : port_edges) {
                 if (edge == edge_to_find)
@@ -64,7 +64,7 @@ bool Edge::isDropped() const {
     if (parent_ptr) {
         not_in_parent = edge_absent(parent_ptr->getChildEdges(), this);
     }
-    
+
     auto child_ptr = child.lock();
     if (child_ptr) {
         not_in_child = edge_absent(child_ptr->getParentEdges(), this);
@@ -621,8 +621,8 @@ EdgeRawPtr Edge::getBaseEdge(int look) {
             getChild()->initDescriptor(childConfig);
         }
 
-        auto ch_edges = getChild()->getChildEdgesAtPort(next_port_idx);
-        auto &next_ch_edge = ch_edges[0];
+        auto& ch_edges = getChild()->getChildEdgesAtPort(next_port_idx);
+        auto next_ch_edge = ch_edges[0];
 
         // Multiple connection to some out port
         // Will try to find inplace consumer

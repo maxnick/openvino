@@ -23,6 +23,7 @@ class Edge;
 using EdgePtr = std::shared_ptr<Edge>;
 using EdgeWeakPtr = std::weak_ptr<Edge>;
 using EdgeRawPtr = Edge*;
+using EdgeRawCPtr = const Edge*;
 
 class Edge {
 public:

@@ -241,8 +241,6 @@ void Node::removeEdge(EdgeRawPtr edgePtr) {
 
     erase_edge(childPtr->parentEdges);
     erase_edge(parentPtr->childEdges);
-
-    auto& child_parent_edges = childPtr->parentEdges;
 }
 
 void Node::remove() {

@@ -142,7 +142,7 @@ public:
      * pointer to the blob containing scales
      * @return pointer to the new Reorder node.
      */
-    NodePtr InsertReorder(EdgePtr edge, std::string layerName, const MemoryDesc& inDesc,
+    NodePtr InsertReorder(EdgeRawPtr edge, std::string layerName, const MemoryDesc& inDesc,
             const MemoryDesc& outDesc, bool isOptimized = false, const std::vector<int> & src_perm = {});
 
     /**
@@ -158,7 +158,7 @@ public:
      * parameter that determines whether the node needs to be initialized
      * @return true in case of success, false otherwise.
      */
-    bool InsertNode(EdgePtr edge, NodePtr node, bool initNode = false);
+    bool InsertNode(EdgeRawPtr edge, NodePtr node, bool initNode = false);
 
     /**
      * @brief Insert Node between two specified nodes.

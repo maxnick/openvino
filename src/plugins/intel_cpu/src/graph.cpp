@@ -327,7 +327,7 @@ void Graph::Replicate(const CNNNetwork &network) {
     for (auto &input : inputNodesMap) {
         const auto precToSet = normalizeToSupportedPrecision(inputsInfo.at(input.first)->getPrecision());
         input.second->setOriginalOutputPrecisionAtPort(0, precToSet);
-        const auto childEdges = input.second->getChildEdgesAtPort(0);
+        const auto& childEdges = input.second->getChildEdgesAtPort(0);
         for (size_t i = 0; i < childEdges.size(); i++) {
             const auto child = childEdges[i]->getChild();
             if (child->getOriginalInputPrecisionAtPort(childEdges[i]->getOutputNum()) != Precision::BF16 &&
@@ -340,7 +340,7 @@ void Graph::Replicate(const CNNNetwork &network) {
     for (auto &output : outputNodesMap) {
         const auto precToSet = normalizeToSupportedPrecision(outputsInfo.at(output.first)->getPrecision());
         output.second->setOriginalInputPrecisionAtPort(0, precToSet);
-        const auto parentEdges = output.second->getParentEdgesAtPort(0);
+        const auto& parentEdges = output.second->getParentEdgesAtPort(0);
         for (size_t i = 0; i < parentEdges.size(); i++) {
             const auto parent = parentEdges[i]->getParent();
             parent->setOriginalOutputPrecisionAtPort(parentEdges[i]->getInputNum(), precToSet);
@@ -582,7 +582,7 @@ void Graph::InitEdges() {
         uniqueLayerNames.insert(layerName);
 
         // optimized flag indicate that just desc update w/o actual physical memory movement.
-        InsertReorder(edge, layerName, edge->getInputDesc(), edge->getOutputDesc(), isOptimized);
+        InsertReorder(edge.get(), layerName, edge->getInputDesc(), edge->getOutputDesc(), isOptimized);
     };
 
     auto updateEdge = [&](int& i) {
@@ -1598,7 +1598,7 @@ void Graph::RemoveDroppedEdges() {
     }
 }
 
-NodePtr Graph::InsertReorder(EdgePtr edge, std::string layerName, const MemoryDesc& inDesc, const MemoryDesc& outDesc,
+NodePtr Graph::InsertReorder(EdgeRawPtr edge, std::string layerName, const MemoryDesc& inDesc, const MemoryDesc& outDesc,
                                          bool isOptimized, const std::vector<int> & src_perm) {
     NodePtr newReorder(new node::Reorder(layerName, context));
     auto *reorderPtr = dynamic_cast<node::Reorder *>(newReorder.get());
@@ -1625,7 +1625,7 @@ NodePtr Graph::InsertReorder(EdgePtr edge, std::string layerName, const MemoryDe
     return newReorder;
 }
 
-bool Graph::InsertNode(EdgePtr edge, NodePtr node, bool initNode) {
+bool Graph::InsertNode(EdgeRawPtr edge, NodePtr node, bool initNode) {
     auto oIndex = edge->getOutputNum();
     auto iIndex = edge->getInputNum();
     if (iIndex < 0 || oIndex < 0)
