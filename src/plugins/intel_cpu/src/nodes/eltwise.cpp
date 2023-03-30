@@ -2166,17 +2166,21 @@ bool Eltwise::canBeInPlace() const {
         return false;
     }
 
-    for (auto& parentEdge : getParentEdges()) {
-        auto parent = parentEdge.lock()->getParent();
-        if (parent->getChildEdges().size() != 1)
-            return false;
+    for (auto& parentPortEdges : getParentEdges()) {
+        for (auto& parentEdge : parentPortEdges) {
+            auto parent = parentEdge->getParent();
+            if (parent->getChildEdges().size() != 1)
+                return false;
 
-        // WA to prevent memory corruption caused by inplace feature
-        if (parent->getType() == Type::Concatenation) {
-            for (auto& parentParentEdge : parent->getParentEdges()) {
-                auto parentParent = parentParentEdge.lock()->getParent();
-                if (parentParent->getChildEdges().size() != 1)
-                    return false;
+            // WA to prevent memory corruption caused by inplace feature
+            if (parent->getType() == Type::Concatenation) {
+                for (auto& parentParentPortEdges : parent->getParentEdges()) {
+                    for (auto& parentParentEdge : parentParentPortEdges) {
+                        auto parentParent = parentParentEdge->getParent();
+                        if (parentParent->getChildEdges().size() != 1)
+                            return false;
+                    }
+                }
             }
         }
     }

@@ -63,7 +63,7 @@ using namespace InferenceEngine::details;
 namespace ov {
 namespace intel_cpu {
 
-typedef std::unordered_set<EdgePtr> edge_cluster_t;
+typedef std::unordered_set<EdgeRawPtr> edge_cluster_t;
 typedef std::vector<edge_cluster_t> edge_clusters_t;
 
 Graph::~Graph() {
@@ -313,13 +313,13 @@ void Graph::Replicate(const CNNNetwork &network) {
 
     auto hasSubgraphConsumers = [] (const NodePtr& node) -> bool {
         const auto & childEdges = node->getChildEdges();
-        return std::any_of(childEdges.begin(), childEdges.end(),
-                           [] (const EdgeWeakPtr& edge) -> bool {
-                               auto edgePtr = edge.lock();
-                               if (!edgePtr)
-                                   return false;
-                               return edgePtr->getChild()->getType() == Type::Subgraph;
-                           });
+        for (auto& portEdges : childEdges) {
+            return std::any_of(portEdges.begin(), portEdges.end(),
+                                [] (EdgeRawPtr edge) -> bool {
+                                    return edge->getChild()->getType() == Type::Subgraph;
+                                });
+        }
+        return false;
     };
 
     // change precision for input/output nodes to avoid extra data conversion when set input/output blobs
@@ -569,7 +569,7 @@ void Graph::InitEdges() {
         uniqueLayerNames.insert(node->getName());
     }
 
-    auto insertReorder = [&](EdgePtr& edge, bool isOptimized) {
+    auto insertReorder = [&](EdgeRawPtr edge, bool isOptimized) {
         std::string basicLayerName = edge->getParent()->getName() + "_" +
                                      node::Reorder::getReorderArgs(edge->getInputDesc(), edge->getOutputDesc()) + "_" +
                                      edge->getChild()->getName();
@@ -582,7 +582,7 @@ void Graph::InitEdges() {
         uniqueLayerNames.insert(layerName);
 
         // optimized flag indicate that just desc update w/o actual physical memory movement.
-        InsertReorder(edge.get(), layerName, edge->getInputDesc(), edge->getOutputDesc(), isOptimized);
+        InsertReorder(edge, layerName, edge->getInputDesc(), edge->getOutputDesc(), isOptimized);
     };
 
     auto updateEdge = [&](int& i) {
@@ -592,7 +592,7 @@ void Graph::InitEdges() {
     };
 
     for (auto i = 0; i < numberOfEdges; i++) {
-        auto edge = graphEdges[i];
+        auto edge = graphEdges[i].get();
         auto reorderStatus = graphEdges[i]->needReorder();
         DEBUG_LOG(graphEdges[i]->name(), " reorderStatus = ", reorderStatus);
         if (reorderStatus == Edge::ReorderStatus::Regular) {
@@ -630,7 +630,7 @@ void Graph::InitEdges() {
     }
 }
 
-static inline bool isConstOutput(EdgePtr edge) {
+static inline bool isConstOutput(EdgeRawPtr edge) {
     return edge->getParent()->isConstant() && !edge->getChild()->isConstant();
 }
 
@@ -640,8 +640,9 @@ static edge_clusters_t findEdgeClusters(const std::vector<EdgePtr> & graphEdges)
     edge_clusters_t edge_clusters;
     edge_cluster_idx_map_t edge_cluster_indices;
 
-    for (auto &edge : graphEdges) {
-        auto edge_it = edge_cluster_indices.find(edge.get());
+    for (auto &sharedEdge : graphEdges) {
+        EdgeRawPtr edge = sharedEdge.get();
+        auto edge_it = edge_cluster_indices.find(edge);
         if (edge_it != edge_cluster_indices.end())
             continue;   // edge is visited
 
@@ -1431,6 +1432,10 @@ void Graph::RemoveEdge(EdgeRawPtr edge) {
 }
 
 void Graph::DropNode(const NodePtr &node) {
+    if (node->getName() == "236") {
+        std::cout << "break" << std::endl;
+    }
+
     const auto& children = node->getChildEdges();
     const auto& parents = node->getParentEdges();
 

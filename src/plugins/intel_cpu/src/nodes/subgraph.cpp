@@ -312,7 +312,7 @@ bool Snippet::optimizeExecDomain(std::vector<VectorDims>& inputShapes, std::vect
     return findDimsToCollapse();
 }
 ov::PartialShape Snippet::canonicalizeBody() {
-    auto edgeToBlockedShape = [](const EdgePtr& edge) {
+    auto edgeToBlockedShape = [](EdgeRawPtr edge) {
         const auto blockedDesc = edge->getMemory().GetDescWithType<BlockedMemoryDesc>();
         std::vector<Dimension> dims;
         // if blockDim == Shape::UNDEFINED_DIM, then it's a dynamic dimension, and we need to recreate a proper dynamic Dim
@@ -510,17 +510,21 @@ bool Snippet::canBeInPlace() const {
         return false;
     }
 
-    for (auto& parentEdge : getParentEdges()) {
-        auto parent = parentEdge.lock()->getParent();
-        if (parent->getChildEdges().size() != 1)
-            return false;
+    for (auto& portEdges : getParentEdges()) {
+        for (auto& parentEdge : portEdges) {
+            auto parent = parentEdge->getParent();
+            if (parent->getChildEdges().size() != 1)
+                return false;
 
-        // WA to prevent memory corruption caused by inplace feature
-        if (parent->getType() == Type::Concatenation) {
-            for (auto& parentParentEdge : parent->getParentEdges()) {
-                auto parentParent = parentParentEdge.lock()->getParent();
-                if (parentParent->getChildEdges().size() != 1)
-                    return false;
+            // WA to prevent memory corruption caused by inplace feature
+            if (parent->getType() == Type::Concatenation) {
+                for (auto& parentParentPortEdges : parent->getParentEdges()) {
+                    for (auto& parentParentEdge : parentParentPortEdges) {
+                        auto parentParent = parentParentEdge->getParent();
+                        if (parentParent->getChildEdges().size() != 1)
+                            return false;
+                    }
+                }
             }
         }
     }

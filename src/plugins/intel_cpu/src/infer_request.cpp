@@ -196,7 +196,7 @@ std::map<std::string, InferenceEngine::InferenceEngineProfileInfo> InferRequestB
     return perfMap;
 }
 
-static inline void changeEdgePtr(const EdgePtr &edge, void *newPtr) {
+static inline void changeEdgePtr(EdgeRawPtr edge, void *newPtr) {
     edge->getMemoryPtr()->setDataHandle(newPtr);
 }
 
@@ -211,63 +211,56 @@ void InferRequestBase::changeDefaultPtr() {
             auto& childEdges = inputNodePtr->getChildEdges();
             // Input cannot be in-place with other primitives
             bool canBeInPlace = true;
-            for (auto& childEdge : childEdges) {
-                auto ce = childEdge.lock();
-                if (!ce)
-                    IE_THROW() << "Node " << inputNodePtr->getName() << " contains empty child edge";
+            for (auto& portEdges : childEdges) {
+                for (auto& childEdge : portEdges) {
+                    auto& child = childEdge->getChild();
 
-                auto& child = ce->getChild();
-
-                if (child->isConstant()) {
-                    canBeInPlace = false;
-                    break;
-                }
-
-                if (child->getType() == Type::Concatenation) {
-                    auto concat = dynamic_cast<node::Concat*>(child.get());
-                    if (concat && concat->isOptimized()) {
+                    if (child->isConstant()) {
                         canBeInPlace = false;
                         break;
                     }
-                }
 
-                // Cannot be in-place before split because split is using different ptrs without offsets
-                if (child->getType() == Type::Split) {
-                    canBeInPlace = false;
-                    break;
-                }
+                    if (child->getType() == Type::Concatenation) {
+                        auto concat = dynamic_cast<node::Concat*>(child.get());
+                        if (concat && concat->isOptimized()) {
+                            canBeInPlace = false;
+                            break;
+                        }
+                    }
 
-                if (child->isInPlace()) {
-                    canBeInPlace = false;
-                    break;
-                }
-
-                auto& edges = child->getChildEdges();
-                for (auto& edge : edges) {
-                    auto e = edge.lock();
-                    if (!e)
-                        IE_THROW() << "Node " << child->getName() << " contains empty child edge";
-
-                    if (e->getMemory().GetData() == ce->getMemory().GetData()) {
+                    // Cannot be in-place before split because split is using different ptrs without offsets
+                    if (child->getType() == Type::Split) {
                         canBeInPlace = false;
                         break;
                     }
+
+                    if (child->isInPlace()) {
+                        canBeInPlace = false;
+                        break;
+                    }
+
+                    auto& edges = child->getChildEdges();
+                    for (auto& childPortEdges : edges) {
+                        for (auto& edge : childPortEdges) {
+                            if (edge->getMemory().GetData() == childEdge->getMemory().GetData()) {
+                                canBeInPlace = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!canBeInPlace)
+                        break;
                 }
-
-                if (!canBeInPlace)
-                    break;
-            }
-            if (canBeInPlace) {
-                for (auto& edge : childEdges) {
-                    auto e = edge.lock();
-                    if (!e)
-                        IE_THROW() << "Node " << inputNodePtr->getName() << " contains empty child edge";
-
-                    changeEdgePtr(e, it.second);
+                if (canBeInPlace) {
+                    for (auto& portEdges : childEdges) {
+                        for (auto& edge : portEdges) {
+                            changeEdgePtr(edge, it.second);
+                        }
+                    }
                 }
+                continue;
             }
-
-            continue;
         }
 
         const auto& outputNodesMap = graph->GetOutputNodesMap();
@@ -290,14 +283,12 @@ void InferRequestBase::changeDefaultPtr() {
                 }
 
                 auto& parentEdges = parent->getParentEdges();
-                for (auto& edge : parentEdges) {
-                    auto e = edge.lock();
-                    if (!e)
-                        IE_THROW() << "Node " << parent->getName() << " contains empty parent edge";
-
-                    if (e->getMemory().GetData() == defaultPtr) {
-                        parent = e->getParent();
-                        break;
+                for (auto& portEdges : parentEdges) {
+                    for (auto& edge : portEdges) {
+                        if (edge->getMemory().GetData() == defaultPtr) {
+                            parent = edge->getParent();
+                            break;
+                        }
                     }
                 }
             } while (previousParent != parent);

@@ -119,8 +119,8 @@ public:
 
         auto addEdge = [&](const NodePtr& parent, const NodePtr& child, size_t parentPort, size_t childPort) -> void {
             auto edge = std::make_shared<Edge>(parent, child, parentPort, childPort);
-            child->addEdge(edge);
             edges.push_back(edge);
+            child->addEdge(edge.get());
             nodesSet.insert(parent);
             nodesSet.insert(child);
         };
