@@ -271,6 +271,7 @@ private:
     int dynBatch = -1;
 
     void EnforceBF16();
+    void resolveInPlaceDirection(const NodePtr& node) const;
 };
 
 }   // namespace intel_cpu
