@@ -814,8 +814,8 @@ void ROIAlign::initSupportedPrimitiveDescriptors() {
 }
 
 void ROIAlign::createPrimitive() {
-    auto& srcMemPtr = getParentEdgeAt(0)->getMemoryPtr();
-    auto& dstMemPtr = getChildEdgeAt(0)->getMemoryPtr();
+    auto srcMemPtr = getParentEdgeAt(0)->getMemoryPtr();
+    auto dstMemPtr = getChildEdgeAt(0)->getMemoryPtr();
     if (!srcMemPtr || !srcMemPtr->isAllocated())
         IE_THROW() << errorPrefix << " did not allocate input memory";
     if (!dstMemPtr || !dstMemPtr->isAllocated())

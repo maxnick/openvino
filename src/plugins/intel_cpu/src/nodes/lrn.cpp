@@ -163,8 +163,8 @@ std::shared_ptr<MemoryDesc> Lrn::getSrcMemDesc(dnnl::primitive_desc_iterator &pr
 }
 
 void Lrn::prepareParams() {
-    auto& srcMemPtr = getParentEdgeAt(0)->getMemoryPtr();
-    auto& dstMemPtr = getChildEdgeAt(0)->getMemoryPtr();
+    auto srcMemPtr = getParentEdgeAt(0)->getMemoryPtr();
+    auto dstMemPtr = getChildEdgeAt(0)->getMemoryPtr();
     if (!srcMemPtr || !srcMemPtr->isAllocated())
         IE_THROW() << errorPrefix << " input memory did not allocate";
     if (!dstMemPtr || !dstMemPtr->isAllocated())
