@@ -907,9 +907,8 @@ void Convolution::addZeroPoints(dnnl::primitive_attr& attr) {
     attr.set_zero_points_mask(DNNL_ARG_SRC, 0);
 
     if (!stockInputZeroPointsMemPtr) {
-        stockInputZeroPointsMemPtr.reset(new Memory(getEngine()));
         DnnlBlockedMemoryDesc memoryDesc(Precision::I32, {inputZeroPoints.size()});
-        stockInputZeroPointsMemPtr->Create(memoryDesc, inputZeroPoints.data());
+        stockInputZeroPointsMemPtr.reset(new Memory(getEngine(), memoryDesc, inputZeroPoints.data()));
     }
 }
 
@@ -918,9 +917,8 @@ void Convolution::addLegacyZeroPoints(dnnl::primitive_attr& attr) {
         DEBUG_LOG(getName(), ": Set legacy input zero points");
         attr.set_input_zero_points(legacyInputZeroPoints.size(), 1 << 1 /*through C dim*/);
         if (!legacyInputZeroPointsMemPtr) {
-            legacyInputZeroPointsMemPtr.reset(new Memory(getEngine()));
             DnnlBlockedMemoryDesc memoryDesc(Precision::U8, {legacyInputZeroPoints.size()});
-            legacyInputZeroPointsMemPtr->Create(memoryDesc, legacyInputZeroPoints.data());
+            legacyInputZeroPointsMemPtr.reset(new Memory(getEngine(), memoryDesc, legacyInputZeroPoints.data()));
         }
     }
 
@@ -929,9 +927,8 @@ void Convolution::addLegacyZeroPoints(dnnl::primitive_attr& attr) {
         attr.set_weights_zero_points(legacyWeightsZeroPoints.size(), 1 << 1 /*through C dim*/);
 
         if (!legacyWeightsZeroPointsMemPtr) {
-            legacyWeightsZeroPointsMemPtr.reset(new Memory(getEngine()));
             DnnlBlockedMemoryDesc memoryDesc(Precision::FP32, {legacyWeightsZeroPoints.size()});
-            legacyWeightsZeroPointsMemPtr->Create(memoryDesc, legacyWeightsZeroPoints.data());
+            legacyWeightsZeroPointsMemPtr.reset(new Memory(getEngine(), memoryDesc, legacyWeightsZeroPoints.data()));
         }
     }
 
@@ -940,9 +937,8 @@ void Convolution::addLegacyZeroPoints(dnnl::primitive_attr& attr) {
         attr.set_output_compensations(legacyOutputCompensation.size(), 1 << 1 /*through C dim*/);
 
         if (!legacyOutputCompensationMemPtr) {
-            legacyOutputCompensationMemPtr.reset(new Memory(getEngine()));
             DnnlBlockedMemoryDesc memoryDesc(Precision::I32, {legacyOutputCompensation.size()});
-            legacyOutputCompensationMemPtr->Create(memoryDesc, legacyOutputCompensation.data());
+            legacyOutputCompensationMemPtr.reset(new Memory(getEngine(), memoryDesc, legacyOutputCompensation.data()));
         }
     }
 }
@@ -1269,7 +1265,7 @@ InferenceEngine::Blob::Ptr Convolution::createInternalBlob(InferenceEngine::Size
         IE_THROW() << "Created internal blob and const blob has different size for node: " << getName() << ".";
     }
 
-    cpu_convert(blb->GetPtr(),
+    cpu_convert(blb->GetData(),
                 internalBlob->buffer(),
                 DnnlExtensionUtils::DataTypeToIEPrecision(blb->GetDataType()),
                 internalBlob->getTensorDesc().getPrecision(),
@@ -1529,7 +1525,7 @@ void Convolution::executeDynamicImpl(dnnl::stream strm) {
         const size_t sumPortNum = getParentEdges().size() - 1;
         const auto& sumInpMem = getParentEdgesAtPort(sumPortNum).front()->getMemory();
         auto inp1 = subgraph->getInput(1);
-        inp1->getChildEdgesAtPort(0).front()->getMemoryPtr()->setDataHandle(sumInpMem.GetData());
+        // inp1->getChildEdgesAtPort(0).front()->getMemoryPtr()->setDataHandle(sumInpMem.GetData());
 
         subgraph->infer();
 
