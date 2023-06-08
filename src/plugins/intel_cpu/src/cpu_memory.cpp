@@ -17,6 +17,7 @@
 #include "memory_desc/dnnl_blocked_memory_desc.h"
 #include "nodes/reorder.h"
 #include "memory_desc/cpu_memory_desc.h"
+#include "output_mem_mgr.h"
 
 using namespace InferenceEngine;
 using namespace dnnl;
@@ -113,6 +114,13 @@ void Memory::FillZero() {
 void Memory::redefineDesc(MemoryDescPtr desc) {
     if (!desc->hasDefinedMaxSize()) {
         IE_THROW() << "Can not reset descriptor, memory upper bound is unknown.";
+    }
+
+    // TODO: how elegantly
+    const auto memMngr = getMemoryMngr();
+    auto outMemMngr = std::dynamic_pointer_cast<OutputMemoryMngr>(memMngr);
+    if (outMemMngr != nullptr) {
+        outMemMngr->setMemDesc(desc);
     }
 
     this->Create(desc, nullptr, false);

@@ -257,6 +257,21 @@ void InferRequestBase::changeDefaultPtr() {
         auto output = outputNodesMap.find(it.first);
         if (output != outputNodesMap.end()) {
             auto parentEdge = output->second->getParentEdgeAt(0);
+
+            if (graph->hasDynamicInput()) { // TODO: internal dynamism
+                bool canBeInPlace = true;
+                // TODO: filter
+
+                if (canBeInPlace) {
+                    changeEdgePtr(parentEdge, it.second);
+                    outputMemMngrs[it.first]->setAllocator(outputAllocators[it.first]);
+                } else {
+                    outputMemMngrs[it.first]->setAllocator(nullptr);
+                }
+
+                continue;
+            }
+
             if (parentEdge->getMemory().GetData() == static_cast<void*>(it.second->buffer()))
                 continue;
 
@@ -615,7 +630,7 @@ InferRequest::InferRequest(const std::vector<std::shared_ptr<const ov::Node>>& i
         modelInputsMap[ov::op::util::get_ie_output_name(ngraph::Output<const ngraph::Node>(in))] = in;
     }
     for (const std::shared_ptr<const ov::Node>& out : outputs) {
-        modelOutputsMap[ov::op::util::get_ie_output_name(out->input_value(0))] = out;
+        modelOutputsMap[ov::op::util::get_ie_output_name(out->input_value(0))] = out;        
     }
 
     CreateInferRequest();
@@ -626,7 +641,14 @@ void InferRequest::initBlobs() {
         InferRequest::GetBlob(it.first);
     }
     for (const auto& it : modelOutputsMap) {
-        InferRequest::GetBlob(it.first);
+        auto outblob = InferRequest::GetBlob(it.first);
+
+        outputAllocators[it.first] = std::make_shared<OutputAllocator>(outblob);
+
+        const auto parent_mem = graph->getOutputNodeByName(it.first)->getParentEdgesAtPort(0)[0]->getMemoryPtr();
+        const auto memMngr = parent_mem->getMemoryMngr();
+        IE_ASSERT(memMngr);
+        outputMemMngrs[it.first] = std::dynamic_pointer_cast<OutputMemoryMngr>(memMngr);
     }
 }
 
@@ -830,8 +852,8 @@ InferenceEngine::Blob::Ptr InferRequest::GetBlob(const std::string& name) {
                 }
 
                 _outputs[name] = data;
-                if (!isDynamic && !externalPtr.count(name) &&
-                    data->getTensorDesc() == MemoryDescUtils::convertToTensorDesc(output->second->getParentEdgesAtPort(0)[0]->getMemory().getDesc()) &&
+                if (!externalPtr.count(name) &&
+                    ((!isDynamic && data->getTensorDesc() == MemoryDescUtils::convertToTensorDesc(output->second->getParentEdgesAtPort(0)[0]->getMemory().getDesc())) || isDynamic) &&
                         !graph->getConfig().batchLimit) {
                     externalPtr[name] = data;
                 }

@@ -56,6 +56,8 @@
 #   include <tbb/task.h>
 #endif
 
+#include "output_mem_mgr.h"
+
 using namespace dnnl;
 using namespace InferenceEngine;
 using namespace InferenceEngine::details;
@@ -883,9 +885,30 @@ void Graph::AllocateWithReuse() {
             }
         }
         for (auto& group : groups) {
-            auto grpMemMngr =
-                std::make_shared<DnnlMemoryMngr>(std::unique_ptr<MemoryMngrWithReuse>(new MemoryMngrWithReuse()));
+            MemoryMngrPtr grpMemMngr;
+            // deternmine a group with outputs.
+            size_t isOutGrp = 0;
             for (auto& box : group) {
+                for (auto& edge : edge_clusters[box.id]) {
+                    if (edge->getChild()->getType() == Type::Output) {
+                        isOutGrp++;
+                        break;
+                    }
+                }
+            }
+            if (isOutGrp) {
+                IE_ASSERT(isOutGrp==1);  // reuse_io_tensors false
+                grpMemMngr =
+                    std::make_shared<DnnlMemoryMngr>(std::unique_ptr<MemoryMngrWithReuse>(new MemoryMngrWithReuse()));
+            } else {
+                grpMemMngr =
+                    std::make_shared<OutputMemoryMngr>(std::unique_ptr<MemoryMngrWithReuse>(new MemoryMngrWithReuse()));
+            }
+            for (auto& box : group) {
+                bool isOutput = false;
+                for (auto& edge : edge_clusters[box.id]) {
+                    isOutput |= edge->getChild()->getType() == Type::Output;
+                }
                 for (auto& edge : edge_clusters[box.id]) {
                     if (edge->getStatus() == Edge::Status::NeedAllocation) {
                         edge->allocate(grpMemMngr);
