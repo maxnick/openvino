@@ -649,6 +649,8 @@ void InferRequest::initBlobs() {
         const auto memMngr = parent_mem->getMemoryMngr();
         IE_ASSERT(memMngr);
         outputMemMngrs[it.first] = std::dynamic_pointer_cast<OutputMemoryMngr>(memMngr);
+        std::cout << "memMngr" << memMngr << std::endl;
+        IE_ASSERT(outputMemMngrs[it.first]);
     }
 }
 

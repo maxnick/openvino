@@ -899,16 +899,13 @@ void Graph::AllocateWithReuse() {
             if (isOutGrp) {
                 IE_ASSERT(isOutGrp==1);  // reuse_io_tensors false
                 grpMemMngr =
-                    std::make_shared<DnnlMemoryMngr>(std::unique_ptr<MemoryMngrWithReuse>(new MemoryMngrWithReuse()));
+                    std::make_shared<OutputMemoryMngr>(std::unique_ptr<MemoryMngrWithReuse>(new MemoryMngrWithReuse()));
             } else {
                 grpMemMngr =
-                    std::make_shared<OutputMemoryMngr>(std::unique_ptr<MemoryMngrWithReuse>(new MemoryMngrWithReuse()));
+                    std::make_shared<DnnlMemoryMngr>(std::unique_ptr<MemoryMngrWithReuse>(new MemoryMngrWithReuse()));
             }
+            std::cout << "grpMemMngr" << grpMemMngr << "" << std::dynamic_pointer_cast<OutputMemoryMngr>(grpMemMngr) <<"" << std::endl;
             for (auto& box : group) {
-                bool isOutput = false;
-                for (auto& edge : edge_clusters[box.id]) {
-                    isOutput |= edge->getChild()->getType() == Type::Output;
-                }
                 for (auto& edge : edge_clusters[box.id]) {
                     if (edge->getStatus() == Edge::Status::NeedAllocation) {
                         edge->allocate(grpMemMngr);
