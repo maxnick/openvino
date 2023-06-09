@@ -25,6 +25,7 @@
 #include "memory_desc/dnnl_blocked_memory_desc.h"
 #include <transformations/utils/utils.hpp>
 #include <ie_ngraph_utils.hpp>
+#include "partitioned_mem_mgr.h"
 
 namespace ov {
 namespace intel_cpu {
@@ -649,7 +650,16 @@ void InferRequest::initBlobs() {
         const auto parent_mem = graph->getOutputNodeByName(it.first)->getParentEdgesAtPort(0)[0]->getMemoryPtr();
         const auto memMngr = parent_mem->getMemoryMngr();
         IE_ASSERT(memMngr);
-        outputMemMngrs[it.first] = std::dynamic_pointer_cast<OutputMemoryMngr>(memMngr);
+
+        OutputMemoryMngrPtr outMemMngr;
+        outMemMngr = std::dynamic_pointer_cast<OutputMemoryMngr>(memMngr);
+        if (!outMemMngr) {
+            auto partiMemMngr = std::dynamic_pointer_cast<PartitionedMemoryMngr>(memMngr);
+            if (partiMemMngr) {
+                outMemMngr = std::dynamic_pointer_cast<OutputMemoryMngr>(partiMemMngr->getBaseMemMngr());
+            }
+        }
+        outputMemMngrs[it.first] = outMemMngr;
     }
 }
 

@@ -35,3 +35,12 @@ void PartitionedMemoryMngr::unregisterMemory(Memory* memPtr) {
         pMgrObs->unregisterMemory(memPtr);
 }
 
+MemoryMngrPtr PartitionedMemoryMngr::getBaseMemMngr() const noexcept {
+    const auto pMngr = std::dynamic_pointer_cast<PartitionedMemoryMngr>(m_pMngr);
+    std::cout << "iteratively getBaseMemMngr()" << this << std::endl;
+    if (pMngr)
+        return pMngr->getBaseMemMngr();
+    else
+        return m_pMngr;
+}
+
