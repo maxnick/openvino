@@ -912,8 +912,11 @@ void Graph::AllocateWithReuse() {
                 // Store the output memory managers.
                 // So that, the infer requests can be able to get access to them.
                 for (auto& edge : edge_clusters[outBoxId]) {
-                    if (edge->getChild()->getType() == Type::Output) {
-                        outputNodesMemMngrMap[edge->getParent()->getName()] = grpMemMngr;
+                    const auto child = edge->getChild();
+                    if (child->getType() == Type::Output) {
+                        for (auto &output : outputNodesMap) {
+                            if (output.second == child) outputNodesMemMngrMap[output.first] = grpMemMngr;
+                        }
                     }
                 }
             }
