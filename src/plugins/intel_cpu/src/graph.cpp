@@ -925,7 +925,8 @@ void Graph::AllocateWithReuse() {
                     if (edge->getStatus() == Edge::Status::NeedAllocation) {
                         edge->allocate(grpMemMngr);
                     }
-                    if (isOutGrp) edge->getParent()->forceUpdateShape = true;  // force recheck shape updates for nodes in the output groups.
+                    if (isOutGrp &&
+                    "Parameter" != edge->getParent()->getTypeStr()) edge->getParent()->forceUpdateShape = true;  // force recheck shape updates for nodes in the output groups.
                 }
             }
         }
@@ -1076,7 +1077,8 @@ void Graph::PullOutputData(BlobMap &out) {
         void *ext_blob_ptr = ext_blob->buffer();
         void *intr_blob_ptr = intr_blob.GetData();
 
-        // That is the same memory. No need to copy
+        DEBUG_LOG(name, " @ ", intr_blob_ptr, " -> ", ext_blob_ptr, " zero-copy: ", intr_blob_ptr==ext_blob_ptr, " for ", GetName());
+        // That is the same memory. No need to copys
         if (ext_blob_ptr == intr_blob_ptr) continue;
 
         if (actualDesc.getBlockingDesc() != expectedDesc.getBlockingDesc() && !isScalarOutput) {
