@@ -116,15 +116,14 @@ private:
     std::unique_ptr<IMemoryMngr> _pMemMngr;
 };
 
-using MemoryMngrPtr = std::shared_ptr<IMemoryMngr>;
-using MemoryMngrCPtr = std::shared_ptr<const IMemoryMngr>;
+using MemoryMngrPtr = std::shared_ptr<IMemoryMngrObserver>;
+using MemoryMngrCPtr = std::shared_ptr<const IMemoryMngrObserver>;
 
 class DnnlMemMngrHandle {
 public:
     DnnlMemMngrHandle(MemoryMngrPtr pMgr, Memory* pMem) : _pMgr(pMgr), _pMem(pMem) {
-        auto pMgrObs = std::dynamic_pointer_cast<IMemoryMngrObserver>(pMgr);
-        if (pMgrObs) {
-            pMgrObs->registerMemory(_pMem);
+        if (_pMgr) {
+            _pMgr->registerMemory(_pMem);
         }
     }
 
@@ -142,9 +141,8 @@ public:
     }
 
     ~DnnlMemMngrHandle() {
-        auto pMgrObs = std::dynamic_pointer_cast<IMemoryMngrObserver>(_pMgr);
-        if (pMgrObs) {
-            pMgrObs->unregisterMemory(_pMem);
+        if (_pMgr) {
+            _pMgr->unregisterMemory(_pMem);
         }
     }
 

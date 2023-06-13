@@ -24,23 +24,10 @@ bool PartitionedMemoryMngr::hasExtBuffer() const noexcept {
 }
 
 void PartitionedMemoryMngr::registerMemory(Memory* memPtr) {
-    auto pMgrObs = std::dynamic_pointer_cast<IMemoryMngrObserver>(m_pMngr);
-    if (pMgrObs)
-        pMgrObs->registerMemory(memPtr);
+    m_pMngr->registerMemory(memPtr);
 }
 
 void PartitionedMemoryMngr::unregisterMemory(Memory* memPtr) {
-    auto pMgrObs = std::dynamic_pointer_cast<IMemoryMngrObserver>(m_pMngr);
-    if (pMgrObs)
-        pMgrObs->unregisterMemory(memPtr);
-}
-
-MemoryMngrPtr PartitionedMemoryMngr::getBaseMemMngr() const noexcept {
-    const auto pMngr = std::dynamic_pointer_cast<PartitionedMemoryMngr>(m_pMngr);
-    std::cout << "iteratively getBaseMemMngr()" << this << std::endl;
-    if (pMngr)
-        return pMngr->getBaseMemMngr();
-    else
-        return m_pMngr;
+    m_pMngr->unregisterMemory(memPtr);
 }
 

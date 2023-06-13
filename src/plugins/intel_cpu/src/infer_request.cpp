@@ -27,6 +27,12 @@
 #include <ie_ngraph_utils.hpp>
 #include "partitioned_mem_mgr.h"
 
+#include "ie_allocator.hpp"  // IE public header
+// #include "openvino/core/except.hpp"
+// #include "openvino/runtime/allocator.hpp"
+// #include "openvino/runtime/common.hpp"
+
+
 namespace ov {
 namespace intel_cpu {
 
@@ -265,7 +271,6 @@ void InferRequestBase::changeDefaultPtr() {
                 IE_ASSERT(outputMemMngrs[it.first]);
                 IE_ASSERT(outputAllocators[it.first]);
                 if (canBeInPlace) {
-                    changeEdgePtr(parentEdge, it.second);
                     outputMemMngrs[it.first]->setAllocator(outputAllocators[it.first]);
                 } else {
                     outputMemMngrs[it.first]->setAllocator(nullptr);
@@ -632,7 +637,7 @@ InferRequest::InferRequest(const std::vector<std::shared_ptr<const ov::Node>>& i
         modelInputsMap[ov::op::util::get_ie_output_name(ngraph::Output<const ngraph::Node>(in))] = in;
     }
     for (const std::shared_ptr<const ov::Node>& out : outputs) {
-        modelOutputsMap[ov::op::util::get_ie_output_name(out->input_value(0))] = out;        
+        modelOutputsMap[ov::op::util::get_ie_output_name(out->input_value(0))] = out;
     }
 
     CreateInferRequest();
@@ -643,23 +648,17 @@ void InferRequest::initBlobs() {
         InferRequest::GetBlob(it.first);
     }
     for (const auto& it : modelOutputsMap) {
-        auto outblob = InferRequest::GetBlob(it.first);
-
-        outputAllocators[it.first] = std::make_shared<OutputAllocator>(outblob);
-
-        const auto parent_mem = graph->getOutputNodeByName(it.first)->getParentEdgesAtPort(0)[0]->getMemoryPtr();
-        const auto memMngr = parent_mem->getMemoryMngr();
-        IE_ASSERT(memMngr);
-
-        OutputMemoryMngrPtr outMemMngr;
-        outMemMngr = std::dynamic_pointer_cast<OutputMemoryMngr>(memMngr);
-        if (!outMemMngr) {
-            auto partiMemMngr = std::dynamic_pointer_cast<PartitionedMemoryMngr>(memMngr);
-            if (partiMemMngr) {
-                outMemMngr = std::dynamic_pointer_cast<OutputMemoryMngr>(partiMemMngr->getBaseMemMngr());
-            }
+        outputAllocators[it.first] = InferenceEngine::CreateDefaultAllocator();
+        InferRequest::GetBlob(it.first);
+ 
+        const auto &outMemMngrMap = graph->outputNodesMemMngrMap;
+        auto itr = outMemMngrMap.find(it.first);
+        if (itr != outMemMngrMap.end()) {
+            OutputMemoryMngrPtr outMemMngr;
+            outMemMngr = std::dynamic_pointer_cast<OutputMemoryMngr>(itr->second);
+            IE_ASSERT(outMemMngr);
+            outputMemMngrs[it.first] = outMemMngr;
         }
-        outputMemMngrs[it.first] = outMemMngr;
     }
 }
 
@@ -799,7 +798,6 @@ InferenceEngine::Blob::Ptr InferRequest::GetBlob(const std::string& name) {
 
                 InferenceEngine::TensorDesc desc(InferenceEngine::details::convertPrecision(inputNode->second->get_output_element_type(0)),
                                                  dims, InferenceEngine::TensorDesc::getLayoutByRank(dims.size()));
-
                 _inputs[name] = make_blob_with_precision(desc);
                 _inputs[name]->allocate();
 
@@ -835,7 +833,7 @@ InferenceEngine::Blob::Ptr InferRequest::GetBlob(const std::string& name) {
                     InferenceEngine::TensorDesc desc(InferenceEngine::details::convertPrecision(outputNode->second->get_input_element_type(0)),
                                                      dims, InferenceEngine::TensorDesc::getLayoutByRank(dims.size()));
 
-                    data = make_blob_with_precision(desc);
+                    data = make_blob_with_precision(desc, outputAllocators[name]);
                     data->allocate();
                 } else {
                     const auto& blobDims = data->getTensorDesc().getDims();

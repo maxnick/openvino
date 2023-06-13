@@ -886,30 +886,43 @@ void Graph::AllocateWithReuse() {
         }
         for (auto& group : groups) {
             MemoryMngrPtr grpMemMngr;
+            grpMemMngr =
+                std::make_shared<DnnlMemoryMngr>(std::unique_ptr<MemoryMngrWithReuse>(new MemoryMngrWithReuse()));
+
             // deternmine a group with outputs.
             size_t isOutGrp = 0;
+            int64_t outBoxId = -1;
             for (auto& box : group) {
-                for (auto& edge : edge_clusters[box.id]) {
-                    if (edge->getChild()->getType() == Type::Output) {
+                if (std::any_of(
+                    edge_clusters[box.id].begin(),
+                    edge_clusters[box.id].end(),
+                    [box](const ov::intel_cpu::EdgePtr edge) {
+                        return edge->getChild()->getType() == Type::Output;
+                    })) {
                         isOutGrp++;
-                        break;
-                    }
+                        outBoxId = box.id;
                 }
             }
             if (isOutGrp) {
                 IE_ASSERT(isOutGrp==1);  // reuse_io_tensors false
                 grpMemMngr =
-                    std::make_shared<OutputMemoryMngr>(std::unique_ptr<MemoryMngrWithReuse>(new MemoryMngrWithReuse()));
-            } else {
-                grpMemMngr =
-                    std::make_shared<DnnlMemoryMngr>(std::unique_ptr<MemoryMngrWithReuse>(new MemoryMngrWithReuse()));
+                    std::make_shared<OutputMemoryMngr>(grpMemMngr);
+                DEBUG_LOG(grpMemMngr);
+
+                // Store the output memory managers.
+                // So that, the infer requests can be able to get access to them.
+                for (auto& edge : edge_clusters[outBoxId]) {
+                    if (edge->getChild()->getType() == Type::Output) {
+                        outputNodesMemMngrMap[edge->getParent()->getName()] = grpMemMngr;
+                    }
+                }
             }
-            std::cout << "grpMemMngr" << grpMemMngr << "" << std::dynamic_pointer_cast<OutputMemoryMngr>(grpMemMngr) <<"" << std::endl;
             for (auto& box : group) {
                 for (auto& edge : edge_clusters[box.id]) {
                     if (edge->getStatus() == Edge::Status::NeedAllocation) {
                         edge->allocate(grpMemMngr);
                     }
+                    if (isOutGrp) edge->getParent()->forceUpdateShape = true;  // force recheck shape updates for nodes in the output groups.
                 }
             }
         }
@@ -1335,12 +1348,12 @@ inline void Graph::ExecuteNode(const NodePtr& node, const dnnl::stream& stream) 
 
     OV_ITT_SCOPED_TASK(itt::domains::intel_cpu, node->profiling.execute);
 
+    DEBUG_LOG(*node, " exec_graph ", this);
     if (node->isDynamicNode()) {
         node->executeDynamic(stream);
     } else {
         node->execute(stream);
     }
-    DEBUG_LOG(*node);
 }
 
 void Graph::Infer(InferRequestBase* request) {

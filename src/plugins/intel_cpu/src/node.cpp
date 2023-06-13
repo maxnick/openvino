@@ -565,7 +565,7 @@ std::vector<memory::format_tag> Node::getAvailableFormatsForDims(const Shape &di
 
 void Node::updateShapes() {
     IE_ASSERT(isDynamicNode()) << "Node::updateShapes() is called to a static shape node of type: " << getTypeStr() << " with name: " << getName();
-    if (needShapeInfer()) {
+    if (needShapeInfer() || forceUpdateShape) {
         auto result = shapeInfer();
         if (ShapeInferStatus::success == result.status) {
             redefineOutputMemory(result.dims);
@@ -618,7 +618,7 @@ void Node::redefineOutputMemory(const std::vector<VectorDims> &newOutputShapes) 
         }
 
         const auto &currDesc = edges[0]->getMemory().getDesc();
-        if (currDesc.getShape().isStatic() && currDesc.getShape().getStaticDims() == newOutputShape)
+        if (currDesc.getShape().isStatic() && currDesc.getShape().getStaticDims() == newOutputShape && !forceUpdateShape)
             continue;
 
         const bool hasZeroDims = std::count(std::begin(newOutputShape), std::end(newOutputShape), 0) > 0;
