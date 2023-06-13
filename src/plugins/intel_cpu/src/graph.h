@@ -201,6 +201,8 @@ public:
         dynBatch = newDynBatch;
     }
 
+    Status getDynStatus() const {return status;}
+
 protected:
     void VisitNode(NodePtr node, std::vector<NodePtr>& sortedNodes);
 

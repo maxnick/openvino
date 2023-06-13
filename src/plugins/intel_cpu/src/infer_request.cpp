@@ -265,7 +265,7 @@ void InferRequestBase::changeDefaultPtr() {
         if (output != outputNodesMap.end()) {
             auto parentEdge = output->second->getParentEdgeAt(0);
 
-            if (graph->hasDynamicInput()) { // TODO: internal dynamism
+            if (Graph::Status::ReadyDynamic == graph->getDynStatus()) {
                 bool canBeInPlace = true;
                 // TODO: filter
                 IE_ASSERT(outputMemMngrs[it.first]);
