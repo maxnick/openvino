@@ -907,7 +907,7 @@ void Graph::AllocateWithReuse() {
                 IE_ASSERT(isOutGrp==1);  // reuse_io_tensors false
                 grpMemMngr =
                     std::make_shared<OutputMemoryMngr>(grpMemMngr);
-                DEBUG_LOG(grpMemMngr);
+                DEBUG_LOG(grpMemMngr, " ", this);
 
                 // Store the output memory managers.
                 // So that, the infer requests can be able to get access to them.
@@ -1038,6 +1038,11 @@ void Graph::PullOutputData(BlobMap &out) {
 
         const auto actualDesc = MemoryDescUtils::convertToTensorDesc(intr_blob.getDesc());
         auto &expectedDesc = ext_blob->getTensorDesc();
+
+        // FIXME: suppose outputs of dynamic graph are sharing memory.
+        if (Graph::Status::ReadyDynamic == getDynStatus()) {
+            return;
+        }
 
         // TODO [NM]: need to create universal reorder which will be detect cases when we really need to use it
         // WA: for cases when output shape after transformation will be 1x1x1x1 but model output is scalar

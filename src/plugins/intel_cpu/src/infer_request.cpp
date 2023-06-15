@@ -268,12 +268,22 @@ void InferRequestBase::changeDefaultPtr() {
             if (Graph::Status::ReadyDynamic == graph->getDynStatus()) {
                 bool canBeInPlace = true;
                 // TODO: filter
-                IE_ASSERT(outputMemMngrs[it.first]);
+
+                OutputMemoryMngrPtr outputMemMngr;
+                const auto &outMemMngrMap = graph->outputNodesMemMngrMap;
+                auto itr = outMemMngrMap.find(it.first);
+                if (itr != outMemMngrMap.end()) {
+                    outputMemMngr = std::dynamic_pointer_cast<OutputMemoryMngr>(itr->second);
+                    IE_ASSERT(outputMemMngr);
+                }
+
                 IE_ASSERT(outputAllocators[it.first]);
                 if (canBeInPlace) {
-                    outputMemMngrs[it.first]->setAllocator(outputAllocators[it.first]);
+                    outputMemMngr->setAllocator(outputAllocators[it.first]);
+                    DEBUG_LOG(this, " ", outputMemMngr, " ", outputAllocators[it.first], " ", graph);
                 } else {
-                    outputMemMngrs[it.first]->setAllocator(nullptr);
+                    outputMemMngr->setAllocator(nullptr);
+                    changeEdgePtr(parentEdge, it.second);
                 }
 
                 continue;
@@ -648,17 +658,8 @@ void InferRequest::initBlobs() {
         InferRequest::GetBlob(it.first);
     }
     for (const auto& it : modelOutputsMap) {
-        outputAllocators[it.first] = InferenceEngine::CreateDefaultAllocator();
+        outputAllocators[it.first] = InferenceEngine::CreateOutputAllocator();
         InferRequest::GetBlob(it.first);
- 
-        const auto &outMemMngrMap = graph->outputNodesMemMngrMap;
-        auto itr = outMemMngrMap.find(it.first);
-        if (itr != outMemMngrMap.end()) {
-            OutputMemoryMngrPtr outMemMngr;
-            outMemMngr = std::dynamic_pointer_cast<OutputMemoryMngr>(itr->second);
-            IE_ASSERT(outMemMngr);
-            outputMemMngrs[it.first] = outMemMngr;
-        }
     }
 }
 
@@ -835,6 +836,7 @@ InferenceEngine::Blob::Ptr InferRequest::GetBlob(const std::string& name) {
 
                     data = make_blob_with_precision(desc, outputAllocators[name]);
                     data->allocate();
+                    DEBUG_LOG(static_cast<void*>(data->buffer()), "_", data->byteSize());
                 } else {
                     const auto& blobDims = data->getTensorDesc().getDims();
                     // in static shape case is enough information that shapes are incompatible to throw exception

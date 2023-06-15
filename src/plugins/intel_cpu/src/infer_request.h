@@ -73,7 +73,6 @@ protected:
     virtual void changeDefaultPtr();
 
     std::unordered_map<std::string, std::shared_ptr<InferenceEngine::IAllocator>> outputAllocators;
-    std::unordered_map<std::string, OutputMemoryMngrPtr> outputMemMngrs;  // reference to the memmanager
 };
 
 class LegacyInferRequest : public InferRequestBase {
