@@ -201,6 +201,8 @@ public:
         dynBatch = newDynBatch;
     }
 
+    Status getDynStatus() const {return status;}
+
 protected:
     void VisitNode(NodePtr node, std::vector<NodePtr>& sortedNodes);
 
@@ -256,6 +258,8 @@ private:
     // TODO: change std::map to std::unordered_map
     std::map<std::string, NodePtr> inputNodesMap;
     std::map<std::string, NodePtr> outputNodesMap;
+
+    std::map<std::string, MemoryMngrPtr> outputNodesMemMngrMap;
 
     // these node pointers (from graphNodes) are to avoid regular checking for
     // constantness of nodes in Infer methods and calls of

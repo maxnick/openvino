@@ -25,6 +25,13 @@
 #include "memory_desc/dnnl_blocked_memory_desc.h"
 #include <transformations/utils/utils.hpp>
 #include <ie_ngraph_utils.hpp>
+#include "partitioned_mem_mgr.h"
+
+#include "ie_allocator.hpp"  // IE public header
+// #include "openvino/core/except.hpp"
+// #include "openvino/runtime/allocator.hpp"
+// #include "openvino/runtime/common.hpp"
+
 
 namespace ov {
 namespace intel_cpu {
@@ -257,6 +264,31 @@ void InferRequestBase::changeDefaultPtr() {
         auto output = outputNodesMap.find(it.first);
         if (output != outputNodesMap.end()) {
             auto parentEdge = output->second->getParentEdgeAt(0);
+
+            if (Graph::Status::ReadyDynamic == graph->getDynStatus()) {
+                bool canBeInPlace = true;
+                // TODO: filter
+
+                OutputMemoryMngrPtr outputMemMngr;
+                const auto &outMemMngrMap = graph->outputNodesMemMngrMap;
+                auto itr = outMemMngrMap.find(it.first);
+                if (itr != outMemMngrMap.end()) {
+                    outputMemMngr = std::dynamic_pointer_cast<OutputMemoryMngr>(itr->second);
+                    IE_ASSERT(outputMemMngr);
+                }
+
+                IE_ASSERT(outputAllocators[it.first]);
+                if (canBeInPlace) {
+                    outputMemMngr->setAllocator(outputAllocators[it.first]);
+                    DEBUG_LOG(this, " ", outputMemMngr, " ", outputAllocators[it.first], " ", graph);
+                } else {
+                    outputMemMngr->setAllocator(nullptr);
+                    changeEdgePtr(parentEdge, it.second);
+                }
+
+                continue;
+            }
+
             if (parentEdge->getMemory().GetData() == static_cast<void*>(it.second->buffer()))
                 continue;
 
@@ -626,6 +658,7 @@ void InferRequest::initBlobs() {
         InferRequest::GetBlob(it.first);
     }
     for (const auto& it : modelOutputsMap) {
+        outputAllocators[it.first] = InferenceEngine::CreateOutputAllocator();
         InferRequest::GetBlob(it.first);
     }
 }
@@ -766,7 +799,6 @@ InferenceEngine::Blob::Ptr InferRequest::GetBlob(const std::string& name) {
 
                 InferenceEngine::TensorDesc desc(InferenceEngine::details::convertPrecision(inputNode->second->get_output_element_type(0)),
                                                  dims, InferenceEngine::TensorDesc::getLayoutByRank(dims.size()));
-
                 _inputs[name] = make_blob_with_precision(desc);
                 _inputs[name]->allocate();
 
@@ -802,8 +834,9 @@ InferenceEngine::Blob::Ptr InferRequest::GetBlob(const std::string& name) {
                     InferenceEngine::TensorDesc desc(InferenceEngine::details::convertPrecision(outputNode->second->get_input_element_type(0)),
                                                      dims, InferenceEngine::TensorDesc::getLayoutByRank(dims.size()));
 
-                    data = make_blob_with_precision(desc);
+                    data = make_blob_with_precision(desc, outputAllocators[name]);
                     data->allocate();
+                    DEBUG_LOG(static_cast<void*>(data->buffer()), "_", data->byteSize());
                 } else {
                     const auto& blobDims = data->getTensorDesc().getDims();
                     // in static shape case is enough information that shapes are incompatible to throw exception
@@ -830,8 +863,8 @@ InferenceEngine::Blob::Ptr InferRequest::GetBlob(const std::string& name) {
                 }
 
                 _outputs[name] = data;
-                if (!isDynamic && !externalPtr.count(name) &&
-                    data->getTensorDesc() == MemoryDescUtils::convertToTensorDesc(output->second->getParentEdgesAtPort(0)[0]->getMemory().getDesc()) &&
+                if (!externalPtr.count(name) &&
+                    ((!isDynamic && data->getTensorDesc() == MemoryDescUtils::convertToTensorDesc(output->second->getParentEdgesAtPort(0)[0]->getMemory().getDesc())) || isDynamic) &&
                         !graph->getConfig().batchLimit) {
                     externalPtr[name] = data;
                 }

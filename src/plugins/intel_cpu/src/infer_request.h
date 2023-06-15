@@ -9,6 +9,7 @@
 #include <string>
 #include <map>
 #include <cpp_interfaces/interface/ie_iinfer_request_internal.hpp>
+#include "output_mem_mgr.h"
 
 namespace ov {
 namespace intel_cpu {
@@ -70,6 +71,8 @@ private:
 
 protected:
     virtual void changeDefaultPtr();
+
+    std::unordered_map<std::string, std::shared_ptr<InferenceEngine::IAllocator>> outputAllocators;
 };
 
 class LegacyInferRequest : public InferRequestBase {

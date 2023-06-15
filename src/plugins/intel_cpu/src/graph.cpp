@@ -56,6 +56,8 @@
 #   include <tbb/task.h>
 #endif
 
+#include "output_mem_mgr.h"
+
 using namespace dnnl;
 using namespace InferenceEngine;
 using namespace InferenceEngine::details;
@@ -883,13 +885,48 @@ void Graph::AllocateWithReuse() {
             }
         }
         for (auto& group : groups) {
-            auto grpMemMngr =
+            MemoryMngrPtr grpMemMngr;
+            grpMemMngr =
                 std::make_shared<DnnlMemoryMngr>(std::unique_ptr<MemoryMngrWithReuse>(new MemoryMngrWithReuse()));
+
+            // deternmine a group with outputs.
+            size_t isOutGrp = 0;
+            int64_t outBoxId = -1;
+            for (auto& box : group) {
+                if (std::any_of(
+                    edge_clusters[box.id].begin(),
+                    edge_clusters[box.id].end(),
+                    [box](const ov::intel_cpu::EdgePtr edge) {
+                        return edge->getChild()->getType() == Type::Output;
+                    })) {
+                        isOutGrp++;
+                        outBoxId = box.id;
+                }
+            }
+            if (isOutGrp) {
+                IE_ASSERT(isOutGrp==1);  // reuse_io_tensors false
+                grpMemMngr =
+                    std::make_shared<OutputMemoryMngr>(grpMemMngr);
+                DEBUG_LOG(grpMemMngr, " ", this);
+
+                // Store the output memory managers.
+                // So that, the infer requests can be able to get access to them.
+                for (auto& edge : edge_clusters[outBoxId]) {
+                    const auto child = edge->getChild();
+                    if (child->getType() == Type::Output) {
+                        for (auto &output : outputNodesMap) {
+                            if (output.second == child) outputNodesMemMngrMap[output.first] = grpMemMngr;
+                        }
+                    }
+                }
+            }
             for (auto& box : group) {
                 for (auto& edge : edge_clusters[box.id]) {
                     if (edge->getStatus() == Edge::Status::NeedAllocation) {
                         edge->allocate(grpMemMngr);
                     }
+                    if (isOutGrp &&
+                    "Parameter" != edge->getParent()->getTypeStr()) edge->getParent()->forceUpdateShape = true;  // force recheck shape updates for nodes in the output groups.
                 }
             }
         }
@@ -1002,6 +1039,11 @@ void Graph::PullOutputData(BlobMap &out) {
         const auto actualDesc = MemoryDescUtils::convertToTensorDesc(intr_blob.getDesc());
         auto &expectedDesc = ext_blob->getTensorDesc();
 
+        // FIXME: suppose outputs of dynamic graph are sharing memory.
+        if (Graph::Status::ReadyDynamic == getDynStatus()) {
+            return;
+        }
+
         // TODO [NM]: need to create universal reorder which will be detect cases when we really need to use it
         // WA: for cases when output shape after transformation will be 1x1x1x1 but model output is scalar
         bool isScalarOutput = false;
@@ -1040,7 +1082,8 @@ void Graph::PullOutputData(BlobMap &out) {
         void *ext_blob_ptr = ext_blob->buffer();
         void *intr_blob_ptr = intr_blob.GetData();
 
-        // That is the same memory. No need to copy
+        DEBUG_LOG(name, " @ ", intr_blob_ptr, " -> ", ext_blob_ptr, " zero-copy: ", intr_blob_ptr==ext_blob_ptr, " for ", GetName());
+        // That is the same memory. No need to copys
         if (ext_blob_ptr == intr_blob_ptr) continue;
 
         if (actualDesc.getBlockingDesc() != expectedDesc.getBlockingDesc() && !isScalarOutput) {
@@ -1315,12 +1358,12 @@ inline void Graph::ExecuteNode(const NodePtr& node, const dnnl::stream& stream) 
 
     OV_ITT_SCOPED_TASK(itt::domains::intel_cpu, node->profiling.execute);
 
+    DEBUG_LOG(*node, " exec_graph ", this);
     if (node->isDynamicNode()) {
         node->executeDynamic(stream);
     } else {
         node->execute(stream);
     }
-    DEBUG_LOG(*node);
 }
 
 void Graph::Infer(InferRequestBase* request) {
