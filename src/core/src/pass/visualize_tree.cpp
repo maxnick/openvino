@@ -140,9 +140,9 @@ static std::string label_edge(const std::shared_ptr<Node>& /* src */,
     std::stringstream ss;
     OPENVINO_SUPPRESS_DEPRECATED_START
     if (getenv_bool("OV_VISUALIZE_TREE_EDGE_LABELS")) {
-        size_t output = 0;
+        size_t output = 0;  // FIXME: find correct output port
         stringstream label_edge;
-        label_edge << "[label=\" " << output << " -> " << arg_index << " \"]";
+        label_edge << "[label=\" " << output << " → " << arg_index << " \"]";
         ss << label_edge.str();
     } else if (getenv_bool("OV_VISUALIZE_TREE_EDGE_JUMP_DISTANCE")) {
         if (jump_distance > 1) {
@@ -238,10 +238,13 @@ void pass::VisualizeTree::add_node_arguments(shared_ptr<Node> node,
             auto clone_name = "CLONE_" + to_string(fake_node_ctr);
             auto color = string("color=\"") + (arg->description() == "Parameter" ? "blue" : "black") + string("\"");
             std::vector<std::string> attributes{"shape=\"box\"",
-                                                "style=\"dashed\"",
+                                                "style=" + string(arg->description() == "Parameter" ? "\"solid\"" : "\"dashed\""),
                                                 color,
-                                                string("label=\"") + get_node_name(arg) + string("\n") +
-                                                    get_constant_value(arg, const_max_elements) + string("\"")};
+                                                "fillcolor=\"#D3E7FF\"",
+                                                string("label=<<TABLE BORDER='0' CELLBORDER='0' CELLSPACING='0'>") +
+                                                    get_node_name(arg) +
+                                                    get_constant_value(arg, const_max_elements) +
+                                                    string("</TABLE>>")};
 
             if (m_node_modifiers && !arg->output(0).get_rt_info().empty()) {
                 m_node_modifiers(*arg, attributes);
@@ -275,6 +278,7 @@ void pass::VisualizeTree::add_node_arguments(shared_ptr<Node> node,
             fake_node_ctr++;
         } else {
             m_ss << add_attributes(arg);
+            m_ss << " fillcolor=\"#D3E7FF\" ";
             m_ss << add_attributes(node);
             m_ss << "    " << arg->get_name() << " -> " << node->get_name()
                  << label_edge(arg, node, arg_index, jump_distance) << "\n";
@@ -294,7 +298,10 @@ string pass::VisualizeTree::add_attributes(shared_ptr<Node> node) {
 
 static std::string pretty_partial_shape(const PartialShape& shape) {
     std::stringstream ss;
+    ss << shape;
+    return ss.str();
 
+    // TODO: Remove the remaining code below
     if (shape.rank().is_dynamic()) {
         ss << "?";
     } else {
@@ -385,13 +392,13 @@ static std::string pretty_value(const vector<T>& values, size_t max_elements) {
 
 std::string pass::VisualizeTree::get_constant_value(std::shared_ptr<Node> node, size_t max_elements) {
     std::stringstream ss;
-    ss << "{" << node->get_element_type().get_type_name() << "}";
-    ss << pretty_partial_shape(node->get_output_partial_shape(0));
+    ss << "<TR><TD>" << node->get_element_type().get_type_name();
+    ss << pretty_partial_shape(node->get_output_partial_shape(0)) << "</TD></TR>";
 
     if (!ngraph::op::is_constant(node))
         return ss.str();
 
-    ss << "\nvalue: ";
+    ss << "<TR><TD>value: ";
     const auto constant = ov::as_type_ptr<ngraph::op::Constant>(node);
     switch (constant->get_output_element_type(0)) {
     case element::Type_t::undefined:
@@ -429,6 +436,7 @@ std::string pass::VisualizeTree::get_constant_value(std::shared_ptr<Node> node, 
         ss << "[" << pretty_value(constant->cast_vector<uint64_t>(), max_elements) << "]";
         break;
     }
+    ss << "</TD></TR>";
     return ss.str();
 }
 
@@ -446,7 +454,7 @@ string pass::VisualizeTree::get_attributes(shared_ptr<Node> node) {
     // Construct the label attribute
     {
         stringstream label;
-        label << "label=\"" << get_node_name(node);
+        label << "label=<<TABLE BORDER='0' CELLBORDER='0' CELLSPACING='0'>" << get_node_name(node);
 
         OPENVINO_SUPPRESS_DEPRECATED_START
         static const bool nvtos =
@@ -473,25 +481,31 @@ string pass::VisualizeTree::get_attributes(shared_ptr<Node> node) {
                     }
                 }
             }
+            label << "<TR>";
             for (const auto& output : node->outputs()) {
+                label << "<TD>";
                 if (nvtio)
-                    label << "\\nout" << to_string(output.get_index()) << ": ";
+                    label << to_string(output.get_index()) << ": ";
                 if (nvtot)
-                    label << "{" << output.get_element_type().get_type_name() << "}";
+                    label << output.get_element_type().get_type_name() << " ";
                 if (nvtos)
                     label << pretty_partial_shape(output.get_partial_shape());
 
                 if (nvtrti) {
+                    // TODO: Embed another table
                     label << get_attribute_values(output.get_rt_info());
                 }
+                // TODO: Partial values
+                label << "</TD>";
             }
+            label << "</TR>";
         }
 
         auto eh = m_ops_to_details.find(node->get_type_info());
         if (eh != m_ops_to_details.end()) {
             eh->second(*node, label);
         }
-        label << "\"";
+        label << "</TABLE>>";
         attributes.push_back(label.str());
     }
 
@@ -510,13 +524,17 @@ string pass::VisualizeTree::get_attributes(shared_ptr<Node> node) {
 string pass::VisualizeTree::get_node_name(shared_ptr<Node> node) {
     OPENVINO_SUPPRESS_DEPRECATED_START
     static const bool nvtmn = getenv_bool("OV_VISUALIZE_TREE_MEMBERS_NAME");
-    string rc = (nvtmn ? string("friendly_name: ") : "") + node->get_friendly_name();
+    string rc = "<TR><TD><FONT POINT-SIZE='8'>";
+    rc += (nvtmn ? string("friendly_name: ") : "") + node->get_friendly_name();
+    rc += "</FONT></TD></TR>";
     if (node->get_friendly_name() != node->get_name()) {
-        rc += "\\n" + (nvtmn ? string("name: ") : "") + node->get_name();
+        rc += "<TR><TD><FONT POINT-SIZE='8'>";
+        rc += (nvtmn ? string("name: ") : "") + node->get_name();
+        rc += "</FONT></TD></TR>";
     }
     const auto type_info = node->get_type_info();
-    rc += "\\n" + (nvtmn ? string("type_name: ") : "") + std::string(type_info.version_id) +
-          "::" + std::string(type_info.name);
+    rc += "<TR><TD>" + (nvtmn ? string("type_name: ") : "") + std::string(type_info.version_id) +
+          "::<FONT POINT-SIZE=\"20\"><B>" + std::string(type_info.name) + "</B></FONT></TD></TR>";
 
     static const bool nvttn = getenv_bool("OV_VISUALIZE_TREE_TENSORS_NAME");
     if (nvttn) {
@@ -531,7 +549,7 @@ string pass::VisualizeTree::get_node_name(shared_ptr<Node> node) {
         };
 
         if (node->get_input_size() != 0) {
-            rc += "\\n" + (nvtmn ? string("in_tensor_names: ") : "");
+            rc += "<TR><TD><FONT POINT-SIZE='8'>" + (nvtmn ? string("in_tensor_names: ") : "");
             for (size_t i = 0; i < node->get_input_size(); ++i) {
                 const auto input = node->input(i);
                 const auto tensor_ptr = input.get_tensor_ptr();
@@ -541,9 +559,10 @@ string pass::VisualizeTree::get_node_name(shared_ptr<Node> node) {
                     rc += str;
                 }
             }
+            rc += "</FONT></TD></TR>";
         }
         if (node->get_output_size() != 0) {
-            rc += "\\n" + (nvtmn ? string("out_tensor_names: ") : "");
+            rc += "<TR><TD><FONT POINT-SIZE='8'>" + (nvtmn ? string("out_tensor_names: ") : "");
             for (size_t i = 0; i < node->get_output_size(); ++i) {
                 const auto output = node->output(i);
                 const auto tensor_ptr = output.get_tensor_ptr();
@@ -553,6 +572,7 @@ string pass::VisualizeTree::get_node_name(shared_ptr<Node> node) {
                     rc += str;
                 }
             }
+            rc += "</FONT></TD></TR>";
         }
     }
 
@@ -560,7 +580,8 @@ string pass::VisualizeTree::get_node_name(shared_ptr<Node> node) {
     if (nvtrti) {
         const auto rt = node->get_rt_info();
         if (!rt.empty()) {
-            rc += "\\nrt info: " + get_attribute_values(rt, "\\n");
+            rc += "<TR><TD><FONT POINT-SIZE='8'>rt info: " + get_attribute_values(rt, "</FONT></TD></TR><TR><TD><FONT POINT-SIZE='8'>");
+            rc += "</FONT></TD></TR>";
         }
     }
     OPENVINO_SUPPRESS_DEPRECATED_END
