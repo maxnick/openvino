@@ -2,6 +2,10 @@
 
 @sphinxdirective
 
+.. meta::
+   :description: Learn how to convert a model from the 
+                 Kaldi format to the OpenVINO Intermediate Representation.
+
 
 .. warning::
 
@@ -50,11 +54,11 @@ Examples of CLI Commands
 
     .. math::
 
-      S = \frac{1}{\sum_{j = 0}^{|C|}C_{j}}
+       S = \frac{1}{\sum_{j = 0}^{|C|}C_{j}}
 
     .. math::
 
-      C_{i}=log(S\*C_{i})
+       C_{i}=log(S*C_{i})
 
     where :math:`C` - the counts array, :math:`C_{i} - i^{th}` element of the counts array, :math:`|C|` - number of elements in the counts array;
 

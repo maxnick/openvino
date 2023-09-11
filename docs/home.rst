@@ -1,7 +1,6 @@
-.. OpenVINO Toolkit documentation master file, created by
-   sphinx-quickstart on Wed Jul  7 10:46:56 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+============================
+OpenVINO 2023.0
+============================
 
 .. meta::
    :google-site-verification: _YqumYQ98cmXUTwtzM_0WIIadtDc6r_TMYGbmGgNvrk
@@ -17,8 +16,21 @@
 
    OpenVINO 2023.0
 
-   | An open-source toolkit for optimizing and deploying deep learning models.
-   | Boost your AI deep-learning inference performance!
+   .. raw:: html
+
+      <div class="line-block">
+         <section class="splide" aria-label="Splide Banner Carousel">
+           <div class="splide__track">
+         		<ul class="splide__list">
+         			<li class="splide__slide">An open-source toolkit for optimizing and deploying deep learning models.<br>Boost your AI deep-learning inference performance!</li>
+			         <li class="splide__slide">Even more integrations in 2023.0!<br>Load TensorFlow, TensorFlow Lite, and PyTorch models directly, without manual conversion.<br><a href="https://docs.openvino.ai/2023.1/Supported_Model_Formats.html">See the supported model formats...</a></li>
+         			<li class="splide__slide">CPU inference has become even better. ARM processors are supported and thread scheduling is available on 12th gen Intel® Core and up.<br><a href="https://docs.openvino.ai/2023.1/openvino_docs_OV_UG_OV_Runtime_User_Guide.html">See how to run OpenVINO on various devices...</a></li>
+         			<li class="splide__slide">Post-training optimization and quantization-aware training now in one tool!<br><a href="https://docs.openvino.ai/2023.1/openvino_docs_model_optimization_guide.html">See the new NNCF capabilities...</a></li>
+                  <li class="splide__slide">OpenVINO is enabled in the PyTorch 2.0 torch.compile() backend.<br><a href="https://docs.openvino.ai/2023.1/pytorch_2_0_torch_compile.html">See how it works...</a></li>
+         		</ul>
+           </div>
+         </section>
+      </div>
    
    .. button-ref::  get_started
       :ref-type: doc
@@ -32,8 +44,6 @@
 
    .. image:: _static/images/ov_homepage_diagram.png
       :align: center
-
-
 
 
 .. grid:: 2 2 3 3
@@ -74,12 +84,16 @@
 
       Reach for performance with post-training and training-time compression with NNCF
 
+   .. grid-item-card:: PyTorch 2.0 - torch.compile() backend
+      :link: pytorch_2_0_torch_compile
+      :link-alt: torch.compile 
+      :link-type: doc
 
-
+      Optimize generation of the graph model with PyTorch 2.0 torch.compile() backend
 
 
 Feature Overview
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##############################
 
 .. grid:: 1 2 2 2
    :class-container: ov-homepage-feature-grid
@@ -109,9 +123,6 @@ Feature Overview
 
 
 
-
-
-
 .. toctree::
    :maxdepth: 2
    :hidden:
@@ -122,4 +133,5 @@ Feature Overview
    DOCUMENTATION <documentation>
    MODEL ZOO <model_zoo>
    RESOURCES <resources>
-   RELEASE NOTES <https://software.intel.com/content/www/us/en/develop/articles/openvino-relnotes.html>
+   RELEASE NOTES <release_notes>
+

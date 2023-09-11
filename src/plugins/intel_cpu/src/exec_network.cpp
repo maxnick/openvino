@@ -161,11 +161,11 @@ ExecNetwork::ExecNetwork(const InferenceEngine::CNNNetwork &network,
 
 ExecNetwork::GraphGuard::Lock ExecNetwork::GetGraph() const {
     int streamId = 0;
-    int numaNodeId = 0;
+    int socketId = 0;
     auto streamsExecutor = dynamic_cast<InferenceEngine::IStreamsExecutor*>(_taskExecutor.get());
     if (nullptr != streamsExecutor) {
         streamId = streamsExecutor->GetStreamId();
-        numaNodeId = streamsExecutor->GetNumaNodeId();
+        socketId = streamsExecutor->GetSocketId();
     }
     auto graphLock = GraphGuard::Lock(_graphs[streamId % _graphs.size()]);
     if (!graphLock._graph.IsReady()) {
@@ -176,8 +176,7 @@ ExecNetwork::GraphGuard::Lock ExecNetwork::GetGraph() const {
                 {
                     std::lock_guard<std::mutex> lock{*_mutex.get()};
                     // disable weights caching if graph was created only once
-                    auto weightsCache =
-                        _cfg.streamExecutorConfig._streams != 1 ? _numaNodesWeights[numaNodeId] : nullptr;
+                    auto weightsCache = _cfg.streamExecutorConfig._streams != 1 ? _socketWeights[socketId] : nullptr;
 
                     auto isQuantizedFlag =
                         (_cfg.lpTransformsMode == Config::On) &&
@@ -335,9 +334,7 @@ InferenceEngine::Parameter ExecNetwork::GetMetric(const std::string &name) const
         const bool perfCount = config.collectPerfCounters;
         return decltype(ov::enable_profiling)::value_type(perfCount);
     } else if (name == ov::hint::inference_precision) {
-        const auto enforceBF16 = config.enforceBF16;
-        const auto inference_precision = enforceBF16 ? ov::element::bf16 : ov::element::f32;
-        return decltype(ov::hint::inference_precision)::value_type(inference_precision);
+        return decltype(ov::hint::inference_precision)::value_type(config.inferencePrecision);
     } else if (name == ov::hint::performance_mode) {
         const auto perfHint = ov::util::from_string(config.perfHintsConfig.ovPerfHint, ov::hint::performance_mode);
         return perfHint;
