@@ -224,10 +224,13 @@ void ov::pass::VisualizeTree::add_node_arguments(std::shared_ptr<Node> node,
             auto color =
                 std::string("color=\"") + (arg->description() == "Parameter" ? "blue" : "black") + std::string("\"");
             std::vector<std::string> attributes{"shape=\"box\"",
-                                                "style=\"dashed\"",
+                                                "style=" + std::string(arg->description() == "Parameter" ? "\"solid\"" : "\"dashed\""),
                                                 color,
-                                                std::string("label=\"") + get_node_name(arg) + std::string("\n") +
-                                                    get_constant_value(arg, const_max_elements) + std::string("\"")};
+                                                "fillcolor=\"#D3E7FF\"",
+                                                std::string("label=<<TABLE BORDER='0' CELLBORDER='0' CELLSPACING='0'>") +
+                                                    get_node_name(arg) +
+                                                    get_constant_value(arg, const_max_elements) +
+                                                    std::string("</TABLE>>")};
 
             if (m_node_modifiers && !arg->output(0).get_rt_info().empty()) {
                 m_node_modifiers(*arg, attributes);
@@ -261,6 +264,7 @@ void ov::pass::VisualizeTree::add_node_arguments(std::shared_ptr<Node> node,
             fake_node_ctr++;
         } else {
             m_ss << add_attributes(arg);
+            m_ss << " fillcolor=\"#D3E7FF\" ";
             m_ss << add_attributes(node);
             m_ss << "    " << arg->get_name() << " -> " << node->get_name()
                  << label_edge(arg, node, arg_index, jump_distance) << "\n";
@@ -280,7 +284,10 @@ std::string ov::pass::VisualizeTree::add_attributes(std::shared_ptr<Node> node) 
 
 static std::string pretty_partial_shape(const ov::PartialShape& shape) {
     std::stringstream ss;
+    ss << shape;
+    return ss.str();
 
+    // TODO: Remove the remaining code below
     if (shape.rank().is_dynamic()) {
         ss << "?";
     } else {
@@ -365,6 +372,10 @@ static std::string get_value(const std::shared_ptr<ov::op::v0::Constant>& consta
                              size_t max_elements,
                              bool allow_obfuscate = false) {
     std::stringstream ss;
+    ss << "<TR><TD>" << constant->get_element_type().get_type_name();
+    ss << pretty_partial_shape(constant->get_output_partial_shape(0)) << "</TD></TR>";
+
+    ss << "<TR><TD>value: ";
     switch (constant->get_output_element_type(0)) {
     case ov::element::Type_t::undefined:
         ss << "[ undefined value ]";
@@ -401,6 +412,7 @@ static std::string get_value(const std::shared_ptr<ov::op::v0::Constant>& consta
         ss << "[" << pretty_value(constant->cast_vector<uint64_t>(), max_elements, allow_obfuscate) << "]";
         break;
     }
+    ss << "</TD></TR>";
     return ss.str();
 }
 
@@ -452,7 +464,7 @@ std::string ov::pass::VisualizeTree::get_attributes(std::shared_ptr<Node> node) 
     // Construct the label attribute
     {
         std::stringstream label;
-        label << "label=\"" << get_node_name(node);
+        label << "label=<<TABLE BORDER='0' CELLBORDER='0' CELLSPACING='0'>" << get_node_name(node);
 
         static const bool nvtos = ov::util::getenv_bool("NGRAPH_VISUALIZE_TREE_OUTPUT_SHAPES") ||
                                   ov::util::getenv_bool("OV_VISUALIZE_TREE_OUTPUT_SHAPES");
@@ -478,27 +490,32 @@ std::string ov::pass::VisualizeTree::get_attributes(std::shared_ptr<Node> node) 
                     }
                 }
             }
+            label << "<TR>";
             for (const auto& output : node->outputs()) {
+                label << "<TD>";
                 if (nvtio)
-                    label << "\\nout" << std::to_string(output.get_index()) << ": ";
+                    label << std::to_string(output.get_index()) << ": ";
                 if (nvtot)
-                    label << "{" << output.get_element_type().to_string() << "}";
+                    label << output.get_element_type().get_type_name() << " ";
                 if (nvtos)
                     label << pretty_partial_shape(output.get_partial_shape());
 
                 if (nvtrti) {
+                    // TODO: Embed another table
                     label << get_attribute_values(output.get_rt_info());
                 }
                 if (ovpvl)
                     label << get_bounds_and_label_info(output);
+                label << "</TD>";
             }
+            label << "</TR>";
         }
 
         auto eh = m_ops_to_details.find(node->get_type_info());
         if (eh != m_ops_to_details.end()) {
             eh->second(*node, label);
         }
-        label << "\"";
+        label << "</TABLE>>";
         attributes.push_back(label.str());
     }
 
@@ -514,13 +531,17 @@ std::string ov::pass::VisualizeTree::get_attributes(std::shared_ptr<Node> node) 
 
 std::string ov::pass::VisualizeTree::get_node_name(std::shared_ptr<Node> node) {
     static const bool nvtmn = ov::util::getenv_bool("OV_VISUALIZE_TREE_MEMBERS_NAME");
-    std::string rc = (nvtmn ? std::string("friendly_name: ") : "") + node->get_friendly_name();
+    std::string rc = "<TR><TD><FONT POINT-SIZE='8'>";
+    rc += (nvtmn ? std::string("friendly_name: ") : "") + node->get_friendly_name();
+    rc += "</FONT></TD></TR>";
     if (node->get_friendly_name() != node->get_name()) {
-        rc += "\\n" + (nvtmn ? std::string("name: ") : "") + node->get_name();
+        rc += "<TR><TD><FONT POINT-SIZE='8'>";
+        rc += (nvtmn ? std::string("name: ") : "") + node->get_name();
+        rc += "</FONT></TD></TR>";
     }
     const auto type_info = node->get_type_info();
-    rc += "\\n" + (nvtmn ? std::string("type_name: ") : "") + std::string(type_info.version_id) +
-          "::" + std::string(type_info.name);
+    rc += "<TR><TD>" + (nvtmn ? std::string("type_name: ") : "") + std::string(type_info.version_id) +
+          "::<FONT POINT-SIZE=\"20\"><B>" + std::string(type_info.name) + "</B></FONT></TD></TR>";
 
     static const bool nvttn = ov::util::getenv_bool("OV_VISUALIZE_TREE_TENSORS_NAME");
     if (nvttn) {
@@ -535,7 +556,7 @@ std::string ov::pass::VisualizeTree::get_node_name(std::shared_ptr<Node> node) {
         };
 
         if (node->get_input_size() != 0) {
-            rc += "\\n" + (nvtmn ? std::string("in_tensor_names: ") : "");
+            rc += "<TR><TD><FONT POINT-SIZE='8'>" + (nvtmn ? std::string("in_tensor_names: ") : "");
             for (size_t i = 0; i < node->get_input_size(); ++i) {
                 const auto input = node->input(i);
                 const auto tensor_ptr = input.get_tensor_ptr();
@@ -545,9 +566,10 @@ std::string ov::pass::VisualizeTree::get_node_name(std::shared_ptr<Node> node) {
                     rc += str;
                 }
             }
+            rc += "</FONT></TD></TR>";
         }
         if (node->get_output_size() != 0) {
-            rc += "\\n" + (nvtmn ? std::string("out_tensor_names: ") : "");
+            rc += "<TR><TD><FONT POINT-SIZE='8'>" + (nvtmn ? std::string("out_tensor_names: ") : "");
             for (size_t i = 0; i < node->get_output_size(); ++i) {
                 const auto output = node->output(i);
                 const auto tensor_ptr = output.get_tensor_ptr();
@@ -557,6 +579,7 @@ std::string ov::pass::VisualizeTree::get_node_name(std::shared_ptr<Node> node) {
                     rc += str;
                 }
             }
+            rc += "</FONT></TD></TR>";
         }
     }
 
@@ -564,7 +587,8 @@ std::string ov::pass::VisualizeTree::get_node_name(std::shared_ptr<Node> node) {
     if (nvtrti) {
         const auto rt = node->get_rt_info();
         if (!rt.empty()) {
-            rc += "\\nrt info: " + get_attribute_values(rt, "\\n");
+            rc += "<TR><TD><FONT POINT-SIZE='8'>rt info: " + get_attribute_values(rt, "</FONT></TD></TR><TR><TD><FONT POINT-SIZE='8'>");
+            rc += "</FONT></TD></TR>";
         }
     }
     return rc;
