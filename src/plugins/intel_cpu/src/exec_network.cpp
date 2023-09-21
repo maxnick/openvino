@@ -134,29 +134,6 @@ ExecNetwork::ExecNetwork(const InferenceEngine::CNNNetwork &network,
     } else {
         ExecNetwork::GetGraph();
     }
-
-    // Save all MemoryLayer data tensors. Will use insight about mechanics
-    // of MemoryLayer implementation. It uses output edge of MemoryLayer
-    // producer as storage for tensor to keep it between infer calls.
-    if (_graphs.size() == 1) {
-        for (auto &node : GetGraph()._graph.GetNodes()) {
-            if (node->getType() == Type::MemoryInput) {
-                auto memoryNode = dynamic_cast<node::MemoryInput*>(node.get());
-                if (!memoryNode) {
-                    IE_THROW() << "Cannot cast " << node->getName() << " to MemoryInput";
-                }
-                auto state_store = memoryNode->getStore();
-                auto state_name = memoryNode->getId();
-
-                // Remove suffix with pair ID. Internal information.
-                auto suffix_idx = state_name.find("/id=");
-                if (suffix_idx != std::string::npos)
-                    state_name = state_name.substr(0, suffix_idx);
-
-                memoryStates.emplace_back(new VariableState(state_name, state_store));
-            }
-        }
-    }
 }
 
 ExecNetwork::GraphGuard::Lock ExecNetwork::GetGraph() const {

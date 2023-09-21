@@ -110,6 +110,7 @@ void InferRequestBase::PushStates() {
                     auto data_size = state->GetState()->byteSize();
                     auto cur_state_mem_buf = static_cast<uint8_t*>(cur_state_mem->getData());
 
+                    DEBUG_LOG(cur_state_mem->getData(), " <- ", data_ptr, ", ", data_size);
                     cpu_memcpy(cur_state_mem_buf, data_ptr, data_size);
                 }
             }
@@ -128,10 +129,15 @@ void InferRequestBase::PullStates() {
             for (const auto& state : memoryStates) {
                 if (state->GetName() == cur_id) {
                     auto cur_state_mem = cur_node->getStore();
+
+                    //redefine state
+
                     auto data_ptr = state->GetState()->cbuffer().as<void*>();
-                    auto data_size = state->GetState()->byteSize();
+                    // auto data_size = state->GetState()->byteSize();
+                    auto data_size = cur_state_mem->getSize();
                     auto cur_state_mem_buf = static_cast<uint8_t*>(cur_state_mem->getData());
 
+                    DEBUG_LOG(data_ptr, " <- ", cur_state_mem->getData(), ", ", data_size);
                     cpu_memcpy(data_ptr, cur_state_mem_buf, data_size);
                 }
             }
@@ -152,6 +158,25 @@ void InferRequestBase::redefineMemoryForInputNodes() {
     }
 }
 
+void InferRequestBase::redefineMemoryForVariableNodes() {
+    for (auto &node : graph->GetNodes()) {
+        if (node->getType() == Type::MemoryInput) {
+            auto cur_node = dynamic_cast<node::MemoryInput*>(node.get());
+            if (!cur_node) {
+                IE_THROW() << "Cannot cast " << node->getName() << " to MemoryInput";
+            }
+            auto cur_id = cur_node->getId();
+            for (const auto& state : memoryStates) {
+                if (state->GetName() == cur_id) {
+                    auto cur_state_mem = cur_node->getStore();
+                    node->redefineOutputMemory({cur_state_mem->getStaticDims()});
+                    DEBUG_LOG(cur_state_mem->getData(), " -> ", node->getChildEdgeAt(0)->getMemory().getData());
+                }
+            }
+        }
+    }
+}
+
 void InferRequestBase::InferImpl() {
     using namespace openvino::itt;
     OV_ITT_SCOPED_TASK(itt::domains::intel_cpu, profilingTask);
@@ -165,6 +190,8 @@ void InferRequestBase::InferImpl() {
         redefineMemoryForInputNodes();
     }
 
+    redefineMemoryForVariableNodes();
+
     execDataPreprocessing(_inputs);
 
     changeDefaultPtr();
@@ -173,15 +200,15 @@ void InferRequestBase::InferImpl() {
 
     PushInputData();
 
-    if (memoryStates.size() != 0) {
-        PushStates();
-    }
+    // if (memoryStates.size() != 0) {
+    //     PushStates();
+    // }
 
     graph->Infer(this);
 
-    if (memoryStates.size() != 0) {
-        PullStates();
-    }
+    // if (memoryStates.size() != 0) {
+    //     PullStates();
+    // }
 
     ThrowIfCanceled();
 

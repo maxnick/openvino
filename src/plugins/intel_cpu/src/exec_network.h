@@ -50,7 +50,6 @@ public:
 protected:
     friend class InferRequestBase;
     ExtensionManager::Ptr extensionManager;
-    std::vector<InferenceEngine::IVariableStateInternal::Ptr> memoryStates;
     const InferenceEngine::CNNNetwork           _network;
     // Generic synchronization primitive on ExecNetwork level.
     // Usage example: helps to avoid data races during CPU Graph initialization in multi-streams scenario

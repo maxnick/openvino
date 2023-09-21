@@ -117,6 +117,7 @@ private:
     void PushStates();
     void PullStates();
     void redefineMemoryForInputNodes();
+    void redefineMemoryForVariableNodes();
 
     std::shared_ptr<ExecNetwork>        execNetwork;
     openvino::itt::handle_t             profilingTask;
