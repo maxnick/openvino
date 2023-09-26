@@ -95,7 +95,9 @@ void InferRequestBase::pushInput(const std::string& inputName, InferenceEngine::
     graph->PushInputData(inputName, needConvert ? iconv : inputBlob);
 }
 
+// state -> storage
 void InferRequestBase::PushStates() {
+    dnnl::engine eng(dnnl::engine::kind::cpu, 0);
     for (auto &node : graph->GetNodes()) {
         if (node->getType() == Type::MemoryInput) {
             auto cur_node = dynamic_cast<node::MemoryInput*>(node.get());
@@ -105,19 +107,17 @@ void InferRequestBase::PushStates() {
             auto cur_id = cur_node->getId();
             for (const auto& state : memoryStates) {
                 if (state->GetName() == cur_id) {
-                    auto cur_state_mem = cur_node->getStore();
-                    auto data_ptr = state->GetState()->cbuffer().as<void*>();
-                    auto data_size = state->GetState()->byteSize();
-                    auto cur_state_mem_buf = static_cast<uint8_t*>(cur_state_mem->getData());
-
-                    DEBUG_LOG(cur_state_mem->getData(), " <- ", data_ptr, ", ", data_size);
-                    cpu_memcpy(cur_state_mem_buf, data_ptr, data_size);
+                    auto state_blob = state->GetState();
+                    auto state_desc = MemoryDescUtils::convertToDnnlBlockedMemoryDesc(state_blob->getTensorDesc());
+                    Memory state_mem(eng, state_desc, state_blob->cbuffer(), false);
+                    cur_node->storeState(state_mem);
                 }
             }
         }
     }
 }
 
+// storage -> state
 void InferRequestBase::PullStates() {
     for (auto &node : graph->GetNodes()) {
         if (node->getType() == Type::MemoryInput) {
@@ -128,17 +128,13 @@ void InferRequestBase::PullStates() {
             auto cur_id = cur_node->getId();
             for (const auto& state : memoryStates) {
                 if (state->GetName() == cur_id) {
-                    auto cur_state_mem = cur_node->getStore();
+                    auto storage = cur_node->getStore();
 
                     //redefine state
-
-                    auto data_ptr = state->GetState()->cbuffer().as<void*>();
-                    // auto data_size = state->GetState()->byteSize();
-                    auto data_size = cur_state_mem->getSize();
-                    auto cur_state_mem_buf = static_cast<uint8_t*>(cur_state_mem->getData());
-
-                    DEBUG_LOG(data_ptr, " <- ", cur_state_mem->getData(), ", ", data_size);
-                    cpu_memcpy(data_ptr, cur_state_mem_buf, data_size);
+                    auto blob = make_blob_with_precision(MemoryDescUtils::convertToTensorDesc(storage->getDesc()));
+                    blob->allocate();
+                    cpu_memcpy(blob->buffer(), storage->getData(), storage->getSize());
+                    state->SetState(blob);
                 }
             }
         }
@@ -190,8 +186,6 @@ void InferRequestBase::InferImpl() {
         redefineMemoryForInputNodes();
     }
 
-    redefineMemoryForVariableNodes();
-
     execDataPreprocessing(_inputs);
 
     changeDefaultPtr();
@@ -200,15 +194,22 @@ void InferRequestBase::InferImpl() {
 
     PushInputData();
 
-    // if (memoryStates.size() != 0) {
-    //     PushStates();
-    // }
+    // state -> storage
+    if (memoryStates.size() != 0) {
+        PushStates();
+    }
+
+    // storage <-> graph
+    // where MemoryInput.execute make storage -> graph input, and
+    // MemoryOutput.execute make graph output -> storage
+    redefineMemoryForVariableNodes();
 
     graph->Infer(this);
 
-    // if (memoryStates.size() != 0) {
-    //     PullStates();
-    // }
+    // storage -> state
+    if (memoryStates.size() != 0) {
+        PullStates();
+    }
 
     ThrowIfCanceled();
 

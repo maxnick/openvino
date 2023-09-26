@@ -12,6 +12,8 @@ namespace ov {
 namespace intel_cpu {
 
 void VariableState::Reset() {
+    state = make_blob_with_precision(tensor_desc);
+    state->allocate();
     std::memset(state->buffer(), 0, state->byteSize());
 }
 
