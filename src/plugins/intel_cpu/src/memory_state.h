@@ -20,6 +20,7 @@ public:
     VariableState(std::string name, MemoryPtr storage)
         : InferenceEngine::IVariableStateInternal{name} {
         tensor_desc = MemoryDescUtils::convertToTensorDesc(storage->getDesc());
+        Reset();
     }
 
     void Reset() override;
