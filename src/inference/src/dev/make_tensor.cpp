@@ -404,6 +404,12 @@ public:
         }
     }
 
+    void refresh() {
+        //TODO we have replace entire TensorDesc
+        InferenceEngine::TBlob<T>::getTensorDesc().setDims(tensor->get_shape());
+        allocate();
+    }
+
     ov::SoPtr<ITensor> tensor;
 };
 
@@ -548,7 +554,38 @@ InferenceEngine::Blob::Ptr tensor_to_blob(const ov::SoPtr<ITensor>& orig_tensor,
 #undef CASE
     }
     OPENVINO_THROW("Cannot convert tensor to blob!");
-}  // namespace ov
+}
+
+bool refresh_blob(const std::shared_ptr<InferenceEngine::Blob>& blob) {
+#define CASE(X) \
+    case X: if (auto tblob = \
+                    dynamic_cast<TensorMemoryBlob<InferenceEngine::PrecisionTrait<X>::value_type>*>(blob.get())) { \
+                tblob->refresh(); \
+                return true; \
+            }
+    switch (blob->getTensorDesc().getPrecision()) {
+        CASE(InferenceEngine::Precision::FP32)
+        CASE(InferenceEngine::Precision::FP16)
+        CASE(InferenceEngine::Precision::BF16)
+        CASE(InferenceEngine::Precision::FP64)
+        CASE(InferenceEngine::Precision::NF4)
+        CASE(InferenceEngine::Precision::Q78)
+        CASE(InferenceEngine::Precision::I16)
+        CASE(InferenceEngine::Precision::U4)
+        CASE(InferenceEngine::Precision::U8)
+        CASE(InferenceEngine::Precision::I4)
+        CASE(InferenceEngine::Precision::I8)
+        CASE(InferenceEngine::Precision::U16)
+        CASE(InferenceEngine::Precision::I32)
+        CASE(InferenceEngine::Precision::U32)
+        CASE(InferenceEngine::Precision::I64)
+        CASE(InferenceEngine::Precision::U64)
+        CASE(InferenceEngine::Precision::BIN)
+        CASE(InferenceEngine::Precision::BOOL)
+        default: return false;
+    }
+#undef CASE
+}
 
 namespace util {
 

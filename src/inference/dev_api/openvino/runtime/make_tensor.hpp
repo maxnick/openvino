@@ -74,6 +74,7 @@ InferenceEngine::Blob* get_hardware_blob(InferenceEngine::Blob* blob);
 OPENVINO_RUNTIME_API std::shared_ptr<InferenceEngine::Blob> tensor_to_blob(const ov::SoPtr<ITensor>& tensor,
                                                                            bool unwrap = true,
                                                                            InferenceEngine::TensorDesc desc = {});
+OPENVINO_RUNTIME_API bool refresh_blob(const std::shared_ptr<InferenceEngine::Blob>& blob);
 /** @endcond */
 
 IE_SUPPRESS_DEPRECATED_END

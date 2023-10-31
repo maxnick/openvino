@@ -161,6 +161,15 @@ void InferRequestBase::InferImpl() {
     ThrowIfCanceled();
     convertBatchedInputBlobs();
 
+    //TODO move to a separte method to keep the structure
+    for (const auto& blob : _inputs) {
+        refresh_blob(blob.second);
+    }
+
+    for (const auto& blob : _outputs) {
+        refresh_blob(blob.second);
+    }
+
     if (graph->hasDynamicInput()) {
         redefineMemoryForInputNodes();
     }
