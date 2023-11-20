@@ -180,6 +180,7 @@ cross_compiled_file(${TARGET_NAME}
         NAME        attn_reduce
         NAMESPACE   InferenceEngine::Extensions::Cpu::XARCH
 )
+
 # system dependencies must go last
 target_link_libraries(${TARGET_NAME} PRIVATE openvino::pugixml)
 ov_set_threading_interface_for(${TARGET_NAME})
