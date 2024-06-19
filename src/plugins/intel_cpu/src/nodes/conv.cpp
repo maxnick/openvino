@@ -51,7 +51,7 @@ struct ConvKey {
     DnnlMemoryDescCPtr bias;
     DnnlMemoryDescCPtr out;
 
-    std::vector<size_t> stride;
+    VectorDims stride;
     std::vector<ptrdiff_t> dilation;
     std::vector<ptrdiff_t> paddingL;
     std::vector<ptrdiff_t> paddingR;
@@ -775,8 +775,8 @@ void Convolution::initSupportedPrimitiveDescriptors() {
         }
 
         if (withDWConv) {
-            const std::vector<size_t> dwWeightsDims{dw_conv_oc, 1, 1, dw_conv_kernel[Y_AXIS], dw_conv_kernel[X_AXIS]};
-            const std::vector<size_t> dwBiasesDims{dw_conv_oc};
+            const VectorDims dwWeightsDims{dw_conv_oc, 1, 1, dw_conv_kernel[Y_AXIS], dw_conv_kernel[X_AXIS]};
+            const VectorDims dwBiasesDims{dw_conv_oc};
 
             const auto dwWeightsPrc = DnnlExtensionUtils::ElementTypeToDataType(dw_conv_in_dt == dnnl_u8 ? ov::element::i8 : ov::element::f32);
             const auto dwWeightsDesc = std::make_shared<DnnlBlockedMemoryDesc>(Shape(dwWeightsDims), dwWeightsPrc, memory::format_tag::Goihw8g);

@@ -988,9 +988,9 @@ void BinaryConvolution::initSupportedPrimitiveDescriptors() {
         //weights
         size_t weiFirstDimBlockSize = implType == impl_desc_type::jit_avx512 ? 16 : 8; //memory::format_tag::OIhw16o32i : memory::format_tag::OIhw8o32i;
         auto weiDims = getInputShapeAtPort(1).getStaticDims();
-        std::vector<size_t> weiBlockDims = {div_up(weiDims[0], weiFirstDimBlockSize), div_up(weiDims[1], 32),
+        VectorDims weiBlockDims = {div_up(weiDims[0], weiFirstDimBlockSize), div_up(weiDims[1], 32),
                                             weiDims[2], weiDims[3], weiFirstDimBlockSize, 32};
-        std::vector<size_t> weiOrder = {0, 1, 2, 3, 0, 1};
+        VectorDims weiOrder = {0, 1, 2, 3, 0, 1};
 
         config.inConfs[1].setMemDesc(std::make_shared<CpuBlockedMemoryDesc>(ov::element::u1, Shape(weiDims), weiBlockDims, weiOrder));
 

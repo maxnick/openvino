@@ -88,8 +88,8 @@ void BatchToSpace::initSupportedPrimitiveDescriptors() {
     }
 }
 
-static std::vector<size_t> getShape5D(const VectorDims &shape) {
-    std::vector<size_t> shape5D(5, 1);
+static VectorDims getShape5D(const VectorDims &shape) {
+    VectorDims shape5D(5, 1);
     for (int i = 0; i < 2; i++) {
         shape5D[i] = shape[i];
         shape5D[4 - i] = shape[shape.size() - 1 - i];

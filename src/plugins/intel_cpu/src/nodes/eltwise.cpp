@@ -1397,7 +1397,7 @@ public:
                        const ov::element::Type& outPrc,
                        const dnnl::post_ops& post_ops,
                        bool useRuntimePtrs) {
-        auto collapseLastDims = [](std::vector<size_t>& dims, int dimsToCollapse) {
+        auto collapseLastDims = [](VectorDims& dims, int dimsToCollapse) {
             for (size_t i = dims.size() - 2; i > dims.size() - dimsToCollapse - 2; i--) {
                 dims[dims.size() - 1] *= dims[i];
             }
@@ -1411,7 +1411,7 @@ public:
             }
         };
 
-        auto collapseLastOffsets = [](std::vector<size_t>& dims, int dimsToCollapse) {
+        auto collapseLastOffsets = [](VectorDims& dims, int dimsToCollapse) {
             for (size_t i = dims.size() - 2; i > dims.size() - dimsToCollapse - 2; i--) {
                 if (dims[dims.size() - 1] > 0 || dims[i] > 0)
                     dims[dims.size() - 1] = std::max(dims[dims.size() - 1], static_cast<size_t>(1)) * std::max(dims[i], static_cast<size_t>(1));

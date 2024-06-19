@@ -819,7 +819,7 @@ int TensorIterator::getNumIteration(const std::vector<PortMap>& inputPortMap, co
         return rule.axis != -1;
     };
 
-    const auto getNumIterations = [this](const PortMap& rule, const std::vector<size_t>& dimensions) -> int {
+    const auto getNumIterations = [this](const PortMap& rule, const VectorDims& dimensions) -> int {
         const auto axis = rule.axis;
         if (axis < 0 || static_cast<std::size_t>(axis) >= dimensions.size()) {
             THROW_ERROR(": Invalid \"axis\" value in an iteration component: ",

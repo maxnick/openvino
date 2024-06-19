@@ -40,9 +40,9 @@ public:
 
     void assignState(const std::shared_ptr<VariableStateKVcache>& state, int idx);
 
-    const std::vector<size_t> getKVCacheOrder() const {
+    const VectorDims getKVCacheOrder() const {
         const auto& permute_axes = m_config.config.permute_axes;
-        std::vector<size_t> real_order = m_kvstate_layout;
+        VectorDims real_order = m_kvstate_layout;
         if (!permute_axes.empty())
             real_order = {permute_axes[2], permute_axes[0], permute_axes[1], permute_axes[3]};
         return real_order;
@@ -78,7 +78,7 @@ private:
     // KV cache layout
     // (0, 1, 2, 3) for BHLS
     // (2, 0, 1, 3) for LBHS
-    std::vector<size_t> m_kvstate_layout = {2, 0, 1, 3};
+    VectorDims m_kvstate_layout = {2, 0, 1, 3};
 };
 
 }  // namespace node

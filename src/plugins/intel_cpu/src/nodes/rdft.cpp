@@ -325,7 +325,7 @@ void RDFTExecutor::execute(float* inputPtr, float* outputPtr,
     }
 }
 
-static void coordsFromIndex(size_t index, std::vector<size_t>& coords, const std::vector<size_t>& shape, int excludeAxis) {
+static void coordsFromIndex(size_t index, std::vector<size_t>& coords, const VectorDims& shape, int excludeAxis) {
     for (size_t i = coords.size(); i > 0; i--) {
         if (static_cast<size_t>(excludeAxis) == i - 1) {
             coords[i - 1] = 0;
@@ -717,7 +717,7 @@ std::vector<float> RDFTExecutor::generateTwiddlesCommon(size_t signalSize, size_
 }
 
 std::vector<std::vector<float>> RDFTExecutor::generateTwiddles(const std::vector<int>& signalSizes,
-                                                               const std::vector<size_t>& outputShape,
+                                                               const VectorDims& outputShape,
                                                                const std::vector<int>& axes) {
     std::vector<std::vector<float>> twiddles;
     twiddles.reserve(axes.size());

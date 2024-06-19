@@ -442,7 +442,7 @@ void ExtractImagePatches::ExtractImagePatchesRefExecutor::executeReference(
     const char* src_data = reinterpret_cast<const char*>(src);
     char* dst_data = reinterpret_cast<char*>(dst);
 
-    const std::vector<size_t> ostrides_partial = { ostrides[0], jpp.KW * IC * ostrides[1], IC * ostrides[1], ostrides[1] };
+    const VectorDims ostrides_partial = { ostrides[0], jpp.KW * IC * ostrides[1], IC * ostrides[1], ostrides[1] };
 
     parallel_for4d(OB, jpp.KH, jpp.KW, IC, [&](const size_t ob, const size_t kh, const size_t kw, const size_t ic) {
         const int64_t iw_start = static_cast<int64_t>(kw * RW) - PL;
@@ -491,7 +491,7 @@ void ExtractImagePatches::ExtractImagePatchesJitExecutor::executeOptimizedGeneri
     char* dst_data = reinterpret_cast<char*>(dst);
     const auto& jpp = pKernel->jpp;
 
-    const std::vector<size_t> ostrides_partial = { ostrides[0], jpp.KW * IC * ostrides[1], IC * ostrides[1], ostrides[1] };
+    const VectorDims ostrides_partial = { ostrides[0], jpp.KW * IC * ostrides[1], IC * ostrides[1], ostrides[1] };
 
     parallel_for4d(OB, jpp.KH, jpp.KW, IC, [&](const size_t ob, const size_t kh, const size_t kw, const size_t ic) {
         const int64_t ih_start = kh * RH - PT;

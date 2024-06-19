@@ -252,9 +252,9 @@ int64_t ScatterUpdate::getIndicesValue(uint8_t *indices, size_t offset) {
 // shapeND: n     c     d     h    w
 // blockND: ncdhw cdhw  dhw   hw   w    1
 // index  : 0      1    2     3    4    5
-static std::vector<size_t> getBlockND(const VectorDims& shape) {
+static VectorDims getBlockND(const VectorDims& shape) {
     size_t shapeRank = shape.size();
-    std::vector<size_t> blockND(shapeRank + 1, 1);
+    VectorDims blockND(shapeRank + 1, 1);
     for (int i = shapeRank - 1; i >= 0; i--) {
         blockND[i] = shape[i] * blockND[i+1];
     }
@@ -294,7 +294,7 @@ struct TensorIterator {
         OPENVINO_ASSERT(m_squashed_shape[m_squashed_axis] == 1);
     }
 
-    std::array<size_t, 2> startover(const size_t start, const std::vector<size_t>& dataBlockND, const std::vector<size_t>& indicesBlockND) {
+    std::array<size_t, 2> startover(const size_t start, const VectorDims& dataBlockND, const VectorDims& indicesBlockND) {
         m_tensorIter.resize(m_squashed_shape.size(), 0);
         getCoordinate(m_tensorIter, start, m_squashed_shape);
 
@@ -311,7 +311,7 @@ struct TensorIterator {
         return {dst_idx, indices_idx};
     }
 
-    void increment(std::array<size_t, 2>& offsets, const std::vector<size_t>& dataBlockND, const std::vector<size_t>& indicesBlockND) {
+    void increment(std::array<size_t, 2>& offsets, const VectorDims& dataBlockND, const VectorDims& indicesBlockND) {
         for (int64_t j = m_squashed_shape.size() - 1; j >= 0; j--) {
             m_tensorIter[j]++;
             if (m_tensorIter[j] < m_squashed_shape[j]) { // no need check if (j != axis) as it is squashed
@@ -413,8 +413,8 @@ void ScatterUpdate::scatterElementsUpdate(const MemoryPtr& mem_data, const Memor
     VectorDims squashed_indices_shape(indices_shape);
     squashed_indices_shape[axis] = 1;
 
-    const std::vector<size_t> dataBlockND = getBlockND(data_shape);
-    const std::vector<size_t> indicesBlockND = getBlockND(indices_shape);
+    const VectorDims dataBlockND = getBlockND(data_shape);
+    const VectorDims indicesBlockND = getBlockND(indices_shape);
     const size_t dataBlock_axisplus1 = dataBlockND[axis + 1];
     const size_t indicesBlock_axisplus1 = indicesBlockND[axis + 1];
 
@@ -711,7 +711,7 @@ void ScatterUpdate::execute(dnnl::stream strm) {
         axis = axis < 0 ? (axis + srcRank) : axis;
 
         size_t srcDimAxis = srcDataDim[axis];
-        std::vector<size_t> indicesBlockND = getBlockND(indicesDim);
+        VectorDims indicesBlockND = getBlockND(indicesDim);
         parallel_nt(0, [&](const int ithr, const int nthr) {
             size_t start = 0, end = 0;
             splitter(indicesBlockND[0], nthr, ithr, start, end);
@@ -759,7 +759,7 @@ void ScatterUpdate::execute(dnnl::stream strm) {
     }
 
     if (srcPtr != dstPtr) {
-        std::vector<size_t> srcBlockND = getBlockND(srcDataDim);
+        VectorDims srcBlockND = getBlockND(srcDataDim);
         parallel_nt(0, [&](const int ithr, const int nthr) {
             size_t start = 0, end = 0;
             splitter(srcBlockND[0], nthr, ithr, start, end);
@@ -801,8 +801,8 @@ void ScatterUpdate::scatterUpdate(uint8_t *indices, uint8_t *update, int axis, u
     const auto& updateDim = getParentEdgeAt(UPDATE_ID)->getMemory().getStaticDims();
     size_t indicesRank = indicesDim.size();
 
-    std::vector<size_t> srcBlockND = getBlockND(srcDataDim);
-    std::vector<size_t> updateBlockND = getBlockND(updateDim);
+    VectorDims srcBlockND = getBlockND(srcDataDim);
+    VectorDims updateBlockND = getBlockND(updateDim);
 
     const size_t mulIdentity = 1;
     size_t idxLength = mulIdentity;
@@ -833,7 +833,7 @@ void ScatterUpdate::scatterNDUpdate(uint8_t *indices, uint8_t *update, uint8_t *
     const auto& indicesDim = getParentEdgeAt(INDICES_ID)->getMemory().getStaticDims();
     size_t indicesRank = indicesDim.size();
 
-    std::vector<size_t> srcBlockND = getBlockND(srcDataDim);
+    VectorDims srcBlockND = getBlockND(srcDataDim);
 
     size_t k = indicesDim[indicesRank - 1];
     size_t idxTupleNum = 1;

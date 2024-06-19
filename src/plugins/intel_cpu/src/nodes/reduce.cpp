@@ -2970,7 +2970,7 @@ inline void Reduce::create_hybrid_working_memory() {
     memory::format_tag format = (layout == ReduceLayoutType::reduce_nspc) ? (rank == 4 ? memory::format_tag::nhwc : memory::format_tag::ndhwc)
                                         : (rank == 4 ? (mayiuse(cpu::x64::avx512_core) ? memory::format_tag::nChw16c : memory::format_tag::nChw8c)
                                                      : (mayiuse(cpu::x64::avx512_core) ? memory::format_tag::nCdhw16c : memory::format_tag::nCdhw8c));
-    auto prc_dims = rank == 4 ? std::vector<size_t>{OB, OC, OH, OW} : std::vector<size_t>{OB, OC, OD, OH, OW};
+    auto prc_dims = rank == 4 ? VectorDims{OB, OC, OH, OW} : VectorDims{OB, OC, OD, OH, OW};
     auto desc = dnnl::memory::desc(DnnlExtensionUtils::convertToDnnlDims(prc_dims), DnnlExtensionUtils::ElementTypeToDataType(output_prec), format);
     prc_mem = dnnl::memory(desc, getEngine());
     dst_size = desc.get_size();

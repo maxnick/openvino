@@ -23,7 +23,7 @@ struct RDFTExecutor {
                      const VectorDims& inputStrides, const VectorDims& outputStrides);
 
         std::vector<std::vector<float>> generateTwiddles(const std::vector<int>& signalSizes,
-                                                         const std::vector<size_t>& outputShape,
+                                                         const VectorDims& outputShape,
                                                          const std::vector<int>& axes);
 
     protected:

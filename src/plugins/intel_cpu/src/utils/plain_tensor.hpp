@@ -290,7 +290,7 @@ struct PlainTensor {
 
        simplified form is when whole tensor is dense
     */
-    PlainTensor reshape(const std::vector<size_t>& target_shape) const {
+    PlainTensor reshape(const VectorDims& target_shape) const {
         // only valid for dense memory
         PlainTensor new_tensor_view;
         assert(is_dense());
@@ -298,7 +298,7 @@ struct PlainTensor {
         return new_tensor_view;
     }
 
-    PlainTensor permute(const std::vector<size_t>& order) const {
+    PlainTensor permute(const VectorDims& order) const {
         PlainTensor new_tensor_view;
         assert(order.size() == m_rank);
         new_tensor_view.m_capacity = 0;
@@ -409,7 +409,7 @@ struct PlainTensor {
     template <typename DT>
     PlainTensor& operator=(const DT& value) {
         // assign every element to value
-        std::vector<size_t> index(m_rank, 0);
+        VectorDims index(m_rank, 0);
         auto* dst = reinterpret_cast<DT*>(m_ptr.get() + m_offset * m_element_size);
         while (1) {
             size_t off = 0;

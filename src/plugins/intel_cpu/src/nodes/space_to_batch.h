@@ -30,7 +30,7 @@ public:
     static bool isSupportedOperation(const std::shared_ptr<const ov::Node>& op, std::string& errorMessage) noexcept;
 
 private:
-    std::vector<size_t> blockShapeIn;
+    VectorDims blockShapeIn;
     std::vector<size_t> padsBeginIn;
 
     std::string errorPrefix;
