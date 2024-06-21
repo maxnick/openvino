@@ -111,8 +111,10 @@ ov::TensorVector Reference::prepareInputs() const {
     ov::TensorVector inputs;
     for (size_t i = 0lu; i < inputShapes.size(); i++) {
         void *srcDataPtr = getSrcDataAtPort(i);
-        ov::Shape shape = ovCoreNode->get_input_partial_shape(i).rank().get_length() == 0 ?
-                ov::Shape{} : getParentEdgeAt(i)->getMemory().getStaticDims();
+        auto&& dims = getParentEdgeAt(i)->getMemory().getStaticDims();
+        ov::Shape shape = ovCoreNode->get_input_partial_shape(i).rank().get_length() == 0
+                              ? ov::Shape{}
+                              : ov::Shape{dims.begin(), dims.end()};
 
         if (std::any_of(shape.begin(), shape.end(), [](const size_t dim) { return dim == 0lu; } )) {
             inputs.push_back(ov::Tensor(ovCoreNode->get_input_element_type(i), shape));
@@ -128,8 +130,10 @@ ov::TensorVector Reference::prepareOutputs() const {
     ov::TensorVector outputs;
     for (size_t i = 0lu; i < outputShapes.size(); i++) {
         void *dstDataPtr = getDstDataAtPort(i);
-        ov::Shape shape = ovCoreNode->get_output_partial_shape(i).rank().get_length() == 0 ?
-                ov::Shape{} : getChildEdgeAt(i)->getMemory().getStaticDims();
+        auto&& dims = getChildEdgeAt(i)->getMemory().getStaticDims();
+        ov::Shape shape = ovCoreNode->get_output_partial_shape(i).rank().get_length() == 0
+                              ? ov::Shape{}
+                              : ov::Shape{dims.begin(), dims.end()};
 
         if (std::any_of(shape.begin(), shape.end(), [](const size_t dim) { return dim == 0lu; } )) {
             outputs.push_back(ov::Tensor(ovCoreNode->get_output_element_type(i), shape));

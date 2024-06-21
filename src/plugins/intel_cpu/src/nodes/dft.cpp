@@ -164,7 +164,7 @@ inline bool copyStep(std::vector<size_t>& counters, const std::vector<size_t>& i
     return false;
 }
 
-size_t calculateOffsetFromStrides(const std::vector<size_t>& coords, const std::vector<size_t>& strides) {
+size_t calculateOffsetFromStrides(const std::vector<size_t>& coords, const VectorDims& strides) {
     size_t offset = 0;
     for (size_t index = 0; index < coords.size(); ++index) {
         offset += coords[index] * strides[index];

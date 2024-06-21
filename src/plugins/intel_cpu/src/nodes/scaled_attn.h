@@ -44,7 +44,7 @@ public:
         const auto& permute_axes = m_config.config.permute_axes;
         VectorDims real_order = m_kvstate_layout;
         if (!permute_axes.empty())
-            real_order = {permute_axes[2], permute_axes[0], permute_axes[1], permute_axes[3]};
+            real_order = VectorDims{permute_axes[2], permute_axes[0], permute_axes[1], permute_axes[3]};
         return real_order;
     }
 

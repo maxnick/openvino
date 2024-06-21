@@ -83,13 +83,13 @@ void Multinomial::prepareParams() {
 
     if (probs_shape.size() != 2) {
         THROW_CPU_NODE_ERR("has incompatible 'probs' shape ",
-                           PartialShape(probs_shape),
+                           ve2str(probs_shape),
                            ". Only 2D tensors are allowed.");
     }
 
     if (num_samples_shape.size() != 1) {
         THROW_CPU_NODE_ERR("has incompatible 'num_samples' shape ",
-                           PartialShape(num_samples_shape),
+                           vec2str(num_samples_shape),
                            ". Only scalar and 1D single element tensors are allowed.");
     }
 

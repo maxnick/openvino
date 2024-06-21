@@ -1073,16 +1073,16 @@ void Graph::PullOutputData(std::unordered_map<std::size_t, ov::SoPtr<ITensor>>& 
                 std::accumulate(actualDims.begin(), actualDims.end(), (size_t)1, std::multiplies<size_t>()) == 1;
         }
 
-        auto outDims = intr_blob.getStaticDims();
+        auto&& outDims = intr_blob.getStaticDims();
         if (ext_blob->get_shape() != outDims && !isScalarOutput) {
             // WA: because input/output info initially contains non empty dims, order etc.
             // and setDims (called inside setShape) can't correct modify blocked desc for desc with blocked layout
             DEBUG_LOG(output_index, ", tensor data addr ", static_cast<void*>(output[output_index]->data()),
-            " dims ", PartialShape(output[output_index]->get_shape()), " -> ", PartialShape(outDims),
+            " dims ", output[output_index]->get_shape().to_string(), " -> ", vec2str(outDims),
             ", intr ptr ", intr_blob.getData(), " , parentedge's memory object ", parentEdge->getMemoryPtr().get());
-            ext_blob->set_shape(outDims);
+            ext_blob->set_shape({outDims.begin(), outDims.end()});
             DEBUG_LOG(output_index, ", tensor data addr ", static_cast<void*>(output[output_index]->data()),
-            " dims ", PartialShape(output[output_index]->get_shape()), ", intr ptr ", intr_blob.getData());
+            " dims ", output[output_index]->get_shape().to_string(), ", intr ptr ", intr_blob.getData());
             expected_desc_ptr = MemoryDescUtils::generateCpuBlockedMemoryDesc(ext_blob);
         }
 

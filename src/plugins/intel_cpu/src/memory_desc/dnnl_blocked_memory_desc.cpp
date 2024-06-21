@@ -222,13 +222,13 @@ DnnlBlockedMemoryDesc::DnnlBlockedMemoryDesc(const Shape& shape, dnnl::memory::d
         desc = dnnl::memory::desc(DnnlExtensionUtils::convertToDnnlDims(dims), dataType, format);
     }
 
-    VectorDims perm;
-    VectorDims inner_blks;
-    VectorDims inner_idxs;
+    std::vector<size_t> perm;
+    std::vector<size_t> inner_blks;
+    std::vector<size_t> inner_idxs;
 
     dnnl::impl::memory_desc_wrapper::compute_blocking(dnnl::memory::convert_to_c(format), perm, inner_blks, inner_idxs);
 
-    order.swap(perm);
+    order = std::move(perm);
     order.insert(order.end(), inner_idxs.begin(), inner_idxs.end());
 
     if (shape.hasZeroDims()) {
@@ -409,7 +409,7 @@ bool DnnlBlockedMemoryDesc::isTailCFormat() const {
     if (shape.getRank() != order.size()) {
         return false;
     }
-    if (!std::is_sorted(order.begin(), --order.end())) {
+    if (!std::is_sorted(order.begin(), order.end() - 1)) {
         return false;
     }
     if (order.back() != 1) {

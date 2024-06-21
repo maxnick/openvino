@@ -51,7 +51,7 @@ struct ConvKey {
     DnnlMemoryDescCPtr bias;
     DnnlMemoryDescCPtr out;
 
-    VectorDims stride;
+    std::vector<size_t> stride;
     std::vector<ptrdiff_t> dilation;
     std::vector<ptrdiff_t> paddingL;
     std::vector<ptrdiff_t> paddingR;
@@ -257,13 +257,14 @@ Convolution::Convolution(const std::shared_ptr<ov::Node>& op, const GraphContext
         groupNum = 1;
         isGrouped = false;
 
-        weightDims = convolutionOp->input_value(1).get_shape();
+        auto&& shape = convolutionOp->input_value(1).get_shape();
+        weightDims = VectorDims{shape.begin(), shape.end()};
 
         IC = weightDims[1];
         groupIC = IC;
         groupOC = weightDims[0];
 
-        expectedBiasDims = {groupOC};
+        expectedBiasDims = VectorDims{groupOC};
 
         for (size_t i = 0; i < convolutionOp->get_strides().size(); i++) {
             stride.push_back(convolutionOp->get_strides()[i]);
@@ -286,7 +287,7 @@ Convolution::Convolution(const std::shared_ptr<ov::Node>& op, const GraphContext
         IC = groupIC * groupNum;
         groupOC = weightDims[1];
 
-        expectedBiasDims = {groupOC * groupNum};
+        expectedBiasDims = VectorDims{groupOC * groupNum};
 
         for (size_t i = 0; i < groupConvolutionOp->get_strides().size(); i++) {
             stride.push_back(groupConvolutionOp->get_strides()[i]);

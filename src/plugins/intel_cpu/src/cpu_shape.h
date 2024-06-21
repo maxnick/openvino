@@ -34,6 +34,8 @@ public:
         hasZeroDimensions = std::any_of(dims.begin(), dims.end(), [](size_t dim) { return dim == 0; } );
     }
 
+    explicit Shape(const ov::Shape& shape) : Shape(VectorDims{shape.begin(), shape.end()}) {}
+
     explicit Shape(const VectorDims& shape) {
         dims = minDims = maxDims = shape;
         type = ShapeType::Static;

@@ -176,9 +176,11 @@ bool DnnlFCPrimitive::useDynamicQuantizationImpl(size_t dqGroupSize, const Memor
     return true;
 }
 
-template <typename T>
-static std::vector<T> normalizeDimsTo2D(const std::vector<T>& dims) {
-    return {std::accumulate(dims.begin(), dims.end() - 1, (T)1, std::multiplies<T>()), dims[dims.size() - 1]};
+template <typename Vector>
+static Vector normalizeDimsTo2D(const Vector& dims) {
+    using value_t = typename Vector::value_type;
+    return {std::accumulate(dims.begin(), dims.end() - 1, static_cast<value_t>(1), std::multiplies<value_t>()),
+            dims[dims.size() - 1]};
 }
 
 static DnnlPrimitiveAttrs createPrimitiveAttrs(const FCAttrs& attrs,

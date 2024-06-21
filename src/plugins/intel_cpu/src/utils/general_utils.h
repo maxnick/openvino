@@ -54,12 +54,12 @@ inline std::unique_ptr<T> make_unique(Args&&... args) {
 }
 #endif
 
-template<typename T>
-std::string vec2str(const std::vector<T> &vec) {
+template<typename Vector>
+std::string vec2str(const Vector& vec) {
     if (!vec.empty()) {
         std::ostringstream result;
         result << "(";
-        std::copy(vec.begin(), vec.end() - 1, std::ostream_iterator<T>(result, "."));
+        std::copy(vec.begin(), vec.end() - 1, std::ostream_iterator<typename Vector::value_type>(result, "."));
         result << vec.back() << ")";
         return result.str();
     }

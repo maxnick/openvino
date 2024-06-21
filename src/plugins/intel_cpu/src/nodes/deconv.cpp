@@ -176,7 +176,7 @@ Deconvolution::Deconvolution(const std::shared_ptr<ov::Node>& op,
 
         IC = weightDims[0];
         OC = weightDims[1];
-        expectedBiasDims  = {OC};
+        expectedBiasDims  = VectorDims{OC};
 
         groupNum = 1;
         withGroups = false;
@@ -199,7 +199,7 @@ Deconvolution::Deconvolution(const std::shared_ptr<ov::Node>& op,
         groupNum = weightDims[0];
         IC = groupNum * weightDims[1];
         OC = groupNum * weightDims[2];
-        expectedBiasDims  = {OC};
+        expectedBiasDims  = VectorDims{OC};
         withGroups = groupNum > 1;
         isDW = withGroups && groupNum == OC && groupNum == IC;
 
@@ -259,9 +259,9 @@ void Deconvolution::createDnnlCompatibleWeights() {
     auto blockedDims = getWeightDims();
     VectorDims order;
     if (withGroups) {
-        order = {0, 2, 1};
+        order = VectorDims{0, 2, 1};
     } else {
-        order = {1, 0};
+        order = VectorDims{1, 0};
     }
     for (size_t i = 2 + withGroups; i < blockedDims.size(); i++)
         order.push_back(i);
@@ -630,7 +630,7 @@ VectorDims Deconvolution::shapeInferInternal(const VectorDims &inDims, std::vect
                                    ", because the node has 'output_shape' input, but provided output spatial dims "
                                    "number is incorrect");
                 }
-                outSpDimsVecShape = {outSpDims.size()};
+                outSpDimsVecShape = VectorDims{outSpDims.size()};
                 inputShapesRefs.push_back(std::cref(outSpDimsVecShape));
                 CpuBlockedMemoryDesc desc(ov::element::i32, Shape(outSpDimsVecShape));
                 auto mem = std::make_shared<Memory>(getEngine(), desc, outSpDims.data());

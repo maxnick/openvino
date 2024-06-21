@@ -485,11 +485,13 @@ void GraphOptimizer::FuseFCAndWeightsDecompression(Graph &graph) {
             // In case of shared group decompression, Reshape node has to be copied for the current FC
             if (withReshape) {
                 const auto& reshapeOutShape = reshapeNode->getOutputShapeAtPort(0).getStaticDims();
-                auto reshapeConst = std::make_shared<ov::opset1::Constant>(ov::element::i32,
-                                                                           ov::Shape{reshapeOutShape.size()},
-                                                                           reshapeOutShape);
-                auto reshapeDummyInput = std::make_shared<ov::opset1::Parameter>(reshapeNode->getOriginalInputPrecisionAtPort(0),
-                                                                                 reshapeNode->getInputShapeAtPort(0).toPartialShape());
+                auto reshapeConst = std::make_shared<ov::opset1::Constant>(
+                    ov::element::i32,
+                    ov::Shape{reshapeOutShape.size()},
+                    std::vector<int>{reshapeOutShape.begin(), reshapeOutShape.end()});
+                auto reshapeDummyInput =
+                    std::make_shared<ov::opset1::Parameter>(reshapeNode->getOriginalInputPrecisionAtPort(0),
+                                                            reshapeNode->getInputShapeAtPort(0).toPartialShape());
                 const auto reshape = std::make_shared<ov::opset1::Reshape>(reshapeDummyInput, reshapeConst, false);
                 reshape->set_friendly_name(reshapeNode->getName() + "_copy");
                 const auto cpuReshape = std::make_shared<ov::intel_cpu::node::Reshape>(reshape, graph.getGraphContext());
@@ -655,8 +657,8 @@ void GraphOptimizer::FuseConvolutionMatMulDeconvAndBias(Graph &graph) {
                     const auto cpuReshapeConstInput = std::make_shared<node::Input>(reshapeConstInput, graph.getGraphContext());
                     graph.AddNode(cpuReshapeConstInput);
                     graph.CreateEdge(cpuReshapeConstInput, cpuReshapeNode, 0, 1);
-                    DEBUG_LOG("GraphOptimizer##FusingBias:Flatten Bias node from shape ", PartialShape{biasOutputShape.getDims()},
-                                        "  to  ", PartialShape{flattenShape});
+                    DEBUG_LOG("GraphOptimizer##FusingBias:Flatten Bias node from shape ", vec2str(biasOutputShape.getDims()),
+                                        "  to  ", vec2str(flattenShape));
                     // Update bias output shape to be flatten shape.
                     biasOutputShape = Shape{flattenShape};
                 } else {

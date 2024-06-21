@@ -29,7 +29,7 @@ void Tensor::set_shape(ov::Shape new_shape) {
     }
 
     auto desc = m_memptr->getDescPtr();
-    const auto newDesc = desc->cloneWithNewDims(new_shape, true);
+    const auto newDesc = desc->cloneWithNewDims({new_shape.begin(), new_shape.end()}, true);
     m_memptr->redefineDesc(newDesc);
 }
 
@@ -42,7 +42,7 @@ const ov::Shape& Tensor::get_shape() const {
     OPENVINO_ASSERT(shape.isStatic(), "intel_cpu::Tensor has dynamic shape.");
 
     std::lock_guard<std::mutex> guard(m_lock);
-    m_shape = ov::Shape{shape.getStaticDims()};
+    m_shape = ov::Shape{shape.getStaticDims().begin(), shape.getStaticDims().end()};
     return m_shape;
 }
 

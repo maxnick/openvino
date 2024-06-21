@@ -1633,29 +1633,6 @@ inline VectorDims getBlockND(const VectorDims& shape) {
     }
     return blockND;
 }
-// w/hw/ncw/nchw/ncdhw to ncdhw
-inline VectorDims to5Dim(VectorDims casesDim) {
-    size_t caseSize = casesDim.size();
-    VectorDims dim5(5, 1lu);
-    dim5[4] = casesDim[caseSize - 1];
-    if (caseSize > 1) {
-        dim5[3] = casesDim[caseSize - 2];
-    }
-    if (caseSize > 2) {
-        dim5[0] = casesDim[0];
-    }
-    if (caseSize > 3) {
-        dim5[1] = casesDim[1];
-    }
-    if (caseSize > 4) {
-        dim5[2] = casesDim[2];
-    }
-    if (caseSize == 3) {  // nhw -> ncw
-        dim5[1] = dim5[3];
-        dim5[3] = 1lu;
-    }
-    return dim5;
-}
 
 using ngInterpMode = ov::op::v4::Interpolate::InterpolateMode;
 using ngInterpCoordTransf = ov::op::v4::Interpolate::CoordinateTransformMode;

@@ -160,16 +160,16 @@ void MultiClassNms::prepareParams() {
         if (boxes_dims[0] != scores_dims[0] || boxes_dims[1] != scores_dims[2])
             OPENVINO_THROW(m_errorPrefix,
                            "has incompatible 'boxes' and 'scores' shape ",
-                           PartialShape(boxes_dims),
+                           vec2str(boxes_dims),
                            " v.s. ",
-                           PartialShape(scores_dims));
+                           vec2str(scores_dims));
     } else if (scores_dims.size() == 2) {
         if (boxes_dims[0] != scores_dims[0] || boxes_dims[1] != scores_dims[1])
             OPENVINO_THROW(m_errorPrefix,
                            "has incompatible 'boxes' and 'scores' shape ",
-                           PartialShape(boxes_dims),
+                           vec2str(boxes_dims),
                            " v.s. ",
-                           PartialShape(scores_dims));
+                           vec2str(scores_dims));
         if (!has_roinum)
             OPENVINO_THROW(m_errorPrefix,
                            "has incorrect number of input edges: ",

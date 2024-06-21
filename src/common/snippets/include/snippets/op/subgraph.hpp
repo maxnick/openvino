@@ -72,7 +72,7 @@ public:
     //
     // D = < 1, 3, 17, 15, 32> < 0, 1, 2, 3, 4>
     // E = < 1, 3, 17,  1, 32> < 0, 1, 2, 3, 4>
-    using Layout = std::vector<size_t>;
+    using Layout = VectorDims;
     using BlockedShape = std::pair<VectorDims, Layout>;
     using BlockedShapeVector = std::vector<BlockedShape>;
 

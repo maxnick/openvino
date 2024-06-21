@@ -527,8 +527,8 @@ void ScatterUpdate::scatterElementsUpdate(const MemoryPtr& mem_data, const Memor
     VectorDims squashed_indices_shape(indices_shape);
     squashed_indices_shape[axis] = 1;
 
-    const std::vector<size_t> dataBlockND = getBlockND(data_shape);
-    const std::vector<size_t> indicesBlockND = getBlockND(indices_shape);
+    const auto& dataBlockND = getBlockND(data_shape);
+    const auto& indicesBlockND = getBlockND(indices_shape);
     const size_t dataBlock_axisplus1 = dataBlockND[axis + 1];
     const size_t indicesBlock_axisplus1 = indicesBlockND[axis + 1];
 

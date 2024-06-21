@@ -35,11 +35,12 @@ struct is_any_of<T, U, Rest...>
 * rank of resulting shape
 * @return normalized vector
 */
-inline VectorDims getNormalizedDimsBySize(const VectorDims &dims, size_t ndims) {
+template<typename Vector>
+Vector getNormalizedDimsBySize(const Vector &dims, size_t ndims) {
     if (dims.size() >= ndims)
         return dims;
 
-    VectorDims normalizedDims = dims;
+    auto normalizedDims = dims;
     for (size_t i = 0; i < (ndims - dims.size()); i++) {
         normalizedDims.insert(normalizedDims.begin(), 1);
     }

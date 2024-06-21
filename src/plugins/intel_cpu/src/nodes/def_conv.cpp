@@ -1016,10 +1016,10 @@ DeformableConvolution::DefConvExecutor::DefConvExecutor(const DefConvAttr &defCo
 
     auto &srcDesc = descVector[DATA_ID];
     auto &dstDesc = descVector[descVector.size() - 1];
-    srcStrides = std::vector<size_t>(srcDesc->getStrides().size());
+    srcStrides = VectorDims(srcDesc->getStrides().size());
     offStrides = descVector[OFF_ID]->getStrides();
     weiStrides = descVector[WEI_ID]->getStrides();
-    dstStrides = std::vector<size_t>(dstDesc->getStrides().size());
+    dstStrides = VectorDims(dstDesc->getStrides().size());
     pSampledCoordsVector = nullptr;
     pInterpWeightsVector = nullptr;
     for (size_t i = 0; i < srcDesc->getStrides().size(); i++) {

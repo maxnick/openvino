@@ -67,7 +67,7 @@ void Inverse::prepareParams() {
 
     if (input_shape.size() < 2) {
         THROW_CPU_NODE_ERR("has incompatible 'data' shape ",
-                           PartialShape(input_shape),
+                           vec2str(input_shape),
                            ". Only tensors of rank at least 2 are allowed.");
     }
 

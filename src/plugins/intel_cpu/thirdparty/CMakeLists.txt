@@ -158,4 +158,7 @@ if(ENABLE_MLAS_FOR_CPU)
     ov_install_static_lib(mlas ${OV_CPACK_COMP_CORE})
 endif()
 
+set(ABSL_BUILD_TESTING OFF)
+add_subdirectory(abseil-cpp)
+
 ov_add_onednn()
