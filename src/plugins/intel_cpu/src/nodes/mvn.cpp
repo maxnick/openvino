@@ -2089,25 +2089,25 @@ void MVN::transformTo5DCase(const VectorDims& shape) {
     switch (rank) {
         case 1 :  // C
             if (mvnAttrs.initAcrossChannels_) {
-                shape5D = {1, 1, 1, 1, shape[0]};
+                shape5D = VectorDims{1, 1, 1, 1, shape[0]};
                 mvnAttrs.execAcrossChannels_ = false;
                 break;
             } else {
-                shape5D = {1, shape[0], 1, 1, 1};
+                shape5D = VectorDims{1, shape[0], 1, 1, 1};
                 break;
             }
         case 2 :  // NC
             if (mvnAttrs.initAcrossChannels_) {
-                shape5D = {1, shape[0], 1, shape[1], 1};
+                shape5D = VectorDims{1, shape[0], 1, shape[1], 1};
                 mvnAttrs.execAcrossChannels_ = false;
                 break;
             } else {
-                shape5D = {shape[0], shape[1], 1, 1, 1};
+                shape5D = VectorDims{shape[0], shape[1], 1, 1, 1};
                 break;
             }
-        case 3 : { shape5D = {shape[0], shape[1], 1, shape[2], 1}; break; }
-        case 4 : { shape5D = {shape[0], shape[1], 1, shape[2], shape[3]}; break; }
-        case 5 : { shape5D = {shape[0], shape[1], shape[2], shape[3], shape[4]}; break; }
+        case 3 : { shape5D = VectorDims{shape[0], shape[1], 1, shape[2], 1}; break; }
+        case 4 : { shape5D = VectorDims{shape[0], shape[1], 1, shape[2], shape[3]}; break; }
+        case 5 : { shape5D = VectorDims{shape[0], shape[1], shape[2], shape[3], shape[4]}; break; }
         default: {
             OPENVINO_THROW("MVN layer with name '",
                            getName(),

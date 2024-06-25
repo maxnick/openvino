@@ -108,6 +108,10 @@ public:
     bool operator!= (const std::vector<Dim>& lhs) const {
         return !(this->operator=(lhs));
     }
+
+    std::vector<T> to_vec() const {
+        return {this->begin(), this->end()};
+    }
 };
 
 template<typename T>

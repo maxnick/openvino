@@ -642,7 +642,7 @@ void GraphOptimizer::FuseConvolutionMatMulDeconvAndBias(Graph &graph) {
                                          biasOutputShape.getRank() != 1);
                 if (needReshape) {
                     // Bias -> Reshape -> Conv/Deconv/FC
-                    const VectorDims flattenShape = {biasOutputShape.getElementsCount()};
+                    const ov::Shape flattenShape = {biasOutputShape.getElementsCount()};
                     // Construct Ngraph Reshape node and CPU Reshape node.
                     auto reshapeConstInput = std::make_shared<ov::opset1::Constant>(ov::element::i32, ov::Shape{1}, flattenShape);
                     auto reshapeDummyInput = std::make_shared<ov::opset1::Parameter>(

@@ -587,7 +587,7 @@ snippets::op::Subgraph::BlockedShapeVector Subgraph::getSnippetsBlockedShapes() 
         const auto& blockedDesc = memDesc->as<BlockedMemoryDesc>();
         const auto& order = blockedDesc->getOrder();
 
-        in_blocked_shapes[i] = {blockedDesc->getBlockDims(), order};
+        in_blocked_shapes[i] = VectorDims{blockedDesc->getBlockDims(), order};
     }
     return in_blocked_shapes;
 }

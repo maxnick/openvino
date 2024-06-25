@@ -64,7 +64,8 @@ void Reference::executeDynamicImpl(dnnl::stream strm) {
         for (size_t i = 0; i < outputShapes.size(); ++i) {
             auto mem_desc = getBaseMemDescAtOutputPort(i);
             if (mem_desc->isDefined()) {
-                outputs.emplace_back(ovCoreNode->get_output_element_type(i), mem_desc->getShape().getStaticDims());
+                auto&& dims = mem_desc->getShape().getStaticDims();
+                outputs.emplace_back(ovCoreNode->get_output_element_type(i), ov::Shape{dims.begin(), dims.end()});
             } else {
                 outputs.emplace_back(ovCoreNode->get_output_element_type(i), ov::Shape{0});
             }

@@ -87,9 +87,9 @@ void Tile::getSupportedDescriptors() {
                                " has output edges 0 and ",
                                i,
                                " with different dims: ",
-                               vec_to_string(dstDims0),
+                               vec2str(dstDims0),
                                " and ",
-                               vec_to_string(dstDims));
+                               vec2str(dstDims));
             }
         }
     }

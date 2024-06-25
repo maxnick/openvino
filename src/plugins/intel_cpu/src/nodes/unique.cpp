@@ -154,7 +154,7 @@ void Unique::executeDynamicImpl(dnnl::stream strm) {
     Dim uniqLen = 1;
     if (flattened) {
         uniqLen = std::accumulate(srcDataDims.begin(), srcDataDims.end(), 1, std::multiplies<Dim>());
-        dstDataDims = { uniqLen };
+        dstDataDims = VectorDims{ uniqLen };
     } else {
         uniqLen = srcDataDims[axis];
         dstDataDims = srcDataDims;

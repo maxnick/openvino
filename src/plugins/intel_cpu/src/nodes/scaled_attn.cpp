@@ -1035,9 +1035,8 @@ void ScaledDotProductAttention::assignState(const std::shared_ptr<VariableStateK
     }
 }
 
-template <typename T>
-std::vector<T> permute_axes(const std::vector<T>& shape, const VectorDims& order) {
-    std::vector<T> results(shape.size());
+VectorDims permute_axes(const VectorDims& shape, const VectorDims& order) {
+    VectorDims results(shape.size());
     for (size_t i = 0; i < order.size(); i++) {
         results[i] = shape[order[i]];
     }

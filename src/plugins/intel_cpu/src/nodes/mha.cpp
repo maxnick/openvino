@@ -893,8 +893,8 @@ void MHA::init_brgemm_copy_b(std::unique_ptr<jit_brgemm_matmul_copy_b_t>& brgCop
 }
 
 void MHA::prepareParams() {
-    auto transpose = [](const std::vector<size_t>& vec, const std::vector<size_t>& order) -> std::vector<size_t> {
-        std::vector<size_t> new_vec(vec.size());
+    auto transpose = [](const VectorDims& vec, const VectorDims& order) -> VectorDims {
+        VectorDims new_vec(vec.size());
         for (size_t i = 0; i < vec.size(); i++) {
             new_vec[i] = vec[order[i]];
         }
@@ -925,7 +925,7 @@ void MHA::prepareParams() {
     std::vector<size_t> orderTranspose1 = {0, 2, 3, 1};
     dimsMatMul0In1 = transpose(dimsTranspose1In0, orderTranspose1);
 
-    dimsMatMul0Out = {dimsMatMul0In0[0], dimsMatMul0In0[1], dimsMatMul0In0[2], dimsMatMul0In1[3]};
+    dimsMatMul0Out = VectorDims{dimsMatMul0In0[0], dimsMatMul0In0[1], dimsMatMul0In0[2], dimsMatMul0In1[3]};
 
     std::vector<size_t> orderTranspose2 = {0, 2, 1, 3};
     dimsMatMul1In1 = transpose(dimsTranspose2In0, orderTranspose2);
@@ -1003,7 +1003,7 @@ void MHA::prepareParams() {
             brgemmCtx0.is_with_amx, brgemmCtx0.dt_in0, brgemmCtx0.dt_in1);
     }
 
-    dimsMatMul1Out = {dimsMatMul0Out[0], dimsMatMul0Out[1], dimsMatMul0Out[2], dimsMatMul1In1[3]};
+    dimsMatMul1Out = VectorDims{dimsMatMul0Out[0], dimsMatMul0Out[1], dimsMatMul0Out[2], dimsMatMul1In1[3]};
 
     N1 = dimsMatMul1Out[3];
     K1 = dimsMatMul0Out[3];

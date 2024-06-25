@@ -16,6 +16,7 @@ NgraphShapeInfer::infer(
     const auto& iranks = m_shape_infer->get_input_ranks();
     OPENVINO_ASSERT(iranks.size() <= input_shapes.size(), "Too few input shapes passed to Shape infer.");
     std::vector<StaticShapeRef> input_static_shapes;
+    std::vector<StaticShape> temp_storage;
 
     input_static_shapes.reserve(input_shapes.size());
 

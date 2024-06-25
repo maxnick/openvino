@@ -81,8 +81,8 @@ MultiClassNms::MultiClassNms(const std::shared_ptr<ov::Node>& op, const GraphCon
     // boxes [C, M, 4], scores [C, M], roisnum [N] opset9
     const auto& boxes_dims = getInputShapeAtPort(NMS_BOXES).getDims();
     const auto& scores_dims = getInputShapeAtPort(NMS_SCORES).getDims();
-    auto boxes_ps = PartialShape(boxes_dims);
-    auto scores_ps = PartialShape(scores_dims);
+    auto boxes_ps = PartialShape{ov::Shape{boxes_dims.begin(), boxes_dims.end()}};
+    auto scores_ps = PartialShape{ov::Shape{scores_dims.begin(), scores_dims.end()}};
     if (boxes_dims.size() != 3)
         OPENVINO_THROW(m_errorPrefix, "has unsupported 'boxes' input rank: ", boxes_dims.size());
     if (boxes_dims[2] != 4)

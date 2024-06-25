@@ -83,7 +83,7 @@ void Multinomial::prepareParams() {
 
     if (probs_shape.size() != 2) {
         THROW_CPU_NODE_ERR("has incompatible 'probs' shape ",
-                           ve2str(probs_shape),
+                           vec2str(probs_shape),
                            ". Only 2D tensors are allowed.");
     }
 
