@@ -121,6 +121,7 @@ protected:
     bool needPrepareParams() const override;
     void prepareParams() override;
     void executeDynamicImpl(dnnl::stream strm) override;
+    void resetImpl() override;
 
 private:
     void prepareInputPorts();

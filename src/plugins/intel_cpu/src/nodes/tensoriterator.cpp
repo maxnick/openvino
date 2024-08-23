@@ -940,6 +940,11 @@ bool TensorIterator::runAsDynamic() const {
     return isDynamicNode() || Graph::Status::ReadyDynamic == sub_graph.getStatus();
 }
 
+void TensorIterator::resetImpl() {
+    // TODO: add other clean up actions
+    sub_graph.resetWorkingState();
+}
+
 bool TensorIterator::created() const {
     return getType() == Type::TensorIterator;
 }

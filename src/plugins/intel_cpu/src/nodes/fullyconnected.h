@@ -79,6 +79,7 @@ public:
 
 protected:
     void toNumaNodeImpl(int numaID) override;
+    void resetImpl() override;
 
 private:
     static const size_t DATA_ID = 0;
@@ -99,6 +100,7 @@ private:
     void needSplitZeroPointForTensorParallel(const MemoryCPtr& memory);
     void needUpdateZeroPointForTensorParallel();
     void needUpdateDQScaleForTensorParallel(std::vector<float>& dequantizationScales);
+    MemoryDescArgs buildMemoryDescArgs() const;
 
     FCAttrs attrs;
     PostOps postOps;

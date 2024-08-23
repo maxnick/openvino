@@ -262,6 +262,12 @@ void If::executeDynamicImpl(dnnl::stream strm) {
     execute(strm);
 }
 
+void If::resetImpl() {
+    // add other clenup actions
+    subGraphElse.resetWorkingState();
+    subGraphThen.resetWorkingState();
+}
+
 bool If::created() const {
     return getType() == Type::If;
 }

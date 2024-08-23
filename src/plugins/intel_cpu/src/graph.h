@@ -38,6 +38,7 @@ public:
         ReadyStatic = 1,
         ReadyDynamic = 2,
         ReadyDynamicSeq = 3,
+        Reset = 4,
     };
 
     Graph() = default;
@@ -190,6 +191,7 @@ public:
     Status getStatus() const {return status;}
     const std::unordered_map<std::string, node::MemoryStateNode*>& getInternalStateNodes() const;
     void InitGraph(bool optimize = true);
+    void resetWorkingState();
 
 protected:
     void ForgetGraphData() {
@@ -243,8 +245,7 @@ private:
     void insertReorder(EdgePtr& edge, bool isOptimized, std::unordered_set<std::string>& uniqueLayerNames);
     void insertConvert(EdgePtr& edge);
     int GetNumaNodeId() const;
-    void allocateIntermediateTensors();
-    void releaseIntermediateTensors();
+    void setUpWokringState();
 
 private:
     // TODO: change std::map to std::unordered_map

@@ -69,6 +69,11 @@ public:
 
     SharedMemory::Ptr get(const std::string& key) const;
 
+    void reset() {
+        std::lock_guard<std::mutex> lock(guard);
+        sharedWeights.clear();
+    }
+
 protected:
     mutable std::mutex guard;
     std::unordered_map<std::string, MemoryInfo::Ptr> sharedWeights;

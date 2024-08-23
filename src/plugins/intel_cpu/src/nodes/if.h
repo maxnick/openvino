@@ -31,6 +31,7 @@ protected:
     void executeDynamicImpl(dnnl::stream strm) override;
     bool needPrepareParams() const override { return false; };
     bool needShapeInfer() const override { return false; }
+    void resetImpl() override;
 
 private:
     void prepareBeforeMappers(const bool isThen, const dnnl::engine& eng);

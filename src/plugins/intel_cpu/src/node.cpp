@@ -1292,6 +1292,25 @@ void Node::appendPostOps(dnnl::post_ops& ops, const VectorDims &postOpDims, std:
     OPENVINO_THROW("Fusing of ", NameFromType(this->getType()), " operation is not implemented");
 }
 
+void Node::reset() {
+    // std::vector<MemoryPtr> internalBlobs;
+    // std::vector<MemoryPtr> internalBlobMemory;
+
+    if (getType() != Type::FullyConnected)
+        return;
+
+    primArgs.clear();
+    scratchpadMem.reset();
+    privateWeightCache->clear();
+    lastInputDims.clear();
+
+    resetImpl();
+}
+
+void Node::resetImpl() {
+    // do nothing to allow nodes leave this mehtod unimplemented
+}
+
 std::vector<ov::element::Type> Node::getInputPrecisions() const {
     std::vector<ov::element::Type> inputPrecisions;
     for (size_t i = 0; i < getParentEdges().size(); i++) {

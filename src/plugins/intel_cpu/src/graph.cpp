@@ -295,6 +295,11 @@ static std::tuple<std::vector<NodePtr>, std::vector<size_t>> ExtractExecutableNo
                            std::move(executableSyncNodesInds));
 }
 
+static Graph::Status selectReadyStatus(const bool hasDynNodes) {
+    return hasDynNodes ? (parallel_get_max_threads() > 1 ? Graph::Status::ReadyDynamic : Graph::Status::ReadyDynamicSeq)
+        : Graph::Status::ReadyStatic;
+}
+
 void Graph::InitGraph(bool optimize) {
     DEBUG_LOG("Initializing graph with name: ",  GetName());
 
@@ -341,8 +346,7 @@ void Graph::InitGraph(bool optimize) {
 
     std::tie(m_executableGraphNodes, m_executableSyncNodesInds) = ExtractExecutableNodesAndSyncPoints(syncNodesInds, graphNodes);
 
-    status = hasDynNodes ? (parallel_get_max_threads() > 1 ? Status::ReadyDynamic : Status::ReadyDynamicSeq)
-        : Status::ReadyStatic;
+    status = selectReadyStatus(hasDynNodes);
 
     CPU_DEBUG_CAP_ENABLE(serialize(*this));
 }
@@ -829,11 +833,13 @@ void Graph::AllocateWithReuse(const std::vector<size_t>& syncNodesInds) {
     }
 
     if (getConfig().flushIntermediateTensors) {
-        m_preInferEvents.push_back(&Graph::allocateIntermediateTensors);
-        m_postInferEvents.push_back(&Graph::releaseIntermediateTensors);
+        m_preInferEvents.push_back(&Graph::setUpWokringState);
+        m_postInferEvents.push_back(&Graph::resetWorkingState);
     } else {
         //allocate mem right away
-        allocateIntermediateTensors();
+        if (m_pMemoryControl) {
+            m_pMemoryControl->allocateMemory();
+        }
     }
 
     // Resolve all other edges with status NotAllocated and in-place
@@ -1730,16 +1736,40 @@ const std::unordered_map<std::string, node::MemoryStateNode*>& Graph::getInterna
     return context->getMemoryStatesRegister()->getMemoryStates();
 }
 
-void Graph::allocateIntermediateTensors() {
+void Graph::setUpWokringState() {
     if (m_pMemoryControl) {
         m_pMemoryControl->allocateMemory();
     }
+
+    if (status != Status::Reset) {
+        return;
+    }
+
+    bool hasDynNodes = false;
+    for (auto&& node : m_executableGraphNodes) {
+        if (!hasDynNodes && node->isDynamicNode())
+            hasDynNodes = true;
+        if (node->getType() != Type::FullyConnected)
+            continue;
+
+        node->createPrimitive();
+    }
+
+    status = selectReadyStatus(hasDynNodes);
 }
 
-void Graph::releaseIntermediateTensors() {
+void Graph::resetWorkingState() {
+    for (auto&& node : m_executableGraphNodes) {
+        node->reset();
+    }
+
     if (m_pMemoryControl) {
         m_pMemoryControl->releaseMemory();
     }
+
+    context->getWeightsCache()->reset();
+
+    status = Status::Reset;
 }
 
 }   // namespace intel_cpu

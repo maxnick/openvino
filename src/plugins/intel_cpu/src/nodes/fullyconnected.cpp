@@ -381,20 +381,7 @@ void FullyConnected::needUpdateDQScaleForTensorParallel(std::vector<float>& dequ
     }
 }
 
-void FullyConnected::initSupportedPrimitiveDescriptors() {
-    attrs.withBias = getOriginalInputsNumber() == 3;
-
-    attrs.dequantizationScales = getDQScales();
-    needUpdateDQScaleForTensorParallel(attrs.dequantizationScales);
-
-    attrs.sparseWeights = useSparseWeightsDecompression(getParentEdgeAt(WEIGHTS_ID)->getParent(),
-                                                        getOriginalInputPrecisionAtPort(DATA_ID),
-                                                        context->getConfig().fcSparseWeiDecompressionRate);
-    attrs.dynamicQuantizationGroupSize = context->getConfig().fcDynamicQuantizationGroupSize;
-    attrs.modelType = context->getConfig().modelType;
-
-    postOps = getPostOps(fusedWith);
-
+MemoryDescArgs FullyConnected::buildMemoryDescArgs() const {
     const auto& srcTypes = getOriginalInputPrecisions();
     auto dstTypes = getOriginalOutputPrecisions();
     // @todo graph optimizer should update original output precisions instead
@@ -414,12 +401,29 @@ void FullyConnected::initSupportedPrimitiveDescriptors() {
         dstDescs.push_back(dstDesc);
     }
 
-    MemoryDescArgs descs{
+    return {
         {ARG_SRC, srcDescs[0]},
         {ARG_WEI, srcDescs[1]},
         {ARG_BIAS, attrs.withBias ? srcDescs[2] : MemoryDescUtils::makeEmptyDesc()},
         {ARG_DST, dstDescs[0]},
     };
+}
+
+void FullyConnected::initSupportedPrimitiveDescriptors() {
+    attrs.withBias = getOriginalInputsNumber() == 3;
+
+    attrs.dequantizationScales = getDQScales();
+    needUpdateDQScaleForTensorParallel(attrs.dequantizationScales);
+
+    attrs.sparseWeights = useSparseWeightsDecompression(getParentEdgeAt(WEIGHTS_ID)->getParent(),
+                                                        getOriginalInputPrecisionAtPort(DATA_ID),
+                                                        context->getConfig().fcSparseWeiDecompressionRate);
+    attrs.dynamicQuantizationGroupSize = context->getConfig().fcDynamicQuantizationGroupSize;
+    attrs.modelType = context->getConfig().modelType;
+
+    postOps = getPostOps(fusedWith);
+
+    MemoryDescArgs descs = buildMemoryDescArgs();
 
     needUpdateScaleForTensorParallel();
     needUpdateZeroPointForTensorParallel();
@@ -488,6 +492,14 @@ void FullyConnected::createPrimitive() {
     memory[ARG_DST] = getDstMemoryAtPort(0);
 
     needSplitMemoryForTensorParallel();
+
+    if (!factory) {
+        // reinstance factory if it was deleted
+        MemoryDescArgs descs = buildMemoryDescArgs();
+        auto executionContext = std::make_shared<ExecutorContext>(context, getImplPriority(), privateWeightCache);
+        factory =
+            std::make_shared<ExecutorFactory<FCAttrs, node::FullyConnected>>(attrs, postOps, executionContext, descs);
+    }
     // @todo should we preconfigure only for dynamic shapes?
     // Since for static shapes primitive is created in scope of compile_model() anyway
     factory->preconfigure(memory);
@@ -552,6 +564,12 @@ void FullyConnected::fuseDecompressionMultiply(const MemoryCPtr& memory) {
 void FullyConnected::fuseDecompressionSubtract(const MemoryCPtr& memory) {
     attrs.decompressionSubtractPtr = memory;
     needSplitZeroPointForTensorParallel(memory);
+}
+
+void FullyConnected::resetImpl() {
+    memory.clear();
+    factory.reset();
+    executor.reset();
 }
 
 }  // namespace node

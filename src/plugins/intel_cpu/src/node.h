@@ -634,6 +634,8 @@ public:
         return keepOriginalPrecision;
     }
 
+    void reset();
+
 protected:
     bool canFuseSimpleOperation(const NodePtr& node) const;
 
@@ -772,6 +774,8 @@ protected:
         OPENVINO_THROW_NOT_IMPLEMENTED("[DS] prapareParams not implemented for node with type ",
                                        NameFromType(getType()));
     }
+
+    virtual void resetImpl();
 
     MemoryPtr getScratchPadMem(const DnnlMemoryDescPtr& desc) {
         if (!scratchpadMem || !scratchpadMem->getDesc().isCompatible(*desc)) {
