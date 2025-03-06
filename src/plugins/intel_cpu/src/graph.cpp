@@ -1104,6 +1104,7 @@ void Graph::PullOutputData(std::unordered_map<std::size_t, ov::SoPtr<ITensor>>& 
                            "!=",
                            intr_blob.getSize(),
                            ").");
+        }
 
         void* ext_blob_ptr = ext_blob->data();
         void* intr_blob_ptr = intr_blob.getData();
