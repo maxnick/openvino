@@ -16,11 +16,13 @@
 #include <list>
 #include <string>
 #include <atomic>
+#include <unordered_map>
 
 namespace cldnn {
 
 struct memory;
 struct shared_mem_params;
+class MemoryTracker;
 class engine;
 
 using primitive_id = std::string;
@@ -115,8 +117,23 @@ struct memory_record {
     memory_ptr _memory;
     uint32_t _network_id;
     allocation_type _type;
+    size_t _total_bytes = 0;
+    size_t _total_users = 0;
+
+    struct memory_segment {
+        size_t offset = 0;
+        size_t size = 0;
+        memory_set users;
+    };
+
+    std::list<memory_segment> _segments;
 
     memory_record(memory_set users, memory_ptr& memory, uint32_t net_id, allocation_type type);
+};
+
+struct non_padded_segment_ref {
+    std::multimap<uint64_t, memory_record>::iterator record_it;
+    std::list<memory_record::memory_segment>::iterator segment_it;
 };
 
 struct padded_pool_comparer {
@@ -155,7 +172,16 @@ class memory_pool {
     memory_ptr alloc_memory(const layout& layout, allocation_type type, bool reset = true);
     static bool has_conflict(const memory_set&, const memory_restricter<uint32_t>&);
 
-    std::multimap<uint64_t, memory_record> _non_padded_pool;
+    using non_padded_pool_t = std::multimap<uint64_t, memory_record>;
+    using non_padded_pool_iter = non_padded_pool_t::iterator;
+    using segment_list_t = std::list<memory_record::memory_segment>;
+    using segment_iter = segment_list_t::iterator;
+    using non_padded_segments_t = std::multimap<size_t, non_padded_segment_ref>;
+    using tracker_map_t = std::unordered_map<MemoryTracker*, non_padded_pool_iter>;
+
+    non_padded_pool_t _non_padded_pool;
+    non_padded_segments_t _non_padded_segments;
+    tracker_map_t _non_padded_tracker_map;
     std::map<layout, std::list<memory_record>, padded_pool_comparer> _padded_pool;
     engine* _engine;
     const ExecutionConfig& _config;
@@ -201,6 +227,16 @@ public:
 private:
     void dump_to_screen(uint32_t id, uint32_t iter);
     void dump_to_file(uint32_t id, uint32_t iter, std::string dump_dir_path);
+    bool is_suballocation_allowed(allocation_type type) const;
+    size_t get_ocl_sub_buffer_alignment() const;
+    size_t get_sub_buffer_alignment(const layout& layout, allocation_type type) const;
+    size_t align_sub_buffer_size(const layout& layout, allocation_type type) const;
+    void insert_non_padded_segment(const non_padded_pool_iter& record_it,
+                                   const segment_iter& segment_it);
+    void erase_non_padded_segment(const non_padded_pool_iter& record_it,
+                                  const segment_iter& segment_it,
+                                  size_t size);
+    void erase_non_padded_record(const non_padded_pool_iter& record_it);
 
 #ifdef GPU_DEBUG_CONFIG
     std::vector<memory_record> _no_reusable_mems;

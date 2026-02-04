@@ -10,6 +10,8 @@
 #include <intel_gpu/primitives/reorder.hpp>
 #include <intel_gpu/primitives/reshape.hpp>
 #include <intel_gpu/primitives/data.hpp>
+#include "intel_gpu/runtime/memory_pool.hpp"
+#include "intel_gpu/runtime/engine.hpp"
 
 #include "softmax_inst.h"
 
@@ -17,6 +19,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <cstdint>
 
 using namespace cldnn;
 using namespace ::tests;
@@ -380,6 +383,282 @@ TEST(dyn_shape_mem_test, igpu_shape_infer_dep_mem_type) {
     }
     auto expected_layout = layout{ov::PartialShape{3, 2, 1, 1}, data_types::f16, format::bfyx};
     ASSERT_EQ(output.begin()->second.get_memory()->get_layout(), expected_layout);
+}
+
+TEST(memory_reuse_realloc_reset_test, usm_subbuffer_multi_live_reuse) {
+    auto& engine = get_test_engine();
+    if (!engine.get_device_info().supports_usm || !engine.use_unified_shared_memory()) {
+        GTEST_SKIP() << "USM not supported";
+    }
+
+    ExecutionConfig config = get_test_default_config(engine);
+    memory_pool pool(engine, config);
+
+    std::unordered_set<uint32_t> restriction_set;
+    memory_restricter<uint32_t> restrictions(&restriction_set);
+
+    layout large_layout = layout{ov::PartialShape{1, 1, 1, 4096}, data_types::f32, format::bfyx};
+    layout small_layout = layout{ov::PartialShape{1, 1, 1, 1024}, data_types::f32, format::bfyx};
+
+    auto large = pool.get_from_non_padded_pool(large_layout, "large", 1, 0, restrictions, allocation_type::usm_device, true, false);
+    pool.release_memory(large.get(), 1, "large", 0);
+
+    auto small1 = pool.get_from_non_padded_pool(small_layout, "small1", 2, 0, restrictions, allocation_type::usm_device, true, false);
+    auto small2 = pool.get_from_non_padded_pool(small_layout, "small2", 3, 0, restrictions, allocation_type::usm_device, true, false);
+
+    ASSERT_EQ(small1->get_mem_tracker(), small2->get_mem_tracker());
+    ASSERT_NE(small1->buffer_ptr(), small2->buffer_ptr());
+}
+
+TEST(memory_reuse_realloc_reset_test, ocl_subbuffer_multi_live_reuse) {
+    auto& engine = get_test_engine();
+    if (engine.runtime_type() != runtime_types::ocl) {
+        GTEST_SKIP() << "OpenCL runtime required";
+    }
+
+    ExecutionConfig config = get_test_default_config(engine);
+    memory_pool pool(engine, config);
+
+    std::unordered_set<uint32_t> restriction_set;
+    memory_restricter<uint32_t> restrictions(&restriction_set);
+
+    layout large_layout = layout{ov::PartialShape{1, 1, 1, 4096}, data_types::f32, format::bfyx};
+    layout small_layout = layout{ov::PartialShape{1, 1, 1, 1024}, data_types::f32, format::bfyx};
+
+    if (!engine.check_allocatable(large_layout, allocation_type::cl_mem) ||
+        !engine.check_allocatable(small_layout, allocation_type::cl_mem)) {
+        GTEST_SKIP() << "cl_mem allocation not supported";
+    }
+
+    auto large = pool.get_from_non_padded_pool(large_layout, "large", 10, 0, restrictions, allocation_type::cl_mem, true, false);
+    pool.release_memory(large.get(), 10, "large", 0);
+
+    auto small1 = pool.get_from_non_padded_pool(small_layout, "small1", 11, 0, restrictions, allocation_type::cl_mem, true, false);
+    auto small2 = pool.get_from_non_padded_pool(small_layout, "small2", 12, 0, restrictions, allocation_type::cl_mem, true, false);
+
+    ASSERT_EQ(small1->get_mem_tracker(), small2->get_mem_tracker());
+    ASSERT_NE(small1->buffer_ptr(), small2->buffer_ptr());
+}
+
+TEST(memory_reuse_realloc_reset_test, usm_subbuffer_shared_segment_split) {
+    auto& engine = get_test_engine();
+    if (!engine.get_device_info().supports_usm || !engine.use_unified_shared_memory()) {
+        GTEST_SKIP() << "USM not supported";
+    }
+
+    ExecutionConfig config = get_test_default_config(engine);
+    memory_pool pool(engine, config);
+
+    std::unordered_set<uint32_t> restriction_set;
+    memory_restricter<uint32_t> restrictions(&restriction_set);
+
+    layout layout_a = layout{ov::PartialShape{1, 1, 1, 256}, data_types::u8, format::bfyx};
+    layout layout_b = layout{ov::PartialShape{1, 1, 1, 64}, data_types::u8, format::bfyx};
+    layout layout_c = layout{ov::PartialShape{1, 1, 1, 192}, data_types::u8, format::bfyx};
+
+    auto mem_a = pool.get_from_non_padded_pool(layout_a, "A", 100, 0, restrictions, allocation_type::usm_device, true, false);
+    auto mem_b = pool.get_from_non_padded_pool(layout_b, "B", 101, 0, restrictions, allocation_type::usm_device, true, false);
+
+    restriction_set.insert(101);
+    auto mem_c = pool.get_from_non_padded_pool(layout_c, "C", 102, 0, restrictions, allocation_type::usm_device, true, false);
+
+    ASSERT_EQ(mem_a->get_mem_tracker(), mem_b->get_mem_tracker());
+    ASSERT_EQ(mem_a->get_mem_tracker(), mem_c->get_mem_tracker());
+
+    auto a_ptr = reinterpret_cast<uint8_t*>(mem_a->buffer_ptr());
+    auto b_ptr = reinterpret_cast<uint8_t*>(mem_b->buffer_ptr());
+    auto c_ptr = reinterpret_cast<uint8_t*>(mem_c->buffer_ptr());
+
+    ASSERT_EQ(b_ptr, a_ptr);
+    ASSERT_NE(c_ptr, a_ptr);
+    ASSERT_NE(c_ptr, b_ptr);
+    ASSERT_EQ(reinterpret_cast<uintptr_t>(c_ptr) - reinterpret_cast<uintptr_t>(a_ptr), 64u);
+}
+
+TEST(memory_reuse_realloc_reset_test, ocl_subbuffer_shared_segment_split) {
+    auto& engine = get_test_engine();
+    if (engine.runtime_type() != runtime_types::ocl) {
+        GTEST_SKIP() << "OpenCL runtime required";
+    }
+
+    ExecutionConfig config = get_test_default_config(engine);
+    memory_pool pool(engine, config);
+
+    std::unordered_set<uint32_t> restriction_set;
+    memory_restricter<uint32_t> restrictions(&restriction_set);
+
+    layout layout_a = layout{ov::PartialShape{1, 1, 1, 256}, data_types::u8, format::bfyx};
+    layout layout_b = layout{ov::PartialShape{1, 1, 1, 64}, data_types::u8, format::bfyx};
+    layout layout_c = layout{ov::PartialShape{1, 1, 1, 192}, data_types::u8, format::bfyx};
+
+    if (!engine.check_allocatable(layout_a, allocation_type::cl_mem) ||
+        !engine.check_allocatable(layout_b, allocation_type::cl_mem) ||
+        !engine.check_allocatable(layout_c, allocation_type::cl_mem)) {
+        GTEST_SKIP() << "cl_mem allocation not supported";
+    }
+
+    auto mem_a = pool.get_from_non_padded_pool(layout_a, "A", 200, 0, restrictions, allocation_type::cl_mem, true, false);
+    auto mem_b = pool.get_from_non_padded_pool(layout_b, "B", 201, 0, restrictions, allocation_type::cl_mem, true, false);
+
+    restriction_set.insert(201);
+    auto mem_c = pool.get_from_non_padded_pool(layout_c, "C", 202, 0, restrictions, allocation_type::cl_mem, true, false);
+
+    ASSERT_EQ(mem_a->get_mem_tracker(), mem_b->get_mem_tracker());
+    ASSERT_EQ(mem_a->get_mem_tracker(), mem_c->get_mem_tracker());
+    ASSERT_NE(mem_b->buffer_ptr(), mem_c->buffer_ptr());
+}
+
+TEST(memory_reuse_realloc_reset_test, usm_subbuffer_shared_segment_split_five) {
+    auto& engine = get_test_engine();
+    if (!engine.get_device_info().supports_usm || !engine.use_unified_shared_memory()) {
+        GTEST_SKIP() << "USM not supported";
+    }
+
+    ExecutionConfig config = get_test_default_config(engine);
+    memory_pool pool(engine, config);
+
+    std::unordered_set<uint32_t> restriction_set;
+    memory_restricter<uint32_t> restrictions(&restriction_set);
+
+    layout layout_a = layout{ov::PartialShape{1, 1, 1, 320}, data_types::u8, format::bfyx};
+    layout layout_b = layout{ov::PartialShape{1, 1, 1, 64}, data_types::u8, format::bfyx};
+
+    auto mem_a = pool.get_from_non_padded_pool(layout_a, "A", 300, 0, restrictions, allocation_type::usm_device, true, false);
+
+    std::vector<memory::ptr> blocks;
+    blocks.reserve(5);
+    for (size_t i = 0; i < 5; ++i) {
+        if (i > 0)
+            restriction_set.insert(static_cast<uint32_t>(300 + i));
+        blocks.push_back(pool.get_from_non_padded_pool(layout_b,
+                                                       "B" + std::to_string(i + 1),
+                                                       301 + i,
+                                                       0,
+                                                       restrictions,
+                                                       allocation_type::usm_device,
+                                                       true,
+                                                       false));
+    }
+
+    auto a_ptr = reinterpret_cast<uint8_t*>(mem_a->buffer_ptr());
+    for (size_t i = 0; i < blocks.size(); ++i) {
+        auto b_ptr = reinterpret_cast<uint8_t*>(blocks[i]->buffer_ptr());
+        ASSERT_EQ(reinterpret_cast<uintptr_t>(b_ptr) - reinterpret_cast<uintptr_t>(a_ptr), 64u * i);
+    }
+}
+
+TEST(memory_reuse_realloc_reset_test, ocl_subbuffer_shared_segment_split_five) {
+    auto& engine = get_test_engine();
+    if (engine.runtime_type() != runtime_types::ocl) {
+        GTEST_SKIP() << "OpenCL runtime required";
+    }
+
+    ExecutionConfig config = get_test_default_config(engine);
+    memory_pool pool(engine, config);
+
+    std::unordered_set<uint32_t> restriction_set;
+    memory_restricter<uint32_t> restrictions(&restriction_set);
+
+    layout layout_a = layout{ov::PartialShape{1, 1, 1, 320}, data_types::u8, format::bfyx};
+    layout layout_b = layout{ov::PartialShape{1, 1, 1, 64}, data_types::u8, format::bfyx};
+
+    if (!engine.check_allocatable(layout_a, allocation_type::cl_mem) ||
+        !engine.check_allocatable(layout_b, allocation_type::cl_mem)) {
+        GTEST_SKIP() << "cl_mem allocation not supported";
+    }
+
+    auto mem_a = pool.get_from_non_padded_pool(layout_a, "A", 400, 0, restrictions, allocation_type::cl_mem, true, false);
+
+    std::vector<memory::ptr> blocks;
+    blocks.reserve(5);
+    for (size_t i = 0; i < 5; ++i) {
+        if (i > 0)
+            restriction_set.insert(static_cast<uint32_t>(400 + i));
+        blocks.push_back(pool.get_from_non_padded_pool(layout_b,
+                                                       "B" + std::to_string(i + 1),
+                                                       401 + i,
+                                                       0,
+                                                       restrictions,
+                                                       allocation_type::cl_mem,
+                                                       true,
+                                                       false));
+    }
+
+    ASSERT_EQ(mem_a->get_mem_tracker(), blocks.front()->get_mem_tracker());
+    for (size_t i = 1; i < blocks.size(); ++i) {
+        ASSERT_NE(blocks[0]->buffer_ptr(), blocks[i]->buffer_ptr());
+    }
+}
+
+TEST(memory_reuse_realloc_reset_test, usm_subbuffer_release_shared_segment) {
+    auto& engine = get_test_engine();
+    if (!engine.get_device_info().supports_usm || !engine.use_unified_shared_memory()) {
+        GTEST_SKIP() << "USM not supported";
+    }
+
+    ExecutionConfig config = get_test_default_config(engine);
+    memory_pool pool(engine, config);
+
+    std::unordered_set<uint32_t> restriction_set;
+    memory_restricter<uint32_t> restrictions(&restriction_set);
+
+    layout layout_a = layout{ov::PartialShape{1, 1, 1, 192}, data_types::u8, format::bfyx};
+    layout layout_b = layout{ov::PartialShape{1, 1, 1, 64}, data_types::u8, format::bfyx};
+
+    auto mem_a = pool.get_from_non_padded_pool(layout_a, "A", 500, 0, restrictions, allocation_type::usm_device, true, false);
+    auto mem_b1 = pool.get_from_non_padded_pool(layout_b, "B1", 501, 0, restrictions, allocation_type::usm_device, true, false);
+    restriction_set.insert(501);
+    auto mem_b2 = pool.get_from_non_padded_pool(layout_b, "B2", 502, 0, restrictions, allocation_type::usm_device, true, false);
+    restriction_set.insert(502);
+    auto mem_b3 = pool.get_from_non_padded_pool(layout_b, "B3", 503, 0, restrictions, allocation_type::usm_device, true, false);
+
+    pool.release_memory(mem_b2.get(), 502, "B2", 0);
+
+    restriction_set.clear();
+    restriction_set.insert(501);
+    restriction_set.insert(503);
+    auto mem_c = pool.get_from_non_padded_pool(layout_b, "C", 504, 0, restrictions, allocation_type::usm_device, true, false);
+
+    ASSERT_EQ(mem_a->get_mem_tracker(), mem_c->get_mem_tracker());
+    ASSERT_EQ(mem_b2->buffer_ptr(), mem_c->buffer_ptr());
+}
+
+TEST(memory_reuse_realloc_reset_test, ocl_subbuffer_release_shared_segment) {
+    auto& engine = get_test_engine();
+    if (engine.runtime_type() != runtime_types::ocl) {
+        GTEST_SKIP() << "OpenCL runtime required";
+    }
+
+    ExecutionConfig config = get_test_default_config(engine);
+    memory_pool pool(engine, config);
+
+    std::unordered_set<uint32_t> restriction_set;
+    memory_restricter<uint32_t> restrictions(&restriction_set);
+
+    layout layout_a = layout{ov::PartialShape{1, 1, 1, 192}, data_types::u8, format::bfyx};
+    layout layout_b = layout{ov::PartialShape{1, 1, 1, 64}, data_types::u8, format::bfyx};
+
+    if (!engine.check_allocatable(layout_a, allocation_type::cl_mem) ||
+        !engine.check_allocatable(layout_b, allocation_type::cl_mem)) {
+        GTEST_SKIP() << "cl_mem allocation not supported";
+    }
+
+    auto mem_a = pool.get_from_non_padded_pool(layout_a, "A", 600, 0, restrictions, allocation_type::cl_mem, true, false);
+    auto mem_b1 = pool.get_from_non_padded_pool(layout_b, "B1", 601, 0, restrictions, allocation_type::cl_mem, true, false);
+    restriction_set.insert(601);
+    auto mem_b2 = pool.get_from_non_padded_pool(layout_b, "B2", 602, 0, restrictions, allocation_type::cl_mem, true, false);
+    restriction_set.insert(602);
+    auto mem_b3 = pool.get_from_non_padded_pool(layout_b, "B3", 603, 0, restrictions, allocation_type::cl_mem, true, false);
+
+    pool.release_memory(mem_b2.get(), 602, "B2", 0);
+
+    restriction_set.clear();
+    restriction_set.insert(601);
+    restriction_set.insert(603);
+    auto mem_c = pool.get_from_non_padded_pool(layout_b, "C", 604, 0, restrictions, allocation_type::cl_mem, true, false);
+
+    ASSERT_EQ(mem_a->get_mem_tracker(), mem_c->get_mem_tracker());
+    ASSERT_EQ(mem_b2->buffer_ptr(), mem_c->buffer_ptr());
 }
 
 TEST(memory_reuse_realloc_reset_test, basic_conv_with_padding_reorder) {
