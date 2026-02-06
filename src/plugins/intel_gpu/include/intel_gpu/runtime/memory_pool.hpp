@@ -12,16 +12,18 @@
 #include <vector>
 #include <set>
 #include <unordered_set>
+#include <unordered_map>
 #include <map>
 #include <list>
 #include <string>
-#include <atomic>
+#include <optional>
 
 namespace cldnn {
 
 struct memory;
 struct shared_mem_params;
 class engine;
+class MemoryTracker;
 
 using primitive_id = std::string;
 using memory_ptr = std::shared_ptr<memory>;
@@ -110,13 +112,22 @@ struct memory_user_comparer {
     }
 };
 
+// memory_record represents a single memory block allocation within a region
+// Multiple records can share the same underlying GPU memory at different offsets
 struct memory_record {
-    memory_set _users;  // list of primitives that already use this memory object
-    memory_ptr _memory;
+    memory_set _users;          // list of primitives that use this memory block
+    memory_ptr _memory;         // the actual memory buffer (subbuffer or root)
     uint32_t _network_id;
     allocation_type _type;
+    size_t _offset;             // byte offset within the region (0 for root/full-region blocks)
+    size_t _size;               // size of this block in bytes
 
-    memory_record(memory_set users, memory_ptr& memory, uint32_t net_id, allocation_type type);
+    // Constructor for memory records
+    memory_record(memory_set users, memory_ptr& memory, uint32_t net_id, allocation_type type,
+                  size_t offset = 0, size_t size = 0);
+
+    // Check if this block is free (no users)
+    bool is_free() const { return _users.empty(); }
 };
 
 struct padded_pool_comparer {
@@ -147,15 +158,47 @@ struct padded_pool_comparer {
 // - images 2d arrays - not implemented yet
 // - immutable - if user request for non reusable resource don't use pool, return
 
+// Subblock allocation design:
+// - Memory regions are contiguous GPU allocations stored in _non_padded_pool (keyed by size)
+// - Each region contains multiple memory_records at different offsets (stored in _records list)
+// - Offset search uses single-pass O(k) algorithm: start at offset 0, on conflict jump past conflicting block
+// - MemoryTracker* is used as region identifier for O(1) reverse lookup during release
+// - Regions are released when all their blocks are freed
+
 // TODO list:
 // - Move from runtime to graph part
 // - Improve memory consumption
 
 class memory_pool {
-    memory_ptr alloc_memory(const layout& layout, allocation_type type, bool reset = true);
-    static bool has_conflict(const memory_set&, const memory_restricter<uint32_t>&);
+public:
+    // Type aliases scoped to memory_pool
+    using record_list = std::list<memory_record>;
+    using record_iterator = record_list::iterator;
 
-    std::multimap<uint64_t, memory_record> _non_padded_pool;
+    // memory_region represents a contiguous GPU memory allocation
+    // Multiple memory_records can be carved from a single region at different offsets
+    struct memory_region {
+        memory_ptr _memory;                             // actual GPU allocation (root)
+        std::map<size_t, record_iterator> _blocks;      // offset -> record iterator
+
+        explicit memory_region(memory_ptr memory) : _memory(std::move(memory)) {}
+    };
+
+    using region_map = std::multimap<uint64_t, memory_region>;
+    using region_iterator = region_map::iterator;
+
+private:
+    memory_ptr alloc_memory(const layout& layout, allocation_type type, bool reset = true);
+
+    // Primary storage: owns all memory_record instances (stable iterators)
+    record_list _records;
+
+    // Region pool: size -> memory_region (regions own GPU memory)
+    region_map _non_padded_pool;
+
+    // Reverse lookup: MemoryTracker* -> region iterator (for O(1) region lookup during release)
+    std::unordered_map<MemoryTracker*, region_iterator> _tracker_to_region;
+
     std::map<layout, std::list<memory_record>, padded_pool_comparer> _padded_pool;
     engine* _engine;
     const ExecutionConfig& _config;
@@ -201,6 +244,32 @@ public:
 private:
     void dump_to_screen(uint32_t id, uint32_t iter);
     void dump_to_file(uint32_t id, uint32_t iter, std::string dump_dir_path);
+
+    // Find a valid offset within a region for the requested size
+    // Returns nullopt if no valid offset found
+    // Uses single-pass O(k) algorithm: iterate blocks, on conflict jump past it
+    std::optional<size_t> find_offset_in_region(const memory_region& region,
+                                                size_t required_size,
+                                                const memory_restricter<uint32_t>& restrictions);
+
+    // Create a new memory region and add first block to it
+    memory_ptr create_new_region(const layout& layout,
+                                 const primitive_id& prim_id,
+                                 size_t unique_id,
+                                 uint32_t network_id,
+                                 allocation_type type,
+                                 bool reset);
+
+    // Add a block to an existing region at the specified offset
+    memory_ptr add_block_to_region(region_iterator region_it,
+                                   const layout& layout,
+                                   const primitive_id& prim_id,
+                                   size_t unique_id,
+                                   uint32_t network_id,
+                                   size_t offset);
+
+    // Remove a block from its region, potentially removing the region if empty
+    void remove_block_from_region(region_iterator region_it, size_t offset);
 
 #ifdef GPU_DEBUG_CONFIG
     std::vector<memory_record> _no_reusable_mems;
