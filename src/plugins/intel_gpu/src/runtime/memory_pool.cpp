@@ -25,19 +25,15 @@
 #endif
 namespace cldnn {
 
-// memory_record implementation
+// memory_record implementation (for _padded_pool)
 memory_record::memory_record(memory_set users,
                              std::shared_ptr<memory>& memory,
                              uint32_t net_id,
-                             allocation_type type,
-                             size_t offset,
-                             size_t size)
+                             allocation_type type)
     : _users(std::move(users))
     , _memory(memory)
     , _network_id(net_id)
-    , _type(type)
-    , _offset(offset)
-    , _size(size == 0 ? (memory ? memory->size() : 0) : size) {}
+    , _type(type) {}
 
 // File-static utility functions for memory pool
 static constexpr size_t SUBBLOCK_ALIGNMENT = 64;        // 64-byte alignment for subblock offsets
@@ -62,6 +58,7 @@ static size_t align_offset(size_t offset) {
     return (offset + SUBBLOCK_ALIGNMENT - 1) & ~(SUBBLOCK_ALIGNMENT - 1);
 }
 
+// Check if any user in the memory set conflicts with restrictions (used by _padded_pool)
 static bool has_conflict(const memory_set& mem_cand,
                          const memory_restricter<uint32_t>& restrictions) {
     for (const auto& mem_usr : mem_cand) {
@@ -75,6 +72,7 @@ memory::ptr memory_pool::alloc_memory(const layout& layout, allocation_type type
 }
 
 memory_pool::~memory_pool() {}
+
 std::optional<size_t> memory_pool::find_offset_in_region(const memory_region& region,
                                                          size_t required_size,
                                                          const memory_restricter<uint32_t>& restrictions) {
@@ -90,38 +88,43 @@ std::optional<size_t> memory_pool::find_offset_in_region(const memory_region& re
         return std::nullopt;
     }
 
+    // With memory_block having single user, conflict checking is straightforward.
+    // Multiple blocks can exist at the same offset (aliasing) when they don't conflict.
+    // Find an offset where our new block doesn't conflict with any overlapping block.
     size_t offset = 0;
-    auto it = region._blocks.begin();
 
     while (offset + required_size <= region_size) {
-        // Skip blocks that end before or at our offset (can't overlap)
-        while (it != region._blocks.end()) {
-            size_t block_end = it->first + it->second->_size;
+        bool has_conflict_at_offset = false;
+        size_t max_conflict_end = offset;  // Track furthest conflicting block end
+
+        // Check ALL blocks (each block has exactly one user)
+        for (const auto& [block_offset, block_it] : region._blocks) {
+            size_t block_end = block_offset + block_it->_size;
+
+            // Block ends before our range starts - no overlap
             if (block_end <= offset) {
-                ++it;
-            } else {
-                break;
+                continue;
+            }
+
+            // Block starts at or after our range ends - no overlap
+            if (block_offset >= offset + required_size) {
+                continue;
+            }
+
+            // Block overlaps our range - check for conflict (single user per block)
+            if (restrictions.contains(static_cast<uint32_t>(block_it->_unique_id))) {
+                has_conflict_at_offset = true;
+                max_conflict_end = std::max(max_conflict_end, block_end);
             }
         }
 
-        // No more blocks - we have space
-        if (it == region._blocks.end()) {
+        if (!has_conflict_at_offset) {
+            // Found a valid offset - no conflicting blocks overlap
             return offset;
         }
 
-        // Block starts at or after our range end - found valid spot
-        if (it->first >= offset + required_size) {
-            return offset;
-        }
-
-        // Block overlaps our range - check for conflict
-        if (has_conflict(it->second->_users, restrictions)) {
-            // Conflict found - jump past this block
-            size_t block_end = it->first + it->second->_size;
-            offset = align_offset(block_end);
-        }
-        // Move to next block regardless (non-conflicting blocks don't change)
-        ++it;
+        // Advance past all conflicting blocks
+        offset = align_offset(max_conflict_end);
     }
 
     return std::nullopt;  // No space found
@@ -149,14 +152,12 @@ memory_ptr memory_pool::create_new_region(const layout& layout,
     OPENVINO_ASSERT(tracker, "[GPU] Memory tracker is null for newly allocated memory");
     _tracker_to_region[tracker] = region_it;
 
-    // Create first memory record at offset 0
-    memory_set users;
-    users.insert(memory_user(MEM_USER(unique_id, network_id, prim_id, layout_bytes_count)));
-    _records.emplace_back(users, mem, network_id, type, 0, layout_bytes_count);
-    auto record_it = std::prev(_records.end());
+    // Create first memory_block at offset 0 (single user per block)
+    _blocks.emplace_back(unique_id, network_id, prim_id, 0, layout_bytes_count, mem);
+    auto block_it = std::prev(_blocks.end());
 
-    // Register block in region
-    region_it->second._blocks[0] = record_it;
+    // Register block in region (multimap allows multiple blocks at same offset)
+    region_it->second._blocks.emplace(0, block_it);
 
     GPU_DEBUG_TRACE_DETAIL << "[memory_pool] Created new region for " << prim_id
                            << " (id: " << unique_id << "), size: " << layout_bytes_count << std::endl;
@@ -180,7 +181,6 @@ memory_ptr memory_pool::add_block_to_region(region_iterator region_it,
                                             size_t offset) {
     auto& region = region_it->second;
     const auto layout_bytes_count = layout.bytes_count();
-    const auto type = region._memory->get_allocation_type();
 
     // Create subbuffer or reinterpret buffer based on offset
     memory_ptr block_mem;
@@ -199,14 +199,12 @@ memory_ptr memory_pool::add_block_to_region(region_iterator region_it,
         return nullptr;
     }
 
-    // Create memory record
-    memory_set users;
-    users.insert(memory_user(MEM_USER(unique_id, network_id, prim_id, layout_bytes_count)));
-    _records.emplace_back(users, block_mem, network_id, type, offset, layout_bytes_count);
-    auto record_it = std::prev(_records.end());
+    // Create memory_block (single user per block)
+    _blocks.emplace_back(unique_id, network_id, prim_id, offset, layout_bytes_count, block_mem);
+    auto block_it = std::prev(_blocks.end());
 
-    // Register block in region
-    region._blocks[offset] = record_it;
+    // Register block in region (multimap allows multiple blocks at same offset)
+    region._blocks.emplace(offset, block_it);
 
     block_mem->from_memory_pool = true;
 
@@ -218,16 +216,19 @@ memory_ptr memory_pool::add_block_to_region(region_iterator region_it,
     return block_mem;
 }
 
-void memory_pool::remove_block_from_region(region_iterator region_it, size_t offset) {
+void memory_pool::remove_block_from_region(region_iterator region_it, block_iterator block_it) {
     auto& region = region_it->second;
 
-    // Find and remove the block
-    auto block_it = region._blocks.find(offset);
-    if (block_it != region._blocks.end()) {
-        // Remove from _records list
-        _records.erase(block_it->second);
-        // Remove from region's block map
-        region._blocks.erase(block_it);
+    // Find and remove the specific block (multimap can have multiple blocks at same offset)
+    auto range = region._blocks.equal_range(block_it->_offset);
+    for (auto it = range.first; it != range.second; ++it) {
+        if (it->second == block_it) {
+            // Remove from region's block map
+            region._blocks.erase(it);
+            // Remove from _blocks list
+            _blocks.erase(block_it);
+            break;
+        }
     }
 
     // If region is empty, remove it entirely
@@ -271,24 +272,19 @@ void memory_pool::release_memory(memory* mem, const size_t& unique_id, primitive
             auto region_it = tracker_it->second;
             auto& region = region_it->second;
 
-            // Find the block within this region
-            for (auto& [offset, record_it] : region._blocks) {
-                if (record_it->_memory.get() == mem ||
-                    record_it->_memory->get_internal_params().mem == mem->get_internal_params().mem) {
+            // Find the block within this region by matching memory pointer and user
+            for (auto& [offset, block_it] : region._blocks) {
+                if ((block_it->_memory.get() == mem ||
+                     block_it->_memory->get_internal_params().mem == mem->get_internal_params().mem) &&
+                    block_it->_unique_id == unique_id &&
+                    block_it->_network_id == network_id) {
 
-                    // Remove user from block
-                    auto user_it = record_it->_users.find({MEM_USER(unique_id, network_id, prim_id, _layout_bytes_count)});
-                    if (user_it != record_it->_users.end()) {
-                        record_it->_users.erase(user_it);
-                        GPU_DEBUG_TRACE_DETAIL << "[memory_pool] Released user " << prim_id
-                                               << " (id: " << unique_id << ") from block at offset "
-                                               << offset << ", size " << record_it->_size << std::endl;
+                    GPU_DEBUG_TRACE_DETAIL << "[memory_pool] Released block for " << prim_id
+                                           << " (id: " << unique_id << ") at offset "
+                                           << offset << ", size " << block_it->_size << std::endl;
 
-                        // If block becomes empty, remove it
-                        if (record_it->_users.empty()) {
-                            remove_block_from_region(region_it, offset);
-                        }
-                    }
+                    // Single user per block - remove the entire block
+                    remove_block_from_region(region_it, block_it);
                     return;
                 }
             }
@@ -389,8 +385,8 @@ memory::ptr memory_pool::get_from_non_padded_pool(const layout& layout,
             ++it;
             continue;
         }
-        auto first_record_it = region._blocks.begin()->second;
-        if (first_record_it->_network_id != network_id ||
+        auto first_block_it = region._blocks.begin()->second;
+        if (first_block_it->_network_id != network_id ||
             region._memory->get_allocation_type() != type) {
             ++it;
             continue;
@@ -406,10 +402,10 @@ memory::ptr memory_pool::get_from_non_padded_pool(const layout& layout,
         }
 
         // Dynamic shape utilization threshold check
-        if (is_dynamic && layout_bytes_count <= region_size * _mem_pool_util_threshold) {
-            ++it;
-            continue;
-        }
+        // if (is_dynamic && layout_bytes_count <= region_size * _mem_pool_util_threshold) {
+        //     ++it;
+        //     continue;
+        // }
 
         // Skip regions that have too many blocks (prevent pathological cases)
         if (region._blocks.size() >= MAX_BLOCKS_PER_REGION) {
@@ -417,40 +413,9 @@ memory::ptr memory_pool::get_from_non_padded_pool(const layout& layout,
             continue;
         }
 
-        // Optimization: if single block fills entire region and has conflict, skip
-        if (region._blocks.size() == 1) {
-            auto& [offset, record_it] = *region._blocks.begin();
-            if (offset == 0 && record_it->_size == region_size &&
-                has_conflict(record_it->_users, restrictions)) {
-                ++it;
-                continue;
-            }
-        }
-
-        // Try to find existing block we can reuse (exact match at some offset)
-        for (auto& [offset, record_it] : region._blocks) {
-            if (record_it->_size >= layout_bytes_count &&
-                !has_conflict(record_it->_users, restrictions)) {
-                // Can reuse this block
-                record_it->_users.insert(memory_user(MEM_USER(unique_id, network_id, prim_id, layout_bytes_count)));
-
-                memory::ptr ret_mem;
-                if (offset == 0) {
-                    ret_mem = _engine->reinterpret_buffer(*region._memory, layout);
-                } else {
-                    ret_mem = _engine->create_subbuffer(*region._memory, layout, offset);
-                }
-                ret_mem->from_memory_pool = true;
-
-                GPU_DEBUG_TRACE_DETAIL << "[memory_pool] Reusing block for " << prim_id
-                                       << " (id: " << unique_id << "), block size: " << record_it->_size
-                                       << ", offset: " << offset << std::endl;
-                return ret_mem;
-            }
-        }
-
-        // Try to allocate a new block at a valid offset within this region
-        if (subblock_supported && region_size >= layout_bytes_count + SUBBLOCK_MIN_SIZE) {
+        // Try to allocate a block at a valid offset within this region
+        // find_offset_in_region checks all overlapping blocks for conflicts
+        if (subblock_supported && region_size >= layout_bytes_count) {
             auto offset_opt = find_offset_in_region(region, layout_bytes_count, restrictions);
             if (offset_opt.has_value()) {
                 auto ret_mem = add_block_to_region(it, layout, prim_id, unique_id, network_id, offset_opt.value());
@@ -585,9 +550,9 @@ void memory_pool::clear_pool_for_network(uint32_t network_id) {
                     mem_size_non_padded_pool_host -= region_size;
             }
 #endif
-            // Remove all records belonging to this region
-            for (auto& [offset, record_it] : region._blocks) {
-                _records.erase(record_it);
+            // Remove all blocks belonging to this region
+            for (auto& [offset, block_it] : region._blocks) {
+                _blocks.erase(block_it);
             }
 
             // Remove from tracker map
@@ -711,19 +676,11 @@ void memory_pool::dump_to_file(uint32_t net_id, uint32_t iter, std::string dump_
 
         for (auto& [region_size, region] : _non_padded_pool) {
             const auto region_type = region._memory->get_allocation_type();
-            for (auto& [offset, record_it] : region._blocks) {
-                const bool is_free = record_it->is_free();
-
-                if (!record_it->_users.empty()) {
-                    for (const auto& user : record_it->_users) {
-                        of << "non_padded_pool,," << region._memory->buffer_ptr() << "," << region_type << ","
-                            << region_size << "," << user._prim_id << "," << user._unique_id << "," << user._mem_size
-                            << "," << offset << ",0" << std::endl;
-                    }
-                } else {
-                    of << "non_padded_pool_free,," << region._memory->buffer_ptr() << "," << region_type << ","
-                        << region_size << ",free,0,0," << offset << ",1" << std::endl;
-                }
+            for (auto& [offset, block_it] : region._blocks) {
+                // Each block has exactly one user
+                of << "non_padded_pool,," << region._memory->buffer_ptr() << "," << region_type << ","
+                    << region_size << "," << block_it->_prim_id << "," << block_it->_unique_id << "," << block_it->_size
+                    << "," << offset << ",0" << std::endl;
             }
         }
 
@@ -753,7 +710,6 @@ void memory_pool::dump_to_screen(uint32_t net_id, uint32_t iter) {
     float total_requested_mem_non_padded_pool    = 0.f;
     float total_requested_mem_padded_pool        = 0.f;
     size_t total_subblocks = 0;
-    size_t total_free_blocks = 0;
 
     {
         GPU_DEBUG_COUT << "========== non-padded pool ( " << _non_padded_pool.size() << " regions) ==========" << std::endl;
@@ -762,35 +718,20 @@ void memory_pool::dump_to_screen(uint32_t net_id, uint32_t iter) {
                 << ", type: " << region._memory->get_allocation_type()
                 << ", blocks: " << region._blocks.size() << ")" << std::endl;
 
-            for (auto& [offset, record_it] : region._blocks) {
-                const bool is_subblock = (offset > 0 || record_it->_size < region_size);
-                const bool is_free = record_it->is_free();
+            for (auto& [offset, block_it] : region._blocks) {
+                const bool is_subblock = (offset > 0 || block_it->_size < region_size);
 
                 if (is_subblock) {
                     total_subblocks++;
                 }
-                if (is_free) {
-                    total_free_blocks++;
-                }
+
+                float utilization = get_utilization(block_it->_size, region_size);
+                total_requested_mem_non_padded_pool += static_cast<float>(block_it->_size);
 
                 GPU_DEBUG_COUT << "  Block at offset " << offset
-                    << " (size: " << get_mb_size(record_it->_size)
-                    << ", free: " << (is_free ? "yes" : "no") << ")" << std::endl;
-
-                if (!record_it->_users.empty()) {
-                    float min_utilization = 100.0f;
-                    float max_utilization = 0.f;
-                    for (const auto& user : record_it->_users) {
-                        float utilization = get_utilization(user._mem_size, record_it->_size);
-                        min_utilization = std::min(utilization, min_utilization);
-                        max_utilization = std::max(utilization, max_utilization);
-                        total_requested_mem_non_padded_pool += static_cast<float>(user._mem_size);
-                        GPU_DEBUG_COUT << "    --- " << user._prim_id << " (" << user._unique_id << "), "
-                            << get_mb_size(user._mem_size) << ", " << utilization << "%" << std::endl;
-                    }
-                    GPU_DEBUG_COUT <<  "   - min utilization: " << min_utilization << " %" << std::endl;
-                    GPU_DEBUG_COUT <<  "   - max utilization: " << max_utilization << " %" << std::endl;
-                }
+                    << " (size: " << get_mb_size(block_it->_size)
+                    << ", user: " << block_it->_prim_id << " (" << block_it->_unique_id << ")"
+                    << ", utilization: " << utilization << "%)" << std::endl;
             }
         }
     }
@@ -834,9 +775,8 @@ void memory_pool::dump_to_screen(uint32_t net_id, uint32_t iter) {
     GPU_DEBUG_COUT << "Memory pool footprint of the network (net_id : " << net_id << ", iter : " << iter << ")" << std::endl;
     GPU_DEBUG_COUT << "Total memory size of non_padded_pool     : " << get_mb_size(total_mem_size_non_padded_pool) << std::endl;
     GPU_DEBUG_COUT << "Total regions                            : " << _non_padded_pool.size() << std::endl;
-    GPU_DEBUG_COUT << "Total blocks                             : " << _records.size() << std::endl;
+    GPU_DEBUG_COUT << "Total blocks                             : " << _blocks.size() << std::endl;
     GPU_DEBUG_COUT << "Total subblock allocations               : " << total_subblocks << std::endl;
-    GPU_DEBUG_COUT << "Total free blocks                        : " << total_free_blocks << std::endl;
     if (total_mem_size_non_padded_pool > 0.f) {
         GPU_DEBUG_COUT << " * Efficiency        : "
             << std::to_string(static_cast<float>(total_requested_mem_non_padded_pool / total_mem_size_non_padded_pool))

@@ -112,22 +112,34 @@ struct memory_user_comparer {
     }
 };
 
-// memory_record represents a single memory block allocation within a region
-// Multiple records can share the same underlying GPU memory at different offsets
+// memory_record represents a memory allocation with multiple potential users (used by _padded_pool)
 struct memory_record {
-    memory_set _users;          // list of primitives that use this memory block
-    memory_ptr _memory;         // the actual memory buffer (subbuffer or root)
+    memory_set _users;  // list of primitives that already use this memory object
+    memory_ptr _memory;
     uint32_t _network_id;
     allocation_type _type;
-    size_t _offset;             // byte offset within the region (0 for root/full-region blocks)
+
+    memory_record(memory_set users, memory_ptr& memory, uint32_t net_id, allocation_type type);
+};
+
+// memory_block represents a single allocation within a memory_region (used by _non_padded_pool)
+// Each block has exactly ONE user - simplifies conflict checking and release logic
+struct memory_block {
+    size_t _unique_id;          // unique identifier of the user
+    uint32_t _network_id;       // network that owns this block
+    primitive_id _prim_id;      // primitive that uses this block
+    size_t _offset;             // byte offset within the region
     size_t _size;               // size of this block in bytes
+    memory_ptr _memory;         // subbuffer or reinterpreted buffer
 
-    // Constructor for memory records
-    memory_record(memory_set users, memory_ptr& memory, uint32_t net_id, allocation_type type,
-                  size_t offset = 0, size_t size = 0);
-
-    // Check if this block is free (no users)
-    bool is_free() const { return _users.empty(); }
+    memory_block(size_t unique_id, uint32_t network_id, primitive_id prim_id,
+                 size_t offset, size_t size, memory_ptr memory)
+        : _unique_id(unique_id)
+        , _network_id(network_id)
+        , _prim_id(std::move(prim_id))
+        , _offset(offset)
+        , _size(size)
+        , _memory(std::move(memory)) {}
 };
 
 struct padded_pool_comparer {
@@ -172,14 +184,15 @@ struct padded_pool_comparer {
 class memory_pool {
 public:
     // Type aliases scoped to memory_pool
-    using record_list = std::list<memory_record>;
-    using record_iterator = record_list::iterator;
+    using block_list = std::list<memory_block>;
+    using block_iterator = block_list::iterator;
 
     // memory_region represents a contiguous GPU memory allocation
-    // Multiple memory_records can be carved from a single region at different offsets
+    // Multiple memory_blocks can be carved from a single region at different offsets
+    // Using multimap allows multiple blocks at the same offset (aliasing) when they don't conflict
     struct memory_region {
-        memory_ptr _memory;                             // actual GPU allocation (root)
-        std::map<size_t, record_iterator> _blocks;      // offset -> record iterator
+        memory_ptr _memory;                                  // actual GPU allocation (root)
+        std::multimap<size_t, block_iterator> _blocks;       // offset -> block iterator (allows aliasing)
 
         explicit memory_region(memory_ptr memory) : _memory(std::move(memory)) {}
     };
@@ -190,8 +203,8 @@ public:
 private:
     memory_ptr alloc_memory(const layout& layout, allocation_type type, bool reset = true);
 
-    // Primary storage: owns all memory_record instances (stable iterators)
-    record_list _records;
+    // Primary storage: owns all memory_block instances (stable iterators)
+    block_list _blocks;
 
     // Region pool: size -> memory_region (regions own GPU memory)
     region_map _non_padded_pool;
@@ -269,7 +282,7 @@ private:
                                    size_t offset);
 
     // Remove a block from its region, potentially removing the region if empty
-    void remove_block_from_region(region_iterator region_it, size_t offset);
+    void remove_block_from_region(region_iterator region_it, block_iterator block_it);
 
 #ifdef GPU_DEBUG_CONFIG
     std::vector<memory_record> _no_reusable_mems;

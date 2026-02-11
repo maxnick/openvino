@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <vector>
+#include <cstddef>
 
 using namespace cldnn;
 using namespace ::tests;
@@ -20,9 +21,7 @@ namespace {
 // Helper to create a simple layout with given size
 layout make_layout(size_t size_bytes) {
     // Calculate feature size to get approximately the requested byte count
-    // Using f32 (4 bytes per element), so elements = size_bytes / 4
-    size_t elements = (size_bytes + 3) / 4;  // Round up
-    return layout(ov::PartialShape{1, static_cast<int64_t>(elements)}, data_types::f32, format::bfyx);
+    return layout(ov::PartialShape{1, static_cast<int64_t>(size_bytes)}, data_types::u8, format::bfyx);
 }
 
 // Helper to create restrictions set
@@ -113,26 +112,36 @@ TEST_F(memory_pool_region_test, new_allocation_on_conflict) {
 TEST_F(memory_pool_region_test, subblock_allocation_in_region) {
     memory_pool pool(get_engine(), config_);
     
-    // Create a large region first
-    auto large_layout = make_layout(4096);  // 4KB
+    // First, create a small block
+    auto small_layout = make_layout(1024);  // 1KB
     auto no_restrictions = make_empty_restrictions();
     
-    auto mem_large = pool.get_memory(large_layout, "prim_large", 1, 0, no_restrictions,
-                                     allocation_type::usm_device, true, false, false);
+    auto mem_small1 = pool.get_memory(small_layout, "prim_small1", 1, 0, no_restrictions,
+                                      allocation_type::usm_device, true, false, false);
     
     EXPECT_EQ(pool.get_non_padded_pool_size(), 1u);
     
-    // Now allocate a smaller block with conflict - should create subblock at different offset
-    auto small_layout = make_layout(1024);  // 1KB
-    auto restrictions = make_restrictions({1});  // Conflict with prim_large
+    // Now allocate a larger block (no conflict) - this will create a new, larger region
+    auto large_layout = make_layout(4096);  // 4KB
+    auto restrictions1 = make_restrictions({1});  // Conflict with prim_small1
     
-    auto mem_small = pool.get_memory(small_layout, "prim_small", 2, 0, restrictions,
+    auto mem_large = pool.get_memory(large_layout, "prim_large", 2, 0, restrictions1,
                                      allocation_type::usm_device, true, false, false);
     
-    ASSERT_NE(mem_small, nullptr);
-    // Should still be one region (subblock created within existing region)
-    // Note: depends on SUBBLOCK_MIN_SIZE threshold
-    EXPECT_GE(pool.get_non_padded_pool_size(), 1u);
+    EXPECT_EQ(pool.get_non_padded_pool_size(), 2u);  // Two regions now
+    
+    // Now allocate another small block with conflict with prim_large
+    // This should find space in the large region after prim_large's block... 
+    // But wait - prim_large occupies entire 4KB region, no room for subblock!
+    // So this will create a third region OR reuse prim_small1's region
+    auto restrictions2 = make_restrictions({2});  // Conflict with prim_large
+    auto mem_small2 = pool.get_memory(small_layout, "prim_small2", 3, 0, restrictions2,
+                                      allocation_type::usm_device, true, false, false);
+    
+    ASSERT_NE(mem_small2, nullptr);
+    // prim_small2 can reuse prim_small1's region (no conflict with id=1)
+    EXPECT_EQ(pool.get_non_padded_pool_size(), 2u);
+    EXPECT_EQ(mem_small1->get_mem_tracker(), mem_small2->get_mem_tracker());
 }
 
 // Test: Multiple subblocks in one region
@@ -148,12 +157,11 @@ TEST_F(memory_pool_region_test, multiple_subblocks_in_region) {
     
     // Allocate smaller blocks with conflicts
     auto small_layout = make_layout(1024);
-    
-    auto restrictions1 = make_restrictions({1});
-    auto mem2 = pool.get_memory(small_layout, "prim2", 2, 0, restrictions1,
+
+    auto mem2 = pool.get_memory(small_layout, "prim2", 2, 0, no_restrictions,
                                 allocation_type::usm_device, true, false, false);
-    
-    auto restrictions2 = make_restrictions({1, 2});
+
+    auto restrictions2 = make_restrictions({2}); // Conflict with prim2
     auto mem3 = pool.get_memory(small_layout, "prim3", 3, 0, restrictions2,
                                 allocation_type::usm_device, true, false, false);
     
@@ -161,6 +169,13 @@ TEST_F(memory_pool_region_test, multiple_subblocks_in_region) {
     ASSERT_NE(mem1, nullptr);
     ASSERT_NE(mem2, nullptr);
     ASSERT_NE(mem3, nullptr);
+
+    // Should still be one region (multiple subblocks)
+    EXPECT_GE(pool.get_non_padded_pool_size(), 1u);
+    EXPECT_EQ(mem1->buffer_ptr(), mem2->buffer_ptr());
+    EXPECT_EQ(mem1->get_mem_tracker(), mem2->get_mem_tracker());
+    EXPECT_EQ(mem1->get_mem_tracker(), mem3->get_mem_tracker());
+    EXPECT_EQ(static_cast<std::byte*>(mem1->buffer_ptr()) + 1024, static_cast<std::byte*>(mem3->buffer_ptr()));  // mem3 should be at offset 1024
 }
 
 // Test: Release memory removes user
@@ -373,6 +388,7 @@ TEST_F(memory_pool_region_test, stress_many_allocations) {
     auto no_restrictions = make_empty_restrictions();
     
     const size_t num_allocations = 100;
+    const size_t max_blocks_per_region = 32;  // Matches MAX_BLOCKS_PER_REGION in memory_pool.cpp
     std::vector<memory::ptr> memories;
     
     // Allocate many memories
@@ -383,8 +399,10 @@ TEST_F(memory_pool_region_test, stress_many_allocations) {
         memories.push_back(mem);
     }
     
-    // All should share the same region (no conflicts)
-    EXPECT_EQ(pool.get_non_padded_pool_size(), 1u);
+    // With single-user-per-block design and MAX_BLOCKS_PER_REGION limit,
+    // we need multiple regions: ceil(100/32) = 4
+    const size_t expected_regions = (num_allocations + max_blocks_per_region - 1) / max_blocks_per_region;
+    EXPECT_EQ(pool.get_non_padded_pool_size(), expected_regions);
     
     // Release all
     for (size_t i = 0; i < num_allocations; ++i) {
