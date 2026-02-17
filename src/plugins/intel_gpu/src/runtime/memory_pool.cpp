@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <fstream>
 #include <vector>
+#include <numeric>
+#include <functional>
 
 #include "intel_gpu/runtime/memory.hpp"
 #include "intel_gpu/runtime/engine.hpp"
@@ -523,6 +525,14 @@ memory::ptr memory_pool::get_memory(const layout& layout,
         return mem;
     } else if (!layout.data_padding || is_dynamic) {
         // non-padded buffers. For dynamic shape, use non-padded pool even if it has padding because we will reset the buffer if it is reused
+#ifdef GPU_DEBUG_CONFIG
+        {
+            auto& conflicts = _non_padded_restrictions[static_cast<uint32_t>(unique_id)];
+            for (auto restricted_uid : restrictions.values()) {
+                conflicts.insert(restricted_uid);
+            }
+        }
+#endif
         return get_from_non_padded_pool(layout, prim_id, unique_id, network_id, restrictions, type, reset, is_dynamic);
     } else {
         // padded buffers
@@ -602,6 +612,8 @@ void memory_pool::clear_pool_for_network(uint32_t network_id) {
     }
 
 #ifdef GPU_DEBUG_CONFIG
+    _non_padded_restrictions.clear();
+
     // Free up _no_reusable_mems for this network
     GPU_DEBUG_IF(_config.get_dump_memory_pool()) {
         auto itr = _no_reusable_mems.begin();
@@ -643,6 +655,90 @@ inline std::string get_mb_size(size_t size) {
 inline float get_utilization(size_t size, size_t total_size) {
     return (static_cast<float>(size) * 100.0f / total_size);
 }
+
+struct conflict_vertex {
+    uint32_t uid;
+    size_t size;
+};
+
+bool are_conflicting(uint32_t lhs,
+                     uint32_t rhs,
+                     const std::unordered_map<uint32_t, std::unordered_set<uint32_t>>& restrictions) {
+    auto lhs_it = restrictions.find(lhs);
+    if (lhs_it != restrictions.end() && lhs_it->second.count(rhs) != 0)
+        return true;
+
+    auto rhs_it = restrictions.find(rhs);
+    if (rhs_it != restrictions.end() && rhs_it->second.count(lhs) != 0)
+        return true;
+
+    return false;
+}
+
+size_t get_theoretical_optimal_non_padded_pool_size(
+    const std::vector<conflict_vertex>& vertices,
+    const std::unordered_map<uint32_t, std::unordered_set<uint32_t>>& restrictions) {
+    if (vertices.empty())
+        return 0;
+
+    // Sort vertices by weight(desc) to improve early pruning quality.
+    std::vector<size_t> order(vertices.size());
+    std::iota(order.begin(), order.end(), 0);
+    std::sort(order.begin(), order.end(), [&](size_t lhs, size_t rhs) {
+        return vertices[lhs].size > vertices[rhs].size;
+    });
+
+    // Build adjacency matrix in sorted-index space.
+    const size_t n = order.size();
+    std::vector<std::vector<uint8_t>> adjacent(n, std::vector<uint8_t>(n, 0));
+    for (size_t i = 0; i < n; ++i) {
+        adjacent[i][i] = 1;
+        for (size_t j = i + 1; j < n; ++j) {
+            const bool conflict = are_conflicting(vertices[order[i]].uid, vertices[order[j]].uid, restrictions);
+            adjacent[i][j] = adjacent[j][i] = static_cast<uint8_t>(conflict);
+        }
+    }
+
+    std::vector<size_t> weights(n, 0);
+    for (size_t i = 0; i < n; ++i)
+        weights[i] = vertices[order[i]].size;
+
+    size_t best = 0;
+
+    std::function<void(const std::vector<size_t>&, size_t)> dfs =
+        [&](const std::vector<size_t>& candidates, size_t current_sum) {
+            size_t upper_bound = current_sum;
+            for (auto v : candidates)
+                upper_bound += weights[v];
+
+            if (upper_bound <= best)
+                return;
+
+            best = std::max(best, current_sum);
+
+            for (size_t i = 0; i < candidates.size(); ++i) {
+                const size_t v = candidates[i];
+                const size_t next_sum = current_sum + weights[v];
+                best = std::max(best, next_sum);
+
+                std::vector<size_t> next_candidates;
+                next_candidates.reserve(candidates.size() - i - 1);
+                for (size_t j = i + 1; j < candidates.size(); ++j) {
+                    const size_t u = candidates[j];
+                    if (adjacent[v][u])
+                        next_candidates.push_back(u);
+                }
+
+                dfs(next_candidates, next_sum);
+            }
+        };
+
+    std::vector<size_t> root_candidates(n);
+    std::iota(root_candidates.begin(), root_candidates.end(), 0);
+    dfs(root_candidates, 0);
+
+    return best;
+}
 #endif
 
 size_t memory_pool::get_total_mem_pool_size(allocation_type type) {
@@ -659,8 +755,12 @@ size_t memory_pool::get_total_mem_pool_size(allocation_type type) {
 #endif
 }
 
-void memory_pool::dump(uint32_t net_id, uint32_t iter, std::string dump_dir_path) {
-    dump_to_screen(net_id, iter);
+void memory_pool::dump(uint32_t net_id,
+                       uint32_t iter,
+                       std::string dump_dir_path,
+                       const std::string& model_name,
+                       const std::string& model_path) {
+    dump_to_screen(net_id, iter, model_name, model_path);
     if (!dump_dir_path.empty())
         dump_to_file(net_id, iter, dump_dir_path);
 }
@@ -704,12 +804,19 @@ void memory_pool::dump_to_file(uint32_t net_id, uint32_t iter, std::string dump_
 #endif
 }
 
-void memory_pool::dump_to_screen(uint32_t net_id, uint32_t iter) {
+void memory_pool::dump_to_screen(uint32_t net_id,
+                                 uint32_t iter,
+                                 const std::string& model_name,
+                                 const std::string& model_path) {
 #ifdef GPU_DEBUG_CONFIG
-    GPU_DEBUG_COUT << "Dump memory pool of network (net_id : " << net_id << ", iter : " << iter << ")" << std::endl;
+    GPU_DEBUG_COUT << "Dump memory pool of network (net_id : " << net_id
+                   << ", model_name : " << (model_name.empty() ? "unknown" : model_name)
+                   << ", model_path : " << (model_path.empty() ? "unknown" : model_path)
+                   << ", iter : " << iter << ")" << std::endl;
     float total_requested_mem_non_padded_pool    = 0.f;
     float total_requested_mem_padded_pool        = 0.f;
     size_t total_subblocks = 0;
+    std::vector<conflict_vertex> non_padded_vertices;
 
     {
         GPU_DEBUG_COUT << "========== non-padded pool ( " << _non_padded_pool.size() << " regions) ==========" << std::endl;
@@ -727,6 +834,7 @@ void memory_pool::dump_to_screen(uint32_t net_id, uint32_t iter) {
 
                 float utilization = get_utilization(block_it->_size, region_size);
                 total_requested_mem_non_padded_pool += static_cast<float>(block_it->_size);
+                non_padded_vertices.push_back({static_cast<uint32_t>(block_it->_unique_id), block_it->_size});
 
                 GPU_DEBUG_COUT << "  Block at offset " << offset
                     << " (size: " << get_mb_size(block_it->_size)
@@ -772,8 +880,16 @@ void memory_pool::dump_to_screen(uint32_t net_id, uint32_t iter) {
     }
 
     GPU_DEBUG_COUT << "************************************************************************" << std::endl;
-    GPU_DEBUG_COUT << "Memory pool footprint of the network (net_id : " << net_id << ", iter : " << iter << ")" << std::endl;
+    GPU_DEBUG_COUT << "Memory pool footprint of the network (net_id : " << net_id
+                   << ", model_name : " << (model_name.empty() ? "unknown" : model_name)
+                   << ", model_path : " << (model_path.empty() ? "unknown" : model_path)
+                   << ", iter : " << iter << ")" << std::endl;
+    const auto theoretical_optimal_non_padded_pool_size =
+        get_theoretical_optimal_non_padded_pool_size(non_padded_vertices, _non_padded_restrictions);
     GPU_DEBUG_COUT << "Total memory size of non_padded_pool     : " << get_mb_size(total_mem_size_non_padded_pool) << std::endl;
+    GPU_DEBUG_COUT << "Theoretical optimal non_padded_pool size : "
+                   << get_mb_size(theoretical_optimal_non_padded_pool_size)
+                   << " (max conflicting clique sum)" << std::endl;
     GPU_DEBUG_COUT << "Total regions                            : " << _non_padded_pool.size() << std::endl;
     GPU_DEBUG_COUT << "Total blocks                             : " << _blocks.size() << std::endl;
     GPU_DEBUG_COUT << "Total subblock allocations               : " << total_subblocks << std::endl;

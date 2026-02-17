@@ -713,7 +713,20 @@ NetworkDebugHelper::~NetworkDebugHelper() {
 }
 
 void NetworkDebugHelper::dump_memory_pool(std::string dump_path, int64_t curr_iter) const {
-    m_network.get_memory_pool().dump(m_network.get_id(), curr_iter, dump_path);
+    std::string model_name = "unknown";
+    std::string model_path = m_network.get_config().get_weights_path();
+    if (const auto& model = m_network.get_config().get_model()) {
+        model_name = model->get_friendly_name();
+        if (model_path.empty() && model->has_rt_info("__weights_path")) {
+            try {
+                model_path = model->get_rt_info<ov::Any>("__weights_path").as<std::string>();
+            } catch (...) {
+                // Keep default value when RT info has non-string type
+            }
+        }
+    }
+
+    m_network.get_memory_pool().dump(m_network.get_id(), curr_iter, dump_path, model_name, model_path);
     auto get_constants_mem_size = [&](allocation_type type) -> size_t {
         size_t mem_size = 0;
         for (auto& prim : m_network._primitives) {

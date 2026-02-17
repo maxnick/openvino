@@ -43,29 +43,43 @@ class memory_restricter {
 
         // Insert into set2 (set1 is read-only)
         void insert(const Key& key) {
-            if (set1->find(key) == set1->end())
+            if (!set1 || set1->find(key) == set1->end())
                 set2.insert(key);
         }
 
         // Check existence in either set
         bool contains(const Key& key) const {
-            return set1->find(key) != set1->end() || set2.find(key) != set2.end();
+            return (set1 && set1->find(key) != set1->end()) || set2.find(key) != set2.end();
         }
 
         // Total size of both sets
         size_t size() const {
-            return set1->size() + set2.size();
+            return (set1 ? set1->size() : 0) + set2.size();
         }
 
         // Check if both sets are empty
         bool empty() const {
-            return set1->empty() && set2.empty();
+            return (!set1 || set1->empty()) && set2.empty();
         }
 
         // Iterate over both sets
         void for_each(void(*func)(const Key&)) const {
-            for (const auto& key : set1) func(key);
+            if (set1) {
+                for (const auto& key : *set1) func(key);
+            }
             for (const auto& key : set2) func(key);
+        }
+
+        std::vector<Key> values() const {
+            std::vector<Key> result;
+            if (set1) {
+                result.reserve(set1->size() + set2.size());
+                result.insert(result.end(), set1->begin(), set1->end());
+            } else {
+                result.reserve(set2.size());
+            }
+            result.insert(result.end(), set2.begin(), set2.end());
+            return result;
         }
 }; // end of memory_restricter
 
@@ -251,11 +265,18 @@ public:
         return _non_padded_pool.size();
     }
 
-    void dump(uint32_t id, uint32_t iter, std::string dump_dir_path = "");
+    void dump(uint32_t id,
+              uint32_t iter,
+              std::string dump_dir_path = "",
+              const std::string& model_name = "",
+              const std::string& model_path = "");
     size_t get_total_mem_pool_size(allocation_type type);
 
 private:
-    void dump_to_screen(uint32_t id, uint32_t iter);
+    void dump_to_screen(uint32_t id,
+                        uint32_t iter,
+                        const std::string& model_name,
+                        const std::string& model_path);
     void dump_to_file(uint32_t id, uint32_t iter, std::string dump_dir_path);
 
     // Find a valid offset within a region for the requested size
@@ -285,6 +306,9 @@ private:
     void remove_block_from_region(region_iterator region_it, block_iterator block_it);
 
 #ifdef GPU_DEBUG_CONFIG
+    // user(unique_id) -> set of conflicting users(unique_id) for non-padded allocations
+    std::unordered_map<uint32_t, std::unordered_set<uint32_t>> _non_padded_restrictions;
+
     std::vector<memory_record> _no_reusable_mems;
 
     float total_mem_size_non_padded_pool        = 0.f;
