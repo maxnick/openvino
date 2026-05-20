@@ -126,7 +126,7 @@ dnnl::memory::desc gatherSliceDesc(const MemoryPtr& mem) {
     const auto& fullDims = mem->getStaticDims();
     const auto dt = DnnlExtensionUtils::ElementTypeToDataType(mem->getDesc().getPrecision());
     const dnnl::memory::dims sliceDims(fullDims.begin() + 1, fullDims.end());
-    return dnnl::memory::desc(sliceDims, dt, dnnl::memory::format_tag::ab);
+    return {sliceDims, dt, dnnl::memory::format_tag::ab};
 }
 
 Dim normalizeM(Dim M) {
@@ -272,6 +272,7 @@ GatherMatmulDnnlExecutor::GatherMatmulDnnlExecutor([[maybe_unused]] const Gather
     auto shapeAgnosticData = DnnlFCPrimitive::createShapeAgnosticData(fcAttrs, sliceArgs, context, false);
 
     m_gemvPrim = DnnlFCPrimitive::create(sliceArgs, fcAttrs, context, shapeAgnosticData);
+    // NOLINTNEXTLINE
     m_implType = m_gemvPrim->implType();
 
     auto gemvWeightsDesc = MemoryDescUtils::convertToBlockedMemoryDesc(m_gemvPrim->weightsDesc());
@@ -315,12 +316,13 @@ GatherMatmulDnnlExecutor::GatherMatmulDnnlExecutor([[maybe_unused]] const Gather
         return result;
     };
 
-    if (scalesMem && !scalesMem->getDesc().empty() && primCpuArgs.count(DNNL_ARG_ATTR_SCALES | DNNL_ARG_WEIGHTS)) {
+    if (scalesMem && !scalesMem->getDesc().empty() &&
+        (primCpuArgs.count(DNNL_ARG_ATTR_SCALES | DNNL_ARG_WEIGHTS) != 0U)) {
         auto postPrepackScale = primCpuArgs.at(DNNL_ARG_ATTR_SCALES | DNNL_ARG_WEIGHTS);
         m_scalesMemory = repackBatched(std::const_pointer_cast<IMemory>(scalesMem), postPrepackScale);
     }
 
-    if (zpMem && !zpMem->getDesc().empty() && primCpuArgs.count(DNNL_ARG_ATTR_ZERO_POINTS | DNNL_ARG_WEIGHTS)) {
+    if (zpMem && !zpMem->getDesc().empty() && (primCpuArgs.count(DNNL_ARG_ATTR_ZERO_POINTS | DNNL_ARG_WEIGHTS) != 0U)) {
         auto postPrepackZp = primCpuArgs.at(DNNL_ARG_ATTR_ZERO_POINTS | DNNL_ARG_WEIGHTS);
         m_zpMemory = repackBatched(std::const_pointer_cast<IMemory>(zpMem), postPrepackZp);
     }
