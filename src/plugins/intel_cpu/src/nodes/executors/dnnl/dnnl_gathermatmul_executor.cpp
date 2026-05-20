@@ -8,16 +8,13 @@
 #include <oneapi/dnnl/dnnl_types.h>
 
 #include <bitset>
-#include <common/primitive_hashing_utils.hpp>
-#include <common/utils.hpp>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <memory>
 #include <oneapi/dnnl/dnnl.hpp>
 #include <oneapi/dnnl/dnnl_common.hpp>
-#include <tuple>
-#include <unordered_map>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -32,199 +29,20 @@
 #include "memory_desc/cpu_memory_desc.h"
 #include "memory_desc/cpu_memory_desc_utils.h"
 #include "memory_desc/dnnl_memory_desc.h"
+#include "nodes/executors/dnnl/dnnl_aliases.hpp"
+#include "nodes/executors/dnnl/dnnl_fullyconnected_primitive.hpp"
+#include "nodes/executors/dnnl/dnnl_shape_agnostic_data.hpp"
 #include "nodes/executors/dnnl/dnnl_utils.hpp"
 #include "nodes/executors/executor.hpp"
+#include "nodes/executors/fullyconnected_config.hpp"
 #include "nodes/executors/gathermatmul_config.hpp"
 #include "nodes/executors/memory_arguments.hpp"
 #include "onednn/iml_type_mapper.h"
 #include "openvino/core/except.hpp"
 #include "openvino/core/type/element_type.hpp"
-#include "thread_pool_imp.hpp"
 #include "utils/general_utils.h"
 
 namespace ov::intel_cpu {
-
-// ---- InnerProductKey ---------------------------------------------------------
-
-struct InnerProductKey {
-    dnnl::memory::desc src_md;
-    dnnl::memory::desc weights_md;
-    dnnl::memory::desc bias_md;
-    VectorDims scale_shape;
-    VectorDims zp_shape;
-
-    [[nodiscard]] size_t hash() const {
-        using namespace dnnl::impl;
-        using namespace dnnl::impl::primitive_hashing;
-
-        size_t seed = 0;
-        seed = hash_combine(seed, get_md_hash(*src_md.get()));
-        seed = hash_combine(seed, get_md_hash(*weights_md.get()));
-        seed = hash_combine(seed, get_md_hash(*bias_md.get()));
-        seed = get_vector_hash(seed, scale_shape);
-        seed = get_vector_hash(seed, zp_shape);
-        return seed;
-    }
-
-    bool operator==(const InnerProductKey& rhs) const {
-        return src_md == rhs.src_md && weights_md == rhs.weights_md && bias_md == rhs.bias_md &&
-               scale_shape == rhs.scale_shape && zp_shape == rhs.zp_shape;
-    }
-};
-
-// ---- InnerProduct (oneDNN inner_product wrapper) ----------------------------
-
-class GatherMatmulDnnlExecutor::InnerProduct {
-public:
-    InnerProduct() = delete;
-    InnerProduct(const InnerProduct&) = delete;
-    InnerProduct(InnerProduct&&) = delete;
-    InnerProduct& operator=(const InnerProduct&) = delete;
-    InnerProduct& operator=(InnerProduct&&) = delete;
-
-    InnerProduct(const dnnl::engine& eng, const std::shared_ptr<ThreadPool>& threadPool, const InnerProductKey& key)
-        : m_stream(make_stream(eng, threadPool)) {
-        const auto& src_md = key.src_md;
-        const auto& weights_md = key.weights_md;
-        auto scale_shape = key.scale_shape;
-        auto zp_shape = key.zp_shape;
-
-        const auto K = weights_md.get_dims()[1];
-        const auto N = weights_md.get_dims()[0];
-        const auto M = src_md.get_dims()[0];
-
-        if (!scale_shape.empty()) {
-            if (all_of(1U, scale_shape.size(), scale_shape[0])) {
-                scale_shape.push_back(1);
-            }
-            OPENVINO_ASSERT(scale_shape.size() == 2, "Unsupported scale shape ", vec2str(scale_shape));
-            const auto K_groups = scale_shape.back();
-            OPENVINO_ASSERT((K % K_groups) == 0, "Incompatible number of groups ", K_groups, " for K ", K);
-            init_w_scales(scale_shape);
-            if (!zp_shape.empty()) {
-                if (all_of(1U, zp_shape.size(), zp_shape[0])) {
-                    zp_shape.push_back(1);
-                }
-                OPENVINO_ASSERT(zp_shape.size() == 2, "Unsupported zero points shape ", vec2str(zp_shape));
-                init_w_zp(zp_shape);
-            }
-        }
-
-        m_input_md = src_md;
-        m_output_md =
-            dnnl::memory::desc(dnnl::memory::dims({M, N}), src_md.get_data_type(), dnnl::memory::format_tag::ab);
-
-        const auto& bias_md = key.bias_md;
-
-        auto ip_prim_desc = dnnl::inner_product_forward::primitive_desc(eng,
-                                                                        dnnl::prop_kind::forward_inference,
-                                                                        m_input_md,
-                                                                        weights_md,
-                                                                        bias_md,
-                                                                        m_output_md,
-                                                                        m_attr);
-
-        m_impl_type = parse_impl_name(ip_prim_desc.impl_info_str());
-        m_wei_md = ip_prim_desc.weights_desc();
-        m_prim = dnnl::inner_product_forward(ip_prim_desc);
-
-        dnnl::memory inp_memory(m_input_md, eng, DNNL_MEMORY_NONE);
-        dnnl::memory out_memory(m_output_md, eng, DNNL_MEMORY_NONE);
-        dnnl::memory wei_memory(m_wei_md, eng, DNNL_MEMORY_NONE);
-        dnnl::memory bias_memory;
-        if (!bias_md.is_zero()) {
-            bias_memory = dnnl::memory(bias_md, eng, DNNL_MEMORY_NONE);
-        }
-        dnnl::memory scale_memory;
-        if (!scale_shape.empty()) {
-            scale_memory = dnnl::memory(m_scale_md, eng, DNNL_MEMORY_NONE);
-        }
-        dnnl::memory zp_memory;
-        if (!zp_shape.empty()) {
-            zp_memory = dnnl::memory(m_zp_md, eng, DNNL_MEMORY_NONE);
-        }
-        m_args = make_args(inp_memory, out_memory, wei_memory, bias_memory, scale_memory, zp_memory);
-    }
-
-    void exec(void* src, void* dst, void* weight, void* bias = nullptr, void* scale = nullptr, void* zp = nullptr) {
-        m_args[DNNL_ARG_SRC].set_data_handle(src);
-        m_args[DNNL_ARG_DST].set_data_handle(dst);
-        m_args[DNNL_ARG_WEIGHTS].set_data_handle(weight);
-        if (bias) {
-            m_args[DNNL_ARG_BIAS].set_data_handle(bias);
-        }
-        if (scale) {
-            m_args[DNNL_ARG_ATTR_SCALES | DNNL_ARG_WEIGHTS].set_data_handle(scale);
-        }
-        if (zp) {
-            m_args[DNNL_ARG_ATTR_ZERO_POINTS | DNNL_ARG_WEIGHTS].set_data_handle(zp);
-        }
-        m_prim.execute(m_stream, m_args);
-    }
-
-    [[nodiscard]] dnnl::memory::desc get_weights_md() const {
-        return m_wei_md;
-    }
-    [[nodiscard]] dnnl::memory::desc get_scale_md() const {
-        return m_scale_md;
-    }
-    [[nodiscard]] dnnl::memory::desc get_zp_md() const {
-        return m_zp_md;
-    }
-    [[nodiscard]] impl_desc_type get_impl_type() const {
-        return m_impl_type;
-    }
-
-private:
-    void init_w_scales(const VectorDims& scale_shape) {
-        constexpr auto data_type = dnnl::memory::data_type::f32;
-        const auto scale_dims = DnnlExtensionUtils::convertToDnnlDims(scale_shape);
-        m_attr.set_scales_dims(DNNL_ARG_WEIGHTS, scale_dims, data_type);
-        m_scale_md = dnnl::memory::desc(scale_dims, data_type, dnnl::memory::format_tag::ba);
-    }
-
-    void init_w_zp(const VectorDims& zp_shape) {
-        constexpr auto data_type = dnnl::memory::data_type::f32;
-        const auto zp_dims = DnnlExtensionUtils::convertToDnnlDims(zp_shape);
-        m_attr.set_zero_points_dims(DNNL_ARG_WEIGHTS, zp_dims, data_type);
-        m_zp_md = dnnl::memory::desc(zp_dims, data_type, dnnl::memory::format_tag::ba);
-    }
-
-    static std::unordered_map<int, dnnl::memory> make_args(dnnl::memory& src,
-                                                           dnnl::memory& dst,
-                                                           dnnl::memory& weight,
-                                                           dnnl::memory& bias,
-                                                           dnnl::memory& scale,
-                                                           dnnl::memory& zp) {
-        std::unordered_map<int, dnnl::memory> args;
-        args.insert({DNNL_ARG_SRC, src});
-        args.insert({DNNL_ARG_WEIGHTS, weight});
-        args.insert({DNNL_ARG_DST, dst});
-        if (bias) {
-            args.insert({DNNL_ARG_BIAS, bias});
-        }
-        if (scale) {
-            args.insert({DNNL_ARG_ATTR_SCALES | DNNL_ARG_WEIGHTS, scale});
-        }
-        if (zp) {
-            args.insert({DNNL_ARG_ATTR_ZERO_POINTS | DNNL_ARG_WEIGHTS, zp});
-        }
-        return args;
-    }
-
-    dnnl::stream m_stream;
-    dnnl::primitive m_prim;
-    dnnl::memory::desc m_input_md;
-    dnnl::memory::desc m_output_md;
-    dnnl::memory::desc m_wei_md;
-    dnnl::memory::desc m_scale_md;
-    dnnl::memory::desc m_zp_md;
-    dnnl::primitive_attr m_attr;
-    std::unordered_map<int, dnnl::memory> m_args;
-    impl_desc_type m_impl_type = impl_desc_type::unknown;
-};
-
-// ---- OffsetHelper ------------------------------------------------------------
 
 namespace {
 class OffsetHelper {
@@ -296,11 +114,22 @@ private:
     size_t m_num_bits;
     std::bitset<2> m_broadcast_mask;
 };
-}  // namespace
 
-// ---- normalizeM helper -------------------------------------------------------
+dnnl::memory::desc bias1DDesc(const MemoryPtr& biasMem) {
+    const auto N = static_cast<dnnl::memory::dim>(biasMem->getStaticDims().back());
+    const auto dt = DnnlExtensionUtils::ElementTypeToDataType(biasMem->getDesc().getPrecision());
+    return dnnl::memory::desc({N}, dt, dnnl::memory::format_tag::a);
+}
 
-static Dim normalizeM(Dim M) {
+// Returns the ncsp dnnl descriptor for one gather-axis slice (strips the leading G dim).
+dnnl::memory::desc gatherSliceDesc(const MemoryPtr& mem) {
+    const auto& fullDims = mem->getStaticDims();
+    const auto dt = DnnlExtensionUtils::ElementTypeToDataType(mem->getDesc().getPrecision());
+    const dnnl::memory::dims sliceDims(fullDims.begin() + 1, fullDims.end());
+    return dnnl::memory::desc(sliceDims, dt, dnnl::memory::format_tag::ab);
+}
+
+Dim normalizeM(Dim M) {
     if (M < 512) {
         M = rnd_up(M, 16);
     } else if (M < 1024) {
@@ -311,28 +140,79 @@ static Dim normalizeM(Dim M) {
     return M;
 }
 
-// ---- GatherMatmulDnnlExecutor -----------------------------------------------
-
-static dnnl::memory::desc makeBiasMd(dnnl::memory::dim N, const MemoryPtr& biasMem) {
-    if (!biasMem || biasMem->getDesc().empty()) {
-        return {};
+template <typename DescFn>
+std::optional<dnnl::memory> toSliceMemory(const MemoryPtr& mem, DescFn descFn, const dnnl::engine& eng) {
+    if (!mem || mem->getDesc().empty()) {
+        return std::nullopt;
     }
-    const auto bias_precision = biasMem->getDesc().getPrecision();
-    return dnnl::memory::desc(dnnl::memory::dims({N}),
-                              DnnlExtensionUtils::ElementTypeToDataType(bias_precision),
-                              dnnl::memory::format_tag::a);
+    return dnnl::memory(descFn(mem), eng, mem->getData());
 }
+
+MemoryArgs makeSliceMemoryArgs(const dnnl::memory::desc& src_md,
+                               const dnnl::memory::desc& wei_md,
+                               const dnnl::memory::desc& dst_md,
+                               const std::optional<dnnl::memory>& bias,
+                               const std::optional<dnnl::memory>& scales,
+                               const std::optional<dnnl::memory>& zp,
+                               const dnnl::engine& eng) {
+    auto wrap = [&eng](const dnnl::memory& m) {
+        return std::make_shared<Memory>(eng, DnnlExtensionUtils::makeDescriptor(m.get_desc()), m.get_data_handle());
+    };
+
+    MemoryArgs args;
+    args[ARG_SRC] = std::make_shared<Memory>(eng, DnnlExtensionUtils::makeDescriptor(src_md));
+    args[ARG_WEI] = std::make_shared<Memory>(eng, DnnlExtensionUtils::makeDescriptor(wei_md));
+    args[ARG_DST] = std::make_shared<Memory>(eng, DnnlExtensionUtils::makeDescriptor(dst_md));
+    args[ARG_BIAS] = bias ? wrap(*bias) : std::make_shared<Memory>(eng, MemoryDescUtils::makeEmptyDesc());
+
+    if (scales) {
+        args[ARG_WEI | ARG_ATTR_SCALES] = wrap(*scales);
+    }
+    if (zp) {
+        args[ARG_WEI | ARG_ATTR_ZERO_POINTS] = wrap(*zp);
+    }
+    return args;
+}
+
+dnnl_primitive_args makePrimArgs(const DnnlFCPrimitivePtr& prim,
+                                 const DnnlShapeAgnosticDataPtr& shapeAgnosticData,
+                                 const MemoryPtr& biasMem,
+                                 const MemoryPtr& scratchpadMem,
+                                 const dnnl::engine& eng) {
+    dnnl_primitive_args args;
+    args[DNNL_ARG_SRC] = dnnl::memory(prim->srcDesc()->getDnnlDesc(), eng, DNNL_MEMORY_NONE);
+    args[DNNL_ARG_DST] = dnnl::memory(prim->dstDesc()->getDnnlDesc(), eng, DNNL_MEMORY_NONE);
+    args[DNNL_ARG_WEIGHTS] = dnnl::memory(prim->weightsDesc()->getDnnlDesc(), eng, DNNL_MEMORY_NONE);
+
+    if (biasMem && !biasMem->getDesc().empty()) {
+        args[DNNL_ARG_BIAS] = dnnl::memory(bias1DDesc(biasMem), eng, DNNL_MEMORY_NONE);
+    }
+
+    const auto& dnnlArgs = shapeAgnosticData->m_primAttrs.dnnlArgs;
+    const auto& cpuArgs = shapeAgnosticData->m_primAttrs.cpuArgs;
+    for (const int key : {DNNL_ARG_ATTR_SCALES | DNNL_ARG_WEIGHTS, DNNL_ARG_ATTR_ZERO_POINTS | DNNL_ARG_WEIGHTS}) {
+        if (dnnlArgs.count(key) && cpuArgs.count(key)) {
+            const auto& dims = cpuArgs.at(key)->getStaticDims();
+            auto dnnlDims = DnnlExtensionUtils::convertToDnnlDims(dims);
+            auto dt = dnnlArgs.at(key).get_desc().get_data_type();
+            args[key] =
+                dnnl::memory(dnnl::memory::desc(dnnlDims, dt, dnnl::memory::format_tag::ba), eng, DNNL_MEMORY_NONE);
+        }
+    }
+
+    args[DNNL_ARG_SCRATCHPAD] = scratchpadMem->getPrimitive();
+    return args;
+}
+}  // namespace
 
 bool GatherMatmulDnnlExecutor::supports([[maybe_unused]] const GatherMatmulConfig& config) {
 #ifdef OPENVINO_ARCH_X86_64
-    // Allow empty (dynamic) src descriptor — actual type is resolved at createPrimitive time
     if ((config.descs.count(ARG_SRC) != 0U) && !config.descs.at(ARG_SRC)->empty()) {
         const auto src_prc = config.descs.at(ARG_SRC)->getPrecision();
         if (!any_of(src_prc, ov::element::f32, ov::element::bf16)) {
             return false;
         }
     }
-    // For compressed (int) weights, require AVX2
     if ((config.descs.count(ARG_WEI) != 0U) && !config.descs.at(ARG_WEI)->empty()) {
         const auto wei_prc = config.descs.at(ARG_WEI)->getPrecision();
         if (any_of(wei_prc, ov::element::u8, ov::element::i8, ov::element::u4, ov::element::i4)) {
@@ -356,6 +236,7 @@ GatherMatmulDnnlExecutor::GatherMatmulDnnlExecutor([[maybe_unused]] const Gather
 
     auto src_precision = srcMemory->getDesc().getPrecision();
     auto weights_precision = weightsMemory->getDesc().getPrecision();
+
 #ifdef OPENVINO_ARCH_X86_64
     m_bf16AmxMode =
         (src_precision == ov::element::bf16 && dnnl::impl::cpu::x64::mayiuse(dnnl::impl::cpu::x64::avx512_core_amx));
@@ -365,51 +246,35 @@ GatherMatmulDnnlExecutor::GatherMatmulDnnlExecutor([[maybe_unused]] const Gather
     const dnnl::memory::dim N = weiDims[weiDims.size() - 2];
     const dnnl::memory::dim K = weiDims[weiDims.size() - 1];
 
-    // Determine scale/zp shapes (per-group, removing the leading batch/gather dim)
-    VectorDims scale_shape{};
-    VectorDims zp_shape{};
-
     const auto& scalesMem = memory.at(ARG_SRC_3);
-    if (scalesMem && !scalesMem->getDesc().empty()) {
-        const auto& fullScalesShape = scalesMem->getShape().getStaticDims();
-        if (1 == fullScalesShape.size()) {
-            OPENVINO_ASSERT(fullScalesShape[0] == 1, "Expect broadcastable scales shape.");
-            scale_shape.push_back(fullScalesShape[0]);
-        } else {
-            scale_shape.assign(fullScalesShape.begin() + 1, fullScalesShape.end());
-        }
-    }
-
     const auto& zpMem = memory.at(ARG_SRC_4);
-    if (zpMem && !zpMem->getDesc().empty()) {
-        const auto& fullZpShape = zpMem->getShape().getStaticDims();
-        if (1 == fullZpShape.size()) {
-            OPENVINO_ASSERT(fullZpShape[0] == 1, "Expect broadcastable zero points shape.");
-            zp_shape.push_back(fullZpShape[0]);
-        } else {
-            zp_shape.assign(fullZpShape.begin() + 1, fullZpShape.end());
-        }
-    }
+    const auto& biasMem = memory.at(ARG_BIAS);
 
     dnnl::memory::desc src_md({1, K},
                               DnnlExtensionUtils::ElementTypeToDataType(src_precision),
                               dnnl::memory::format_tag::ab);
+    dnnl::memory::desc dst_md({1, N},
+                              DnnlExtensionUtils::ElementTypeToDataType(src_precision),
+                              dnnl::memory::format_tag::ab);
     dnnl::memory::desc weights_md({N, K},
                                   DnnlExtensionUtils::ElementTypeToDataType(weights_precision),
-                                  dnnl::memory::format_tag::any);
+                                  dnnl::memory::format_tag::ab);
 
-    InnerProductKey key{src_md, weights_md, makeBiasMd(N, memory.at(ARG_BIAS)), scale_shape, zp_shape};
-
+    const FCAttrs fcAttrs{};
     const auto& eng = context->getEngine();
-    const auto threadPool = context->getThreadPool();
-    auto cache = context->getRuntimeCache();
-    std::tie(m_gemvImpl, std::ignore) = cache->getOrCreate(key, [&eng, &threadPool](const InnerProductKey& k) {
-        return std::make_shared<InnerProduct>(eng, threadPool, k);
-    });
+    auto sliceArgs = makeSliceMemoryArgs(src_md,
+                                         weights_md,
+                                         dst_md,
+                                         toSliceMemory(biasMem, bias1DDesc, eng),
+                                         toSliceMemory(scalesMem, gatherSliceDesc, eng),
+                                         toSliceMemory(zpMem, gatherSliceDesc, eng),
+                                         eng);
+    auto shapeAgnosticData = DnnlFCPrimitive::createShapeAgnosticData(fcAttrs, sliceArgs, context, false);
 
-    // Repack weights: convert from [G, K, N] to [G, (packed_N, K)] format expected by oneDNN
-    auto gemvWeightsDesc =
-        MemoryDescUtils::convertToBlockedMemoryDesc(DnnlExtensionUtils::makeDescriptor(m_gemvImpl->get_weights_md()));
+    m_gemvPrim = DnnlFCPrimitive::create(sliceArgs, fcAttrs, context, shapeAgnosticData);
+    m_implType = m_gemvPrim->implType();
+
+    auto gemvWeightsDesc = MemoryDescUtils::convertToBlockedMemoryDesc(m_gemvPrim->weightsDesc());
 
     auto addBatchDim = [](const BlockedMemoryDescPtr& desc, size_t batchDim) -> DnnlMemoryDescPtr {
         const auto& weightsDims = desc->getShape().getStaticDims();
@@ -424,9 +289,8 @@ GatherMatmulDnnlExecutor::GatherMatmulDnnlExecutor([[maybe_unused]] const Gather
         for (size_t i = 0; i < weightsOrder.size(); i++) {
             newOrder[i + 1] = weightsOrder[i] + 1;
         }
-        auto targetDesc =
-            std::make_shared<CpuBlockedMemoryDesc>(desc->getPrecision(), Shape(newDims), newBlockDims, newOrder);
-        return MemoryDescUtils::convertToDnnlMemoryDesc(targetDesc);
+        return MemoryDescUtils::convertToDnnlMemoryDesc(
+            std::make_shared<CpuBlockedMemoryDesc>(desc->getPrecision(), Shape(newDims), newBlockDims, newOrder));
     };
 
     auto targetWeightsDesc = addBatchDim(gemvWeightsDesc, weiDims[0]);
@@ -436,39 +300,34 @@ GatherMatmulDnnlExecutor::GatherMatmulDnnlExecutor([[maybe_unused]] const Gather
                                                   targetWeightsDesc,
                                                   weightsMemory,
                                                   eng,
-                                                  cache,
+                                                  context->getRuntimeCache(),
                                                   context->getWeightsCache(),
                                                   context->getPrivateWeightCache(),
-                                                  threadPool);
+                                                  context->getThreadPool());
 
-    if (!scale_shape.empty()) {
-        auto expectedScaleMemDesc =
-            MemoryDescUtils::convertToDnnlMemoryDesc(DnnlExtensionUtils::makeDescriptor(m_gemvImpl->get_scale_md()));
-        const auto& scDims = scalesMem->getShape().getStaticDims();
-        expectedScaleMemDesc =
-            addBatchDim(MemoryDescUtils::convertToBlockedMemoryDesc(expectedScaleMemDesc), scDims[0]);
-        if (expectedScaleMemDesc->isCompatible(scalesMem->getDesc())) {
-            m_scalesMemory = std::const_pointer_cast<IMemory>(scalesMem);
-        } else {
-            m_scalesMemory = std::make_shared<Memory>(eng, expectedScaleMemDesc);
-            m_scalesMemory->load(*scalesMem, false, false);
-        }
+    const auto& primCpuArgs = shapeAgnosticData->m_primAttrs.cpuArgs;
+    auto repackBatched = [&eng, &addBatchDim](const MemoryPtr& srcMem, const MemoryPtr& postPrepackSlice) -> MemoryPtr {
+        const size_t G = srcMem->getShape().getStaticDims()[0];
+        auto dstSliceBlockedDesc = MemoryDescUtils::convertToBlockedMemoryDesc(
+            MemoryDescUtils::convertToDnnlMemoryDesc(postPrepackSlice->getDescPtr()));
+        auto result = std::make_shared<Memory>(eng, addBatchDim(dstSliceBlockedDesc, G));
+        result->load(*srcMem, false, false);
+        return result;
+    };
+
+    if (scalesMem && !scalesMem->getDesc().empty() && primCpuArgs.count(DNNL_ARG_ATTR_SCALES | DNNL_ARG_WEIGHTS)) {
+        auto postPrepackScale = primCpuArgs.at(DNNL_ARG_ATTR_SCALES | DNNL_ARG_WEIGHTS);
+        m_scalesMemory = repackBatched(std::const_pointer_cast<IMemory>(scalesMem), postPrepackScale);
     }
 
-    if (!zp_shape.empty()) {
-        auto expectedZpMemDesc =
-            MemoryDescUtils::convertToDnnlMemoryDesc(DnnlExtensionUtils::makeDescriptor(m_gemvImpl->get_zp_md()));
-        const auto& zpDims = zpMem->getShape().getStaticDims();
-        expectedZpMemDesc = addBatchDim(MemoryDescUtils::convertToBlockedMemoryDesc(expectedZpMemDesc), zpDims[0]);
-        if (expectedZpMemDesc->isCompatible(zpMem->getDesc())) {
-            m_zpMemory = std::const_pointer_cast<IMemory>(zpMem);
-        } else {
-            m_zpMemory = std::make_shared<Memory>(eng, expectedZpMemDesc);
-            m_zpMemory->load(*zpMem, false, false);
-        }
+    if (zpMem && !zpMem->getDesc().empty() && primCpuArgs.count(DNNL_ARG_ATTR_ZERO_POINTS | DNNL_ARG_WEIGHTS)) {
+        auto postPrepackZp = primCpuArgs.at(DNNL_ARG_ATTR_ZERO_POINTS | DNNL_ARG_WEIGHTS);
+        m_zpMemory = repackBatched(std::const_pointer_cast<IMemory>(zpMem), postPrepackZp);
     }
 
-    m_implType = m_gemvImpl->get_impl_type();
+    m_gemvScratchpad = context->getScratchPad()->createScratchPadMem(m_gemvPrim->scratchPadDesc());
+
+    m_gemvArgs = makePrimArgs(m_gemvPrim, shapeAgnosticData, biasMem, m_gemvScratchpad, eng);
 }
 
 bool GatherMatmulDnnlExecutor::update(const MemoryArgs& memory) {
@@ -478,63 +337,57 @@ bool GatherMatmulDnnlExecutor::update(const MemoryArgs& memory) {
 
     const auto& srcMem = memory.at(ARG_SRC);
     const auto& srcShape = srcMem->getStaticDims();
-    // srcShape is [B, M, K]
     if (Dim{1} == srcShape[1]) {
-        // If M is 1, we can skip the temporary buffer and execute GEMV in-place on the src buffer
         return true;
     }
+
     const Dim M = normalizeM(srcShape[1]);
     const auto& creatorsMap = BlockedDescCreator::getCommonCreators();
     const auto srcPrc = srcMem->getDesc().getPrecision();
-
-    const auto& dstMem = memory.at(ARG_DST);
-    const auto& dstShape = dstMem->getStaticDims();
+    const auto& dstShape = memory.at(ARG_DST)->getStaticDims();
 
     m_tmpInputDesc = creatorsMap.at(LayoutType::ncsp)->createSharedDesc(srcPrc, Shape({M, srcShape[2]}));
     m_tmpOutputDesc = creatorsMap.at(LayoutType::ncsp)->createSharedDesc(srcPrc, Shape({M, dstShape[2]}));
 
-    const size_t srcSize = rnd_up(m_tmpInputDesc->getCurrentMemSize(), 64);
-    const size_t totalSize = srcSize + m_tmpOutputDesc->getCurrentMemSize();
-    auto scratchPadDesc = creatorsMap.at(LayoutType::ncsp)->createSharedDesc(ov::element::u8, Shape({totalSize}));
-    m_tmpInpBuffer = m_context->getScratchPad()->createScratchPadMem(scratchPadDesc);
-
-    OPENVINO_ASSERT(m_gemvImpl, "GEMV implementation is not created");
+    const dnnl::memory::dim N = static_cast<dnnl::memory::dim>(m_gemvPrim->weightsDesc()->getDnnlDesc().get_dims()[0]);
+    const auto& eng = m_context->getEngine();
 
     dnnl::memory::desc src_md({static_cast<dnnl::memory::dim>(M), static_cast<dnnl::memory::dim>(srcShape[2])},
                               DnnlExtensionUtils::ElementTypeToDataType(srcPrc),
                               dnnl::memory::format_tag::ab);
-    auto weights_md = m_gemvImpl->get_weights_md();
+    dnnl::memory::desc dst_md({static_cast<dnnl::memory::dim>(M), N},
+                              DnnlExtensionUtils::ElementTypeToDataType(srcPrc),
+                              dnnl::memory::format_tag::ab);
+    const auto& gemvWeiDnnlDesc = m_gemvPrim->weightsDesc()->getDnnlDesc();
+    const dnnl::memory::desc weights_md(gemvWeiDnnlDesc.get_dims(),
+                                        gemvWeiDnnlDesc.get_data_type(),
+                                        dnnl::memory::format_tag::ab);
 
-    VectorDims scale_shape{};
-    VectorDims zp_shape{};
-    if (m_scalesMemory) {
-        const auto& fullScaleDims = m_scalesMemory->getStaticDims();
-        if (1 == fullScaleDims.size()) {
-            scale_shape.push_back(fullScaleDims[0]);
-        } else {
-            scale_shape.assign(fullScaleDims.begin() + 1, fullScaleDims.end());
-        }
-    }
-    if (m_zpMemory) {
-        const auto& fullZpDims = m_zpMemory->getStaticDims();
-        if (1 == fullZpDims.size()) {
-            zp_shape.push_back(fullZpDims[0]);
-        } else {
-            zp_shape.assign(fullZpDims.begin() + 1, fullZpDims.end());
-        }
-    }
+    const FCAttrs fcAttrs{};
+    auto sliceArgs = makeSliceMemoryArgs(src_md,
+                                         weights_md,
+                                         dst_md,
+                                         toSliceMemory(memory.at(ARG_BIAS), bias1DDesc, eng),
+                                         toSliceMemory(m_scalesMemory, gatherSliceDesc, eng),
+                                         toSliceMemory(m_zpMemory, gatherSliceDesc, eng),
+                                         eng);
+    auto shapeAgnosticData = DnnlFCPrimitive::createShapeAgnosticData(fcAttrs, sliceArgs, m_context, false);
+    m_gemmPrim = DnnlFCPrimitive::create(sliceArgs, fcAttrs, m_context, shapeAgnosticData);
 
-    InnerProductKey key{src_md,
-                        weights_md,
-                        makeBiasMd(static_cast<dnnl::memory::dim>(weights_md.get_dims()[0]), memory.at(ARG_BIAS)),
-                        scale_shape,
-                        zp_shape};
-    const auto& eng = m_context->getEngine();
-    const auto threadPool = m_context->getThreadPool();
-    auto cache = m_context->getRuntimeCache();
-    std::tie(m_gemmImpl, std::ignore) = cache->getOrCreate(key, [&eng, &threadPool](const InnerProductKey& k) {
-        return std::make_shared<InnerProduct>(eng, threadPool, k);
-    });
+    const size_t srcSize = rnd_up(m_tmpInputDesc->getCurrentMemSize(), 64);
+    const size_t outputSize = rnd_up(m_tmpOutputDesc->getCurrentMemSize(), 64);
+    const size_t gemmScratchSize = rnd_up(m_gemmPrim->scratchPadDesc()->getCurrentMemSize(), 64);
+    const size_t totalSize = srcSize + outputSize + gemmScratchSize;
+
+    auto scratchPadDesc = creatorsMap.at(LayoutType::ncsp)->createSharedDesc(ov::element::u8, Shape({totalSize}));
+    m_tmpInpBuffer = m_context->getScratchPad()->createScratchPadMem(scratchPadDesc);
+
+    m_gemmScratchpad = std::make_shared<Memory>(eng,
+                                                m_gemmPrim->scratchPadDesc(),
+                                                m_tmpInpBuffer->getDataAs<uint8_t>() + srcSize + outputSize);
+
+    m_gemmArgs = makePrimArgs(m_gemmPrim, shapeAgnosticData, memory.at(ARG_BIAS), m_gemmScratchpad, eng);
+
     return true;
 }
 
@@ -546,8 +399,8 @@ void GatherMatmulDnnlExecutor::execute(const MemoryArgs& memory) {
     const auto& dstMem = memory.at(ARG_DST);
 
     const auto& indexShape = indexMem->getStaticDims();
-    size_t M = indexShape[0];
-    size_t indices_size = indexShape[1];
+    const size_t M = indexShape[0];
+    const size_t indices_size = indexShape[1];
 
     auto src_offset = OffsetHelper::createOffsetHelper(srcMem);
     auto dst_offset = OffsetHelper::createOffsetHelper(dstMem);
@@ -558,6 +411,18 @@ void GatherMatmulDnnlExecutor::execute(const MemoryArgs& memory) {
     auto index_offset = OffsetHelper::createOffsetHelper(indexMem);
 
     const size_t gather_axis_size = m_weightsMemory->getStaticDims()[0];
+
+    auto setGatherArgs = [&](dnnl_primitive_args& args, size_t gather_axis_index) {
+        if (args.count(DNNL_ARG_BIAS) != 0U) {
+            args[DNNL_ARG_BIAS].set_data_handle(bias_offset(gather_axis_index));
+        }
+        if (args.count(DNNL_ARG_ATTR_SCALES | DNNL_ARG_WEIGHTS) != 0U) {
+            args[DNNL_ARG_ATTR_SCALES | DNNL_ARG_WEIGHTS].set_data_handle(scale_offset(gather_axis_index));
+        }
+        if (args.count(DNNL_ARG_ATTR_ZERO_POINTS | DNNL_ARG_WEIGHTS) != 0U) {
+            args[DNNL_ARG_ATTR_ZERO_POINTS | DNNL_ARG_WEIGHTS].set_data_handle(zp_offset(gather_axis_index));
+        }
+    };
 
     if (M > 1) {
         std::vector<std::pair<int32_t, int32_t>> gather_idx_map(gather_axis_size * M);
@@ -581,6 +446,7 @@ void GatherMatmulDnnlExecutor::execute(const MemoryArgs& memory) {
             OPENVINO_ASSERT(m_tmpInpBuffer, "Temporary input/output memory is not created");
             OPENVINO_ASSERT(m_tmpInputDesc, "Temporary input memory desc is not created");
             OPENVINO_ASSERT(m_tmpOutputDesc, "Temporary output memory desc is not created");
+            OPENVINO_ASSERT(m_gemmPrim, "GEMM primitive is not created");
 
             const auto element_size = m_tmpInputDesc->getPrecision().size();
             const auto K_size = m_tmpInputDesc->getShape().getStaticDims()[1];
@@ -596,7 +462,6 @@ void GatherMatmulDnnlExecutor::execute(const MemoryArgs& memory) {
             auto tmp_input_offset = OffsetHelper::createOffsetHelper(tmpInput);
             auto tmp_dst_offset = OffsetHelper::createOffsetHelper(tmpOutput);
 
-            OPENVINO_ASSERT(m_gemmImpl, "GEMM implementation is not created");
             for (size_t gather_axis_index = 0; gather_axis_index < gather_axis_size; gather_axis_index++) {
                 const size_t num_valid_rows = elements_per_gather_indx[gather_axis_index];
                 if (0 == num_valid_rows) {
@@ -608,50 +473,43 @@ void GatherMatmulDnnlExecutor::execute(const MemoryArgs& memory) {
                     if (m < num_valid_rows) {
                         const auto row_id = gather_idx_map[gather_axis_index * M + m].first;
                         const auto batch_index = gather_idx_map[gather_axis_index * M + m].second;
-                        const auto* src_data = src_offset(batch_index, row_id);
-                        std::memcpy(dst_row, src_data, K_size * element_size);
+                        std::memcpy(dst_row, src_offset(batch_index, row_id), K_size * element_size);
                     } else {
                         std::memset(dst_row, 0, K_size * element_size);
                     }
                 });
 
-                auto* src = tmp_input_offset.get_base();
-                auto* dst = tmp_dst_offset.get_base();
-                auto* wei = wei_offset(gather_axis_index);
-                auto* bias = bias_offset(gather_axis_index);
-                auto* scale = scale_offset(gather_axis_index);
-                auto* zp = zp_offset(gather_axis_index);
-                m_gemmImpl->exec(src, dst, wei, bias, scale, zp);
+                m_gemmArgs[DNNL_ARG_SRC].set_data_handle(tmp_input_offset.get_base());
+                m_gemmArgs[DNNL_ARG_DST].set_data_handle(tmp_dst_offset.get_base());
+                m_gemmArgs[DNNL_ARG_WEIGHTS].set_data_handle(wei_offset(gather_axis_index));
+                setGatherArgs(m_gemmArgs, gather_axis_index);
+                m_gemmPrim->execute(m_gemmArgs);
 
                 cpu_parallel->parallel_for(num_valid_rows, [&](size_t m) {
-                    const auto* src_row = tmp_dst_offset(m);
                     const auto row_id = gather_idx_map[gather_axis_index * M + m].first;
                     const auto batch_index = gather_idx_map[gather_axis_index * M + m].second;
-                    auto* dst_row = dst_offset(batch_index, row_id);
-                    std::memcpy(dst_row, src_row, N_size * element_size);
+                    std::memcpy(dst_offset(batch_index, row_id), tmp_dst_offset(m), N_size * element_size);
                 });
             }
         } else {
-            OPENVINO_ASSERT(m_gemvImpl, "GEMV implementation is not created");
+            OPENVINO_ASSERT(m_gemvPrim, "GEMV primitive is not created");
             for (size_t gather_axis_index = 0; gather_axis_index < gather_axis_size; gather_axis_index++) {
                 if (0 == elements_per_gather_indx[gather_axis_index]) {
                     continue;
                 }
-                auto* wei = wei_offset(gather_axis_index);
-                auto* bias = bias_offset(gather_axis_index);
-                auto* scale = scale_offset(gather_axis_index);
-                auto* zp = zp_offset(gather_axis_index);
+                m_gemvArgs[DNNL_ARG_WEIGHTS].set_data_handle(wei_offset(gather_axis_index));
+                setGatherArgs(m_gemvArgs, gather_axis_index);
                 for (int32_t m = 0; m < elements_per_gather_indx[gather_axis_index]; ++m) {
                     const auto row_id = gather_idx_map[gather_axis_index * M + m].first;
                     const auto batch_index = gather_idx_map[gather_axis_index * M + m].second;
-                    auto* src = src_offset(batch_index, row_id);
-                    auto* dst = dst_offset(batch_index, row_id);
-                    m_gemvImpl->exec(src, dst, wei, bias, scale, zp);
+                    m_gemvArgs[DNNL_ARG_SRC].set_data_handle(src_offset(batch_index, row_id));
+                    m_gemvArgs[DNNL_ARG_DST].set_data_handle(dst_offset(batch_index, row_id));
+                    m_gemvPrim->execute(m_gemvArgs);
                 }
             }
         }
     } else {
-        OPENVINO_ASSERT(m_gemvImpl, "GEMV implementation is not created");
+        OPENVINO_ASSERT(m_gemvPrim, "GEMV primitive is not created");
 
         constexpr size_t m = 0;
         auto* gather_ids = static_cast<int32_t*>(index_offset(m));
@@ -662,13 +520,11 @@ void GatherMatmulDnnlExecutor::execute(const MemoryArgs& memory) {
                             gather_axis_index,
                             " for i ",
                             i);
-            auto* src = src_offset(i, m);
-            auto* dst = dst_offset(i, m);
-            auto* wei = wei_offset(gather_axis_index);
-            auto* bias = bias_offset(gather_axis_index);
-            auto* scale = scale_offset(gather_axis_index);
-            auto* zp = zp_offset(gather_axis_index);
-            m_gemvImpl->exec(src, dst, wei, bias, scale, zp);
+            m_gemvArgs[DNNL_ARG_SRC].set_data_handle(src_offset(i, m));
+            m_gemvArgs[DNNL_ARG_DST].set_data_handle(dst_offset(i, m));
+            m_gemvArgs[DNNL_ARG_WEIGHTS].set_data_handle(wei_offset(gather_axis_index));
+            setGatherArgs(m_gemvArgs, gather_axis_index);
+            m_gemvPrim->execute(m_gemvArgs);
         }
     }
 }
