@@ -41,18 +41,18 @@ private:
     // GEMV primitive (M=1) — created once in constructor, used for all M=1 calls
     // and as the M>1 non-AMX fallback
     DnnlFCPrimitivePtr m_gemvPrim;
-    MemoryPtr          m_gemvScratchpad;   // fixed allocation for GEMV scratchpad
-    dnnl_primitive_args m_gemvArgs;        // pre-built args map, handles updated per-call
+    MemoryPtr m_gemvScratchpad;      // fixed allocation for GEMV scratchpad
+    dnnl_primitive_args m_gemvArgs;  // pre-built args map, handles updated per-call
 
     // GEMM primitive (M>1, AMX bf16 path) — re-created in update() when M changes
     DnnlFCPrimitivePtr m_gemmPrim;
-    MemoryPtr          m_gemmScratchpad;   // embedded in m_tmpInpBuffer
-    dnnl_primitive_args m_gemmArgs;        // pre-built args map, handles updated per-call
+    MemoryPtr m_gemmScratchpad;      // embedded in m_tmpInpBuffer
+    dnnl_primitive_args m_gemmArgs;  // pre-built args map, handles updated per-call
 
     // Temporary pack/scatter buffers for the AMX GEMM path (allocated in update())
-    MemoryPtr      m_tmpInpBuffer;
-    MemoryDescPtr  m_tmpInputDesc;
-    MemoryDescPtr  m_tmpOutputDesc;
+    MemoryPtr m_tmpInpBuffer;
+    MemoryDescPtr m_tmpInputDesc;
+    MemoryDescPtr m_tmpOutputDesc;
 
     bool m_bf16AmxMode = false;
     impl_desc_type m_implType = impl_desc_type::unknown;
