@@ -11,7 +11,9 @@
 #include "memory_desc/cpu_memory_desc.h"
 #include "nodes/executors/dnnl/dnnl_aliases.hpp"
 #include "nodes/executors/dnnl/dnnl_fullyconnected_primitive.hpp"
+#include "nodes/executors/dnnl/dnnl_shape_agnostic_data.hpp"
 #include "nodes/executors/executor.hpp"
+#include "nodes/executors/fullyconnected_config.hpp"
 #include "nodes/executors/gathermatmul_config.hpp"
 #include "nodes/executors/memory_arguments.hpp"
 #include "onednn/iml_type_mapper.h"
@@ -33,16 +35,16 @@ public:
 private:
     ExecutorContext::CPtr m_context;
 
-    // Packed weight / scale / ZP tensors with the gather batch dimension prepended
+    FCAttrs m_fcAttrs;
+    DnnlShapeAgnosticDataPtr m_shapeAgnosticData;
+
     MemoryPtr m_weightsMemory;
     MemoryPtr m_scalesMemory;
     MemoryPtr m_zpMemory;
 
-    // GEMV primitive (M=1) — created once in constructor, used for all M=1 calls
-    // and as the M>1 non-AMX fallback
     DnnlFCPrimitivePtr m_gemvPrim;
-    MemoryPtr m_gemvScratchpad;      // fixed allocation for GEMV scratchpad
-    dnnl_primitive_args m_gemvArgs;  // pre-built args map, handles updated per-call
+    MemoryPtr m_gemvScratchpad;
+    dnnl_primitive_args m_gemvArgs;
 
     // GEMM primitive (M>1, AMX bf16 path) — re-created in update() when M changes
     DnnlFCPrimitivePtr m_gemmPrim;

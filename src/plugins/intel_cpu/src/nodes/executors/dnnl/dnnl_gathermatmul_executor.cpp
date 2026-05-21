@@ -14,7 +14,6 @@
 #include <memory>
 #include <oneapi/dnnl/dnnl.hpp>
 #include <oneapi/dnnl/dnnl_common.hpp>
-#include <optional>
 #include <utility>
 #include <vector>
 
@@ -22,6 +21,7 @@
 #if defined(OPENVINO_ARCH_X86) || defined(OPENVINO_ARCH_X86_64)
 #    include <cpu/x64/cpu_isa_traits.hpp>
 #endif
+#include "config.h"
 #include "cpu_memory.h"
 #include "cpu_types.h"
 #include "dnnl_extension_utils.h"
@@ -34,7 +34,6 @@
 #include "nodes/executors/dnnl/dnnl_shape_agnostic_data.hpp"
 #include "nodes/executors/dnnl/dnnl_utils.hpp"
 #include "nodes/executors/executor.hpp"
-#include "nodes/executors/fullyconnected_config.hpp"
 #include "nodes/executors/gathermatmul_config.hpp"
 #include "nodes/executors/memory_arguments.hpp"
 #include "onednn/iml_type_mapper.h"
@@ -115,18 +114,15 @@ private:
     std::bitset<2> m_broadcast_mask;
 };
 
-dnnl::memory::desc bias1DDesc(const MemoryPtr& biasMem) {
-    const auto N = static_cast<dnnl::memory::dim>(biasMem->getStaticDims().back());
-    const auto dt = DnnlExtensionUtils::ElementTypeToDataType(biasMem->getDesc().getPrecision());
-    return dnnl::memory::desc({N}, dt, dnnl::memory::format_tag::a);
+MemoryDescPtr bias1DDesc(const MemoryPtr& biasMem) {
+    return std::make_shared<CpuBlockedMemoryDesc>(biasMem->getDesc().getPrecision(),
+                                                  Shape({biasMem->getStaticDims().back()}));
 }
 
-// Returns the ncsp dnnl descriptor for one gather-axis slice (strips the leading G dim).
-dnnl::memory::desc gatherSliceDesc(const MemoryPtr& mem) {
-    const auto& fullDims = mem->getStaticDims();
-    const auto dt = DnnlExtensionUtils::ElementTypeToDataType(mem->getDesc().getPrecision());
-    const dnnl::memory::dims sliceDims(fullDims.begin() + 1, fullDims.end());
-    return {sliceDims, dt, dnnl::memory::format_tag::ab};
+MemoryDescPtr gatherSliceDesc(const MemoryPtr& mem) {
+    const auto& dims = mem->getStaticDims();
+    return std::make_shared<CpuBlockedMemoryDesc>(mem->getDesc().getPrecision(),
+                                                  Shape(VectorDims(dims.begin() + 1, dims.end())));
 }
 
 Dim normalizeM(Dim M) {
@@ -141,35 +137,31 @@ Dim normalizeM(Dim M) {
 }
 
 template <typename DescFn>
-std::optional<dnnl::memory> toSliceMemory(const MemoryPtr& mem, DescFn descFn, const dnnl::engine& eng) {
+MemoryPtr toSliceMem(const MemoryPtr& mem, DescFn descFn, const dnnl::engine& eng) {
     if (!mem || mem->getDesc().empty()) {
-        return std::nullopt;
+        return nullptr;
     }
-    return dnnl::memory(descFn(mem), eng, mem->getData());
+    return std::make_shared<Memory>(eng, descFn(mem), mem->getData());
 }
 
-MemoryArgs makeSliceMemoryArgs(const dnnl::memory::desc& src_md,
-                               const dnnl::memory::desc& wei_md,
-                               const dnnl::memory::desc& dst_md,
-                               const std::optional<dnnl::memory>& bias,
-                               const std::optional<dnnl::memory>& scales,
-                               const std::optional<dnnl::memory>& zp,
+MemoryArgs makeSliceMemoryArgs(const MemoryDescPtr& src_desc,
+                               const MemoryDescPtr& wei_desc,
+                               const MemoryDescPtr& dst_desc,
+                               const MemoryPtr& bias,
+                               const MemoryPtr& scales,
+                               const MemoryPtr& zp,
                                const dnnl::engine& eng) {
-    auto wrap = [&eng](const dnnl::memory& m) {
-        return std::make_shared<Memory>(eng, DnnlExtensionUtils::makeDescriptor(m.get_desc()), m.get_data_handle());
-    };
-
     MemoryArgs args;
-    args[ARG_SRC] = std::make_shared<Memory>(eng, DnnlExtensionUtils::makeDescriptor(src_md));
-    args[ARG_WEI] = std::make_shared<Memory>(eng, DnnlExtensionUtils::makeDescriptor(wei_md));
-    args[ARG_DST] = std::make_shared<Memory>(eng, DnnlExtensionUtils::makeDescriptor(dst_md));
-    args[ARG_BIAS] = bias ? wrap(*bias) : std::make_shared<Memory>(eng, MemoryDescUtils::makeEmptyDesc());
+    args[ARG_SRC] = std::make_shared<Memory>(eng, src_desc);
+    args[ARG_WEI] = std::make_shared<Memory>(eng, wei_desc);
+    args[ARG_DST] = std::make_shared<Memory>(eng, dst_desc);
+    args[ARG_BIAS] = bias ? bias : std::make_shared<Memory>(eng, MemoryDescUtils::makeEmptyDesc());
 
     if (scales) {
-        args[ARG_WEI | ARG_ATTR_SCALES] = wrap(*scales);
+        args[ARG_WEI | ARG_ATTR_SCALES] = scales;
     }
     if (zp) {
-        args[ARG_WEI | ARG_ATTR_ZERO_POINTS] = wrap(*zp);
+        args[ARG_WEI | ARG_ATTR_ZERO_POINTS] = zp;
     }
     return args;
 }
@@ -185,7 +177,9 @@ dnnl_primitive_args makePrimArgs(const DnnlFCPrimitivePtr& prim,
     args[DNNL_ARG_WEIGHTS] = dnnl::memory(prim->weightsDesc()->getDnnlDesc(), eng, DNNL_MEMORY_NONE);
 
     if (biasMem && !biasMem->getDesc().empty()) {
-        args[DNNL_ARG_BIAS] = dnnl::memory(bias1DDesc(biasMem), eng, DNNL_MEMORY_NONE);
+        args[DNNL_ARG_BIAS] = dnnl::memory(MemoryDescUtils::convertToDnnlMemoryDesc(bias1DDesc(biasMem))->getDnnlDesc(),
+                                           eng,
+                                           DNNL_MEMORY_NONE);
     }
 
     const auto& dnnlArgs = shapeAgnosticData->m_primAttrs.dnnlArgs;
@@ -231,6 +225,7 @@ GatherMatmulDnnlExecutor::GatherMatmulDnnlExecutor([[maybe_unused]] const Gather
                                                    const MemoryArgs& memory,
                                                    const ExecutorContext::CPtr& context)
     : m_context(context) {
+    m_fcAttrs.modelType = Config::ModelType::LLM;
     const auto& weightsMemory = memory.at(ARG_WEI);
     const auto& srcMemory = memory.at(ARG_SRC);
 
@@ -250,28 +245,23 @@ GatherMatmulDnnlExecutor::GatherMatmulDnnlExecutor([[maybe_unused]] const Gather
     const auto& zpMem = memory.at(ARG_SRC_4);
     const auto& biasMem = memory.at(ARG_BIAS);
 
-    dnnl::memory::desc src_md({1, K},
-                              DnnlExtensionUtils::ElementTypeToDataType(src_precision),
-                              dnnl::memory::format_tag::ab);
-    dnnl::memory::desc dst_md({1, N},
-                              DnnlExtensionUtils::ElementTypeToDataType(src_precision),
-                              dnnl::memory::format_tag::ab);
-    dnnl::memory::desc weights_md({N, K},
-                                  DnnlExtensionUtils::ElementTypeToDataType(weights_precision),
-                                  dnnl::memory::format_tag::ab);
+    const auto Ns = static_cast<size_t>(N), Ks = static_cast<size_t>(K);
+    const auto& creatorsMap = BlockedDescCreator::getCommonCreators();
+    auto src_desc = creatorsMap.at(LayoutType::ncsp)->createSharedDesc(src_precision, Shape({1, Ks}));
+    auto wei_desc = creatorsMap.at(LayoutType::ncsp)->createSharedDesc(weights_precision, Shape({Ns, Ks}));
+    auto dst_desc = creatorsMap.at(LayoutType::ncsp)->createSharedDesc(src_precision, Shape({1, Ns}));
 
-    const FCAttrs fcAttrs{};
     const auto& eng = context->getEngine();
-    auto sliceArgs = makeSliceMemoryArgs(src_md,
-                                         weights_md,
-                                         dst_md,
-                                         toSliceMemory(biasMem, bias1DDesc, eng),
-                                         toSliceMemory(scalesMem, gatherSliceDesc, eng),
-                                         toSliceMemory(zpMem, gatherSliceDesc, eng),
+    auto sliceArgs = makeSliceMemoryArgs(src_desc,
+                                         wei_desc,
+                                         dst_desc,
+                                         toSliceMem(biasMem, bias1DDesc, eng),
+                                         toSliceMem(scalesMem, gatherSliceDesc, eng),
+                                         toSliceMem(zpMem, gatherSliceDesc, eng),
                                          eng);
-    auto shapeAgnosticData = DnnlFCPrimitive::createShapeAgnosticData(fcAttrs, sliceArgs, context, false);
+    m_shapeAgnosticData = DnnlFCPrimitive::createShapeAgnosticData(m_fcAttrs, sliceArgs, context, false);
 
-    m_gemvPrim = DnnlFCPrimitive::create(sliceArgs, fcAttrs, context, shapeAgnosticData);
+    m_gemvPrim = DnnlFCPrimitive::create(sliceArgs, m_fcAttrs, context, m_shapeAgnosticData);
     // NOLINTNEXTLINE
     m_implType = m_gemvPrim->implType();
 
@@ -306,7 +296,7 @@ GatherMatmulDnnlExecutor::GatherMatmulDnnlExecutor([[maybe_unused]] const Gather
                                                   context->getPrivateWeightCache(),
                                                   context->getThreadPool());
 
-    const auto& primCpuArgs = shapeAgnosticData->m_primAttrs.cpuArgs;
+    const auto& primCpuArgs = m_shapeAgnosticData->m_primAttrs.cpuArgs;
     auto repackBatched = [&eng, &addBatchDim](const MemoryPtr& srcMem, const MemoryPtr& postPrepackSlice) -> MemoryPtr {
         const size_t G = srcMem->getShape().getStaticDims()[0];
         auto dstSliceBlockedDesc = MemoryDescUtils::convertToBlockedMemoryDesc(
@@ -329,7 +319,7 @@ GatherMatmulDnnlExecutor::GatherMatmulDnnlExecutor([[maybe_unused]] const Gather
 
     m_gemvScratchpad = context->getScratchPad()->createScratchPadMem(m_gemvPrim->scratchPadDesc());
 
-    m_gemvArgs = makePrimArgs(m_gemvPrim, shapeAgnosticData, biasMem, m_gemvScratchpad, eng);
+    m_gemvArgs = makePrimArgs(m_gemvPrim, m_shapeAgnosticData, biasMem, m_gemvScratchpad, eng);
 }
 
 bool GatherMatmulDnnlExecutor::update(const MemoryArgs& memory) {
@@ -351,30 +341,16 @@ bool GatherMatmulDnnlExecutor::update(const MemoryArgs& memory) {
     m_tmpInputDesc = creatorsMap.at(LayoutType::ncsp)->createSharedDesc(srcPrc, Shape({M, srcShape[2]}));
     m_tmpOutputDesc = creatorsMap.at(LayoutType::ncsp)->createSharedDesc(srcPrc, Shape({M, dstShape[2]}));
 
-    const dnnl::memory::dim N = static_cast<dnnl::memory::dim>(m_gemvPrim->weightsDesc()->getDnnlDesc().get_dims()[0]);
     const auto& eng = m_context->getEngine();
 
-    dnnl::memory::desc src_md({static_cast<dnnl::memory::dim>(M), static_cast<dnnl::memory::dim>(srcShape[2])},
-                              DnnlExtensionUtils::ElementTypeToDataType(srcPrc),
-                              dnnl::memory::format_tag::ab);
-    dnnl::memory::desc dst_md({static_cast<dnnl::memory::dim>(M), N},
-                              DnnlExtensionUtils::ElementTypeToDataType(srcPrc),
-                              dnnl::memory::format_tag::ab);
-    const auto& gemvWeiDnnlDesc = m_gemvPrim->weightsDesc()->getDnnlDesc();
-    const dnnl::memory::desc weights_md(gemvWeiDnnlDesc.get_dims(),
-                                        gemvWeiDnnlDesc.get_data_type(),
-                                        dnnl::memory::format_tag::ab);
-
-    const FCAttrs fcAttrs{};
-    auto sliceArgs = makeSliceMemoryArgs(src_md,
-                                         weights_md,
-                                         dst_md,
-                                         toSliceMemory(memory.at(ARG_BIAS), bias1DDesc, eng),
-                                         toSliceMemory(m_scalesMemory, gatherSliceDesc, eng),
-                                         toSliceMemory(m_zpMemory, gatherSliceDesc, eng),
+    auto sliceArgs = makeSliceMemoryArgs(m_tmpInputDesc,
+                                         m_gemvPrim->weightsDesc(),
+                                         m_tmpOutputDesc,
+                                         toSliceMem(memory.at(ARG_BIAS), bias1DDesc, eng),
+                                         toSliceMem(m_scalesMemory, gatherSliceDesc, eng),
+                                         toSliceMem(m_zpMemory, gatherSliceDesc, eng),
                                          eng);
-    auto shapeAgnosticData = DnnlFCPrimitive::createShapeAgnosticData(fcAttrs, sliceArgs, m_context, false);
-    m_gemmPrim = DnnlFCPrimitive::create(sliceArgs, fcAttrs, m_context, shapeAgnosticData);
+    m_gemmPrim = DnnlFCPrimitive::create(sliceArgs, m_fcAttrs, m_context, m_shapeAgnosticData);
 
     const size_t srcSize = rnd_up(m_tmpInputDesc->getCurrentMemSize(), 64);
     const size_t outputSize = rnd_up(m_tmpOutputDesc->getCurrentMemSize(), 64);
@@ -388,7 +364,7 @@ bool GatherMatmulDnnlExecutor::update(const MemoryArgs& memory) {
                                                 m_gemmPrim->scratchPadDesc(),
                                                 m_tmpInpBuffer->getDataAs<uint8_t>() + srcSize + outputSize);
 
-    m_gemmArgs = makePrimArgs(m_gemmPrim, shapeAgnosticData, memory.at(ARG_BIAS), m_gemmScratchpad, eng);
+    m_gemmArgs = makePrimArgs(m_gemmPrim, m_shapeAgnosticData, memory.at(ARG_BIAS), m_gemmScratchpad, eng);
 
     return true;
 }
